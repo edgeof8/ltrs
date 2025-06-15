@@ -1,7 +1,7 @@
 # aopl_python_impl/aop_parser.py
 
 from typing import List, Tuple, Union, Optional
-from .definitions import ValueTuple, Operator, PowerAssociativity
+from .definitions import ValueTuple, PowerAssociativity
 from .aop_operations import is_symbolic_exponent
 
 class ParseError(Exception):
