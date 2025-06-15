@@ -22,7 +22,7 @@ def main():
     calculator = AoPCalculator(base=args.base, output_mode=mode_map[args.mode], precision=args.precision)
 
     try:
-        result = calculator.calculate(args.expression)
+        result = calculator.evaluate_and_format(args.expression)
         print(result)
     except Exception as e:
         print(f"Unexpected error: {str(e)}", file=sys.stderr)
