@@ -2,7 +2,7 @@
 
 import sys
 import argparse
-from .aop_calculator import AoPCalculator
+from .aop_calculator import AoP_Calculator
 from .definitions import OutputFormatMode
 
 def main():
@@ -19,13 +19,22 @@ def main():
         "sci": OutputFormatMode.SCIENTIFIC,
         "num": OutputFormatMode.NUMERICAL
     }
-    calculator = AoPCalculator(base=args.base, output_mode=mode_map[args.mode], precision=args.precision)
+    calculator = AoP_Calculator(base=args.base)
+
+    calculator.output_format_mode = mode_map[args.mode]
+    calculator.precision = args.precision
 
     try:
-        result = calculator.evaluate_and_format(args.expression)
-        print(result)
-    except Exception as e:
-        print(f"Unexpected error: {str(e)}", file=sys.stderr)
+        result = calculator.evaluate_expression(args.expression)
+        if result.startswith("Error:"):
+            print(f"CLI: Detected error result: {result}", file=sys.stderr) # DEBUG
+            print(result, file=sys.stderr) # Print the specific error to stderr
+            sys.exit(1) # Exit with error code
+        else:
+            print(result) # Print successful result to stdout
+    except Exception as e: # Catch any other unexpected exceptions
+        print(f"CLI: Caught unexpected system error: {str(e)}", file=sys.stderr) # DEBUG
+        print(f"Unexpected system error: {str(e)}", file=sys.stderr)
         sys.exit(1)
 
 if __name__ == "__main__":

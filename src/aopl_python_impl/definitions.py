@@ -1,19 +1,17 @@
-# aopl_python_impl/definitions.py
+# FILE: src/aopl_python_impl/definitions.py
 
 import string
+import re
 from typing import NamedTuple, List, Dict, Pattern, Optional, Tuple
 from enum import Enum
-import re
+# DO NOT IMPORT AoPValue or any other local project modules here.
+# This file must be self-contained.
 
 class OutputFormatMode(Enum):
     AUTO = "auto"
     AOP = "aop"
     SCIENTIFIC = "sci"
     NUMERICAL = "num"
-
-class PowerAssociativity(Enum):
-    LEFT = "left"
-    RIGHT = "right"
 
 class Token(NamedTuple):
     kind: str
@@ -27,41 +25,49 @@ class AoPError(ValueError):
         self.token = token
         super().__init__(message)
 
-ValueTuple = tuple[complex, int | tuple[str, int, int]]
-IMAGINARY_UNIT_J: ValueTuple = (complex(0, 1), 0)
+# The IMAGINARY_UNIT_J constant has been permanently moved to aop_term_handler.py
 
-AOP_LETTERS = string.ascii_lowercase[:25] # 'a' through 'y'
-LETTER_TO_EXPONENT_MAP: Dict[str, int] = {letter: i + 1 for i, letter in enumerate(AOP_LETTERS)}
-EXPONENT_TO_LETTER_MAP: Dict[int, str] = {i + 1: letter for i, letter in enumerate(AOP_LETTERS)}
+# ... (rest of the file is correct and remains unchanged) ...
 
+LOWERCASE_AOP_LETTERS = string.ascii_lowercase[:25] # a-y
+UPPERCASE_AOP_LETTERS = string.ascii_uppercase[:25] # A-Y
+
+LETTER_TO_EXPONENT_MAP: Dict[str, int] = {
+    **{letter: i + 1 for i, letter in enumerate(LOWERCASE_AOP_LETTERS)},
+    **{letter: i + 26 for i, letter in enumerate(UPPERCASE_AOP_LETTERS)}
+}
+EXPONENT_TO_LETTER_MAP: Dict[int, str] = {v: k for k, v in LETTER_TO_EXPONENT_MAP.items()}
+
+# ... (rest of regex and OPERATORS definitions) ...
 _opt_sign = r"[+-]?"
 _number_bare = r"(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?"
 _number_signed = fr"{_opt_sign}{_number_bare}"
 _word_simple = r"[a-yA-Y]+"
-_identifier_raw = r"[a-zA-Z_$][a-zA-Z0-9_$]*"
-_hashtag_constants = r"pi|e|j"
+_variable_name = r"[zZ_][a-zA-Z0-9_$]*"
 
 TOKEN_SPECIFICATION: List[Tuple[str, str]] = [
     ('FUNCTION', r"sqrt|log|ln|log2|sin|cos|tan"),
-    ('CONSTANT_LITERAL', fr"#(?:{_hashtag_constants})"),
-    ('OPERATOR', r"[\+\-\*\/\^]"),
+    ('CONSTANT_LITERAL', fr"#(?:pi|e|j)"),
+    ('OPERATOR', r"\*\*|[\+\-\*\/\^=]"),
     ('COEFF_WORD', fr"{_number_signed}{_word_simple}"),
     ('NUMBER', _number_signed),
-    ('IDENTIFIER', _identifier_raw),
+    ('IDENTIFIER', _word_simple),
+    ('VARIABLE', _variable_name),
     ('LPAREN', r"\("),
     ('RPAREN', r"\)"),
     ('COMMA', r","),
+    ('WHITESPACE', r"\s+"),
     ('MISMATCH', r"."),
 ]
 
 TOKEN_REGEX: Pattern[str] = re.compile('|'.join(f'(?P<{name}>{pattern})' for name, pattern in TOKEN_SPECIFICATION))
 
 OPERATORS: Dict[str, Dict] = {
+    '=': {'precedence': 1, 'associativity': 'right'},
     '+': {'precedence': 2, 'associativity': 'left'},
     '-': {'precedence': 2, 'associativity': 'left'},
     '*': {'precedence': 3, 'associativity': 'left'},
     '/': {'precedence': 3, 'associativity': 'left'},
-    '^': {'precedence': 5, 'associativity': 'right'}, # Default, parser adapts
-    '_UMINUS': {'precedence': 4, 'associativity': 'right'},
-    '_UPLUS': {'precedence': 4, 'associativity': 'right'},
+    '^': {'precedence': 5, 'associativity': 'right'},
+    '**': {'precedence': 6, 'associativity': 'right'},
 }

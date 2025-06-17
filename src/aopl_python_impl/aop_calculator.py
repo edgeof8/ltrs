@@ -1,68 +1,52 @@
 # aopl_python_impl/aop_calculator.py
 
-from typing import Optional, Dict, Any, Callable
-from .definitions import ValueTuple, OutputFormatMode, PowerAssociativity
-from .aop_parser import parse_and_evaluate
+import re
+from .definitions import (
+    OutputFormatMode, OPERATORS, TOKEN_REGEX,
+    LETTER_TO_EXPONENT_MAP, EXPONENT_TO_LETTER_MAP, AoPError
+)
+from .aop_value import AoPValue
+from .aop_parser import tokenize_expression, infix_to_rpn, evaluate_rpn
+from .aop_term_handler import get_term_value
 from .aop_formatter import format_output
 from .aop_operations import simplify_value
 
-class AoPCalculator:
-    def __init__(self, base: int = 10, output_mode: OutputFormatMode = OutputFormatMode.AUTO,
-                 precision: int = 10, power_assoc: PowerAssociativity = PowerAssociativity.RIGHT):
-        if base < 2:
-            raise ValueError("Base must be at least 2")
-        if precision < 1:
-            raise ValueError("Precision must be at least 1")
-        self.base: int = base
-        self.output_mode: OutputFormatMode = output_mode
-        self.precision: int = precision
-        self.power_assoc: PowerAssociativity = power_assoc
-        self.letter_cache: Dict[str, ValueTuple] = {}
-
-    def set_base(self, base: int) -> None:
-        if base < 2:
-            raise ValueError("Base must be at least 2")
+class AoP_Calculator:
+    def __init__(self, base: int = 10): # Removed aop_letters parameter
         self.base = base
-        self.letter_cache.clear()
+        # Use the comprehensive maps directly from definitions
+        self.letter_to_exponent = LETTER_TO_EXPONENT_MAP
+        self.exponent_to_letter = EXPONENT_TO_LETTER_MAP
 
-    def set_output_mode(self, mode: OutputFormatMode) -> None:
-        self.output_mode = mode
+        self.token_regex = TOKEN_REGEX
 
-    def set_precision(self, precision: int) -> None:
-        if precision < 1:
-            raise ValueError("Precision must be at least 1")
-        self.precision = precision
+        self.variables: dict[str, AoPValue] = {}
+        self.output_format_mode = OutputFormatMode.AUTO
+        self.precision = 10
+        self.operators_map = OPERATORS.copy()
 
-    def set_power_associativity(self, assoc: PowerAssociativity) -> None:
-        self.power_assoc = assoc
+    def set_power_associativity(self, mode: str):
+        if mode.lower() == 'right':
+            self.operators_map['^']['associativity'] = 'right'
+            self.operators_map['**']['associativity'] = 'right'
+        elif mode.lower() == 'left':
+            self.operators_map['^']['associativity'] = 'left'
+            self.operators_map['**']['associativity'] = 'left'
+        else:
+            raise ValueError("Invalid associativity mode. Use 'left' or 'right'.")
 
-    def get_letter_value(self, letter: str) -> ValueTuple:
-        if letter not in self.letter_cache:
-            from .aop_parser import letter_to_value
-            self.letter_cache[letter] = letter_to_value(letter, self.base)
-        return self.letter_cache[letter]
+    def evaluate_expression(self, expression: str) -> str:
+        try:
+            tokens = tokenize_expression(expression, self.token_regex)
+            rpn = infix_to_rpn(tokens, self.operators_map)
+            result = evaluate_rpn(rpn, self.variables, get_term_value, self.base)
 
-    def evaluate(self, expression: str) -> ValueTuple:
-        return parse_and_evaluate(expression, self.base, self.power_assoc)
+            def get_letter_func(exp: int) -> str:
+                return self.exponent_to_letter.get(exp, "")
 
-    def format_value(self, value: ValueTuple) -> str:
-        def get_letter(n: int) -> str:
-            if 1 <= n <= 26:
-                return chr(ord('a') + n - 1)
-            return str(n)
-
-        def represent_exponent(exp_val: Any, base: int, letter_getter: Callable[[int], str]) -> str:
-            from .aop_formatter import represent_exponent_as_aop_term
-            return represent_exponent_as_aop_term(exp_val, base, letter_getter)
-
-        def normalize(val: ValueTuple) -> ValueTuple:
-            return simplify_value(val, self.base)
-
-        return format_output(value, self.base, get_letter, represent_exponent, self.output_mode, normalize, self.precision)
-
-    def evaluate_and_format(self, expression: str) -> str:
-        result = self.evaluate(expression)
-        return self.format_value(result)
-
-    def clear_cache(self) -> None:
-        self.letter_cache.clear()
+            return format_output(
+                result, self.base, get_letter_func, self.output_format_mode, self.precision
+            )
+        except (AoPError, ZeroDivisionError, OverflowError, ValueError, NotImplementedError) as e:
+            # Return the raw string of the exception for now, to simplify debugging.
+            return str(e)

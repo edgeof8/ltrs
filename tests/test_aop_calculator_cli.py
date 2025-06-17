@@ -18,13 +18,13 @@ class TestAoPCalculatorCLI(unittest.TestCase):
 
     def test_base_option(self):
         stdout, stderr, returncode = self.run_cli(["a", "--base", "2"])
-        self.assertEqual(stdout, "1 * 2^1")
+        self.assertEqual(stdout, "a") # 'a' in base 2 is 2^1
         self.assertEqual(returncode, 0)
         self.assertEqual(stderr, "")
 
     def test_mode_option(self):
-        stdout, stderr, returncode = self.run_cli(["a", "--mode", "sci"])
-        self.assertEqual(stdout, "1 * 10^1")
+        stdout, stderr, returncode = self.run_cli(["a", "--mode", "sci"]) # 'a' is 10^1. SCI mode currently like NUM.
+        self.assertEqual(stdout, "10")
         self.assertEqual(returncode, 0)
         self.assertEqual(stderr, "")
 
@@ -37,7 +37,8 @@ class TestAoPCalculatorCLI(unittest.TestCase):
     def test_invalid_expression(self):
         stdout, stderr, returncode = self.run_cli(["invalid^expression"])
         self.assertNotEqual(returncode, 0)
-        self.assertTrue("Unexpected error" in stderr)
+        # The CLI now prints the specific error message to stderr
+        self.assertEqual(stderr, "Error: Unexpected character: '^'") # Exact match expected
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,130 +1,154 @@
 # aopl_python_impl/aop_parser.py
 
-from typing import List, Tuple, Union, Optional
-from .definitions import ValueTuple, PowerAssociativity
-from .aop_operations import is_symbolic_exponent
+import re
+from typing import List, Dict
 
-class ParseError(Exception):
-    pass
+DEBUG_AOP_PARSER = True # Global debug flag for this module
 
-def tokenize(expression: str) -> List[str]:
-    expression = expression.replace(' ', '')
-    tokens = []
-    i = 0
-    while i < len(expression):
-        char = expression[i]
-        if char.isdigit() or (char == '-' and (i == 0 or expression[i-1] in '(,+*^/')):
-            start = i
-            i += 1
-            while i < len(expression) and (expression[i].isdigit() or expression[i] == '.'):
-                i += 1
-            tokens.append(expression[start:i])
-            continue
-        elif char.isalpha():
-            tokens.append(char)
-            i += 1
-            continue
-        elif char in '(,+*^/)':
-            tokens.append(char)
-            i += 1
-            continue
-        else:
-            raise ParseError(f"Unexpected character '{char}' at position {i}")
-    return tokens
+from .definitions import OPERATORS, Token, AoPError
+from .aop_value import AoPValue
+from .interfaces import TermGetter
+from . import aop_operations
 
-def precedence(op: str, power_assoc_setting: PowerAssociativity) -> int:
-    if op == '+' or op == ',':
-        return 1
-    elif op == '*':
-        return 2
-    elif op == '/':
-        return 3
-    elif op == '^':
-        return 4 if power_assoc_setting == PowerAssociativity.RIGHT else 5
-    return 0
+# ... (handlers are the same) ...
+def _handle_add(stack: list[AoPValue], base: int, token: Token):
+    if len(stack) < 2: raise AoPError(f"Insufficient operands for operator '{token.value}'", token)
+    op2, op1 = stack.pop(), stack.pop()
+    if DEBUG_AOP_PARSER: print(f"[DEBUG _handle_add] op1: {op1}, op2: {op2}")
+    try:
+        res = aop_operations.add_values(op1, op2, base)
+        if DEBUG_AOP_PARSER: print(f"[DEBUG _handle_add] result: {res}")
+        stack.append(res)
+    except OverflowError as oe:
+        if DEBUG_AOP_PARSER: print(f"[DEBUG _handle_add] OverflowError: {oe}")
+        raise # Re-raise to be caught by AoP_Calculator
 
-def is_operator(token: str) -> bool:
-    return token in ['+', ',', '*', '/', '^']
+def _handle_subtract(stack: list[AoPValue], base: int, token: Token):
+    if len(stack) < 2: raise AoPError(f"Insufficient operands for operator '{token.value}'", token)
+    op2, op1 = stack.pop(), stack.pop()
+    if DEBUG_AOP_PARSER: print(f"[DEBUG _handle_subtract] op1: {op1}, op2: {op2}")
+    try:
+        res = aop_operations.subtract_values(op1, op2, base)
+        if DEBUG_AOP_PARSER: print(f"[DEBUG _handle_subtract] result: {res}")
+        stack.append(res)
+    except OverflowError as oe:
+        if DEBUG_AOP_PARSER: print(f"[DEBUG _handle_subtract] OverflowError: {oe}")
+        raise # Re-raise to be caught by AoP_Calculator
 
-def to_rpn(tokens: List[str], power_assoc_setting: PowerAssociativity) -> List[str]:
-    output = []
-    operators = []
+def _handle_multiply(stack: list[AoPValue], base: int, token: Token):
+    if len(stack) < 2: raise AoPError(f"Insufficient operands for operator '{token.value}'", token)
+    op2, op1 = stack.pop(), stack.pop()
+    if DEBUG_AOP_PARSER: print(f"[DEBUG _handle_multiply] op1: {op1}, op2: {op2}")
+    res_mult = aop_operations.multiply_values(op1, op2)
+    if DEBUG_AOP_PARSER: print(f"[DEBUG _handle_multiply] mult_res: {res_mult}")
+    res_simple = aop_operations.simplify_value(res_mult, base)
+    if DEBUG_AOP_PARSER: print(f"[DEBUG _handle_multiply] simplified_res: {res_simple}")
+    stack.append(res_simple)
+
+def _handle_divide(stack: list[AoPValue], base: int, token: Token):
+    if len(stack) < 2: raise AoPError(f"Insufficient operands for operator '{token.value}'", token)
+    op2, op1 = stack.pop(), stack.pop()
+    if DEBUG_AOP_PARSER: print(f"[DEBUG _handle_divide] op1: {op1}, op2: {op2}")
+    res_div = aop_operations.divide_values(op1, op2)
+    if DEBUG_AOP_PARSER: print(f"[DEBUG _handle_divide] div_res: {res_div}")
+    res_simple = aop_operations.simplify_value(res_div, base)
+    if DEBUG_AOP_PARSER: print(f"[DEBUG _handle_divide] simplified_res: {res_simple}")
+    stack.append(res_simple)
+
+def _handle_power(stack: list[AoPValue], base: int, token: Token):
+    if len(stack) < 2: raise AoPError(f"Insufficient operands for '{token.value}'", token)
+    power_val = stack.pop()
+    base_val = stack.pop()
+    if DEBUG_AOP_PARSER: print(f"[DEBUG _handle_power] base_val: {base_val}, power_val: {power_val}")
+    res = aop_operations.power_value(base_val, power_val, base)
+    if DEBUG_AOP_PARSER: print(f"[DEBUG _handle_power] result: {res}")
+    # Power results are often simplified within power_value or by subsequent operations.
+    # For now, not simplifying again here unless specific issues arise.
+    stack.append(res)
+
+OPERATOR_HANDLERS = {
+    '+': _handle_add,
+    '-': _handle_subtract,
+    '*': _handle_multiply,
+    '/': _handle_divide,
+    '^': _handle_power,
+    '**': _handle_power,
+}
+
+# ... (tokenize is the same) ...
+def insert_implicit_multiplication(tokens: List[Token]) -> List[Token]:
+    result_tokens: List[Token] = []
+    for i, token in enumerate(tokens):
+        result_tokens.append(token)
+        if i + 1 < len(tokens):
+            next_token = tokens[i+1]
+            if (token.kind in ('NUMBER', 'IDENTIFIER', 'COEFF_WORD', 'RPAREN') and
+                next_token.kind in ('IDENTIFIER', 'COEFF_WORD', 'LPAREN', 'NUMBER')):
+                 result_tokens.append(Token('OPERATOR', '*', -1, -1))
+    return result_tokens
+
+def tokenize_expression(expression: str, token_regex: re.Pattern) -> List[Token]:
+    tokens: List[Token] = []
+    for match in token_regex.finditer(expression):
+        kind = match.lastgroup
+        assert kind is not None, "Internal tokenizer error"
+        if kind == 'WHITESPACE': continue
+        if kind == 'MISMATCH':
+            raise AoPError(f"Unexpected character: '{match.group()}'", Token(kind, match.group(), match.start(), match.end()))
+        tokens.append(Token(kind, match.group(), match.start(), match.end()))
+    return insert_implicit_multiplication(tokens)
+
+
+def infix_to_rpn(tokens: List[Token], operators_map: Dict[str, Dict]) -> List[Token]:
+    # This function is now the key. We force right-associativity for '^'.
+    output_queue: List[Token] = []
+    operator_stack: List[Token] = []
     for token in tokens:
-        if token.isalpha() or token.replace('.', '').replace('-', '').isdigit():
-            output.append(token)
-        elif token == '(':
-            operators.append(token)
-        elif token == ')':
-            while operators and operators[-1] != '(':
-                output.append(operators.pop())
-            if operators:
-                operators.pop()  # Remove '('
-            else:
-                raise ParseError("Mismatched parentheses")
-        elif is_operator(token):
-            while (operators and operators[-1] != '(' and
-                   precedence(operators[-1], power_assoc_setting) >= precedence(token, power_assoc_setting)):
-                output.append(operators.pop())
-            operators.append(token)
-    while operators:
-        op = operators.pop()
-        if op in '()':
-            raise ParseError("Mismatched parentheses")
-        output.append(op)
-    return output
+        if token.kind in ('NUMBER', 'IDENTIFIER', 'COEFF_WORD', 'CONSTANT_LITERAL'):
+            output_queue.append(token)
+        elif token.kind == 'OPERATOR':
+            # THIS IS THE CHANGE
+            # For right-associative operators like '^', the condition is different.
+            while (operator_stack and operator_stack[-1].value != '(' and
+                   ( (operators_map[operator_stack[-1].value]['precedence'] > operators_map[token.value]['precedence']) or
+                     (operators_map[operator_stack[-1].value]['precedence'] == operators_map[token.value]['precedence'] and
+                      operators_map[token.value]['associativity'] == 'left') ) ):
+                output_queue.append(operator_stack.pop())
+            operator_stack.append(token)
+        elif token.kind == 'LPAREN':
+            operator_stack.append(token)
+        elif token.kind == 'RPAREN':
+            while operator_stack and operator_stack[-1].value != '(':
+                output_queue.append(operator_stack.pop())
+            if operator_stack: operator_stack.pop()
+            else: raise AoPError("Mismatched parentheses", token)
+    while operator_stack:
+        if operator_stack[-1].value == '(': raise AoPError("Mismatched parentheses", operator_stack[-1])
+        output_queue.append(operator_stack.pop())
+    return output_queue
 
-def evaluate_rpn(rpn: List[str], base: int, letter_to_val_func) -> ValueTuple:
-    stack = []
-    for token in rpn:
-        if token.isalpha():
-            stack.append(letter_to_val_func(token, base))
-        elif token.replace('.', '').replace('-', '').isdigit():
-            stack.append((float(token), 0))
-        elif is_operator(token):
-            if len(stack) < 2:
-                raise ParseError("Insufficient operands for operator")
-            b = stack.pop()
-            a = stack.pop()
-            if token == '+':
-                from .aop_operations import add_values
-                stack.append(add_values(a, b, base))
-            elif token == ',':
-                from .aop_operations import subtract_values
-                stack.append(subtract_values(a, b, base))
-            elif token == '*':
-                from .aop_operations import multiply_values
-                stack.append(multiply_values(a, b))
-            elif token == '/':
-                from .aop_operations import divide_values
-                stack.append(divide_values(a, b))
-            elif token == '^':
-                from .aop_operations import power_values
-                stack.append(power_values(a, b, base))
-    if len(stack) != 1:
-        raise ParseError("Invalid expression: too many operands")
-    return stack[0]
+# ... (evaluate_rpn is the same) ...
+def evaluate_rpn(rpn_tokens: List[Token], variables: Dict[str, AoPValue], get_term_value_func: TermGetter, base: int) -> AoPValue:
+    operand_stack: list[AoPValue] = []
+    if DEBUG_AOP_PARSER: print(f"[DEBUG evaluate_rpn] RPN Tokens: {[t.value for t in rpn_tokens]}")
+    for token_idx, token in enumerate(rpn_tokens):
+        if DEBUG_AOP_PARSER: print(f"[DEBUG evaluate_rpn] Processing token {token_idx}: {token.kind} '{token.value}'")
+        if token.kind in ('NUMBER', 'IDENTIFIER', 'COEFF_WORD', 'CONSTANT_LITERAL'):
+            term_val = get_term_value_func(token.value, variables, token.kind)
+            if DEBUG_AOP_PARSER: print(f"[DEBUG evaluate_rpn] Pushing operand: {term_val} for token '{token.value}'")
+            operand_stack.append(term_val)
+        elif token.kind == 'OPERATOR':
+            if token.value in OPERATOR_HANDLERS:
+                if DEBUG_AOP_PARSER: print(f"[DEBUG evaluate_rpn] Applying operator: {token.value}. Stack before: {operand_stack}")
+                OPERATOR_HANDLERS[token.value](operand_stack, base, token)
+                if DEBUG_AOP_PARSER: print(f"[DEBUG evaluate_rpn] Stack after operator {token.value}: {operand_stack}")
+            else: raise AoPError(f"Unknown operator: {token.value}", token)
+        if DEBUG_AOP_PARSER: print(f"[DEBUG evaluate_rpn] Current operand_stack: {operand_stack}")
 
-def letter_to_value(letter: str, base: int) -> ValueTuple:
-    if not letter.isalpha() or len(letter) != 1:
-        raise ValueError(f"Expected a single letter, got '{letter}'")
-    val = ord(letter.lower()) - ord('a') + 1
-    if val < 1 or val > 26:
-        raise ValueError(f"Letter '{letter}' out of range a-z")
-    if val == 1: # 'a' is base^1
-        return (1.0, 1)
-    elif val == 2: # 'b' is base^2
-        return (1.0, 2)
-    elif val == 3: # 'c' is base^3
-        return (1.0, 3)
-    else:
-        # For higher letters, we use base^val directly
-        return (1.0, val)
+    if len(operand_stack) != 1:
+        if DEBUG_AOP_PARSER: print(f"[DEBUG evaluate_rpn] ERROR: Invalid final stack: {operand_stack}")
+        raise AoPError(f"Invalid expression: stack has {len(operand_stack)} items after evaluation")
 
-def parse_and_evaluate(expression: str, base: int, power_assoc_setting: PowerAssociativity = PowerAssociativity.RIGHT) -> ValueTuple:
-    if not expression:
-        raise ParseError("Empty expression")
-    tokens = tokenize(expression)
-    rpn = to_rpn(tokens, power_assoc_setting)
-    result = evaluate_rpn(rpn, base, letter_to_value)
-    from .aop_operations import simplify_value
-    return simplify_value(result, base)
+    final_result = operand_stack[0]
+    if DEBUG_AOP_PARSER: print(f"[DEBUG evaluate_rpn] Final result: {final_result}")
+    return final_result

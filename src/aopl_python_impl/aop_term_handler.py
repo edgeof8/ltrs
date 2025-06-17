@@ -1,42 +1,41 @@
-# aopl_python_impl/aop_term_handler.py
+# FILE: src/aopl_python_impl/aop_term_handler.py
 
 import re
-from .definitions import ValueTuple, IMAGINARY_UNIT_J, LETTER_TO_EXPONENT_MAP
+from .definitions import LETTER_TO_EXPONENT_MAP
+from .aop_value import AoPValue # This import is fine and necessary
+
+# FIX: Define the constant here instead of importing it.
+IMAGINARY_UNIT_J: AoPValue = AoPValue(complex(0, 1), 0.0)
 
 COEFF_WORD_PARSER = re.compile(r"([+-]?\d*\.?\d+(?:[eE][+-]?\d+)?)([a-yA-Y]+)")
 
 def calculate_word_exponent(word: str) -> int:
-    """Calculates the total exponent for a word based on the a-y alphabet."""
-    total_exponent = 0
-    for char in word.lower():
-        total_exponent += LETTER_TO_EXPONENT_MAP.get(char, 0)
-    return total_exponent
+    return sum(LETTER_TO_EXPONENT_MAP.get(char, 0) for char in word.lower())
 
-def get_term_value(term_str: str, variables: dict[str, ValueTuple], kind: str) -> ValueTuple:
+def get_term_value(term_str: str, variables: dict[str, AoPValue], kind: str) -> AoPValue:
     if kind == 'NUMBER':
-        return (complex(term_str), 0)
+        return AoPValue(complex(term_str), 0.0)
+
     if kind == 'CONSTANT_LITERAL':
-        if term_str == '#j': return IMAGINARY_UNIT_J
+        if term_str == '#j':
+            # Use the locally defined constant
+            return IMAGINARY_UNIT_J
         raise ValueError(f"Unknown constant: {term_str}")
 
     if kind == 'COEFF_WORD':
         match = COEFF_WORD_PARSER.match(term_str)
-        if not match: raise ValueError(f"Invalid coefficient-word: {term_str}")
+        if not match:
+            raise ValueError(f"Invalid coeff-word: {term_str}")
         coeff = complex(float(match.group(1)))
-        expon = calculate_word_exponent(match.group(2))
-        return (coeff, expon)
+        expon = float(calculate_word_exponent(match.group(2)))
+        return AoPValue(coeff, expon)
 
     if kind == 'IDENTIFIER':
-        # Check if it's a defined variable first.
         if term_str in variables:
             return variables[term_str]
-
-        # If not a variable, check if it's a valid AoP word (now a-y).
         if all(c.lower() in LETTER_TO_EXPONENT_MAP for c in term_str):
-            expon = calculate_word_exponent(term_str)
-            return (1.0, expon)
-
-        # If it contains 'z' or other non-AoP letters, it's an undefined variable.
+            expon = float(calculate_word_exponent(term_str))
+            return AoPValue(1.0, expon)
         raise ValueError(f"Undefined variable or invalid word: '{term_str}'")
 
     raise ValueError(f"Unknown term kind: {kind}")
