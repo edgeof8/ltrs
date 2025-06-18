@@ -31,23 +31,10 @@ class AoPValue:
     def to_str(self, base: int, get_letter: Callable, mode: OutputFormatMode, precision: int) -> str:
         if not self.terms: return "0"
 
-        # Try to simplify to a single number first for formatting
-        try:
-            # This is a non-mutating simplification for display purposes only
-            num_val = self.to_numerical(base)
-            return _format_numeric_exponent(num_val, base, get_letter, precision)
-        except (PracticalLimitError, OverflowError, NotImplementedError):
-            # Cannot be represented as a single number, so format symbolically.
-            pass
+        if len(self.terms) == 1:
+            return self.terms[0].to_str(base, get_letter, mode, precision)
 
-        # FIX: Correctly build the string term-by-term
-        parts = []
-        for t in self.terms:
-            part_str = t.to_str(base, get_letter, mode, precision)
-            # AoPTerm.to_str will now handle its own sign for subsequent terms
-            parts.append(part_str)
-
-        # Join the parts, minding the signs
+        parts = [t.to_str(base, get_letter, mode, precision) for t in self.terms]
         result = parts[0]
         for part in parts[1:]:
             if part.startswith('-'):
@@ -58,6 +45,12 @@ class AoPValue:
 
     def __repr__(self) -> str:
         return f"AoPValue({self.terms!r})"
+
+    def to_simple_number(self) -> Optional[complex]:
+        """If the value represents a single number (coeff * base^0), return it. Otherwise None."""
+        if len(self.terms) == 1 and self.terms[0].is_numeric_exponent_zero():
+            return self.terms[0].coeff
+        return None
 
 # aopl_python_impl/aop_value.py -> AoPTerm class
 
@@ -111,50 +104,43 @@ class AoPTerm:
         return f"Term(c={self.coeff!r}, e={self.exponent!r})"
 
     def to_str(self, base: int, get_letter: Callable, mode: OutputFormatMode, precision: int) -> str:
-        # If term represents a pure number (C*a^0), format the number C.
+        # Case 1: The term itself simplifies to a single letter (e.g., 1*a^6 -> f)
+        if cmath.isclose(self.coeff, 1.0) and not isinstance(self.exponent, AoPValue):
+            try:
+                exp_num = complex(self.exponent)
+                if cmath.isclose(exp_num.imag, 0) and cmath.isclose(exp_num.real, round(exp_num.real)):
+                    exp_int = int(round(exp_num.real))
+                    if letter := get_letter(exp_int):
+                        return letter
+            except (TypeError, ValueError):
+                pass
+
+        # Case 2: The term is a simple number (e.g., from 3+5=8 or 2*a^0)
         if self.is_numeric_exponent_zero():
              return _format_numeric_exponent(self.coeff, base, get_letter, precision)
 
-        # FIX: Streamlined and corrected string construction logic.
-
-        # Part 1: Coefficient String
+        # Case 3: Format as a full C*a^E expression
         coeff_part = ""
-        if cmath.isclose(self.coeff, 1.0):
-            coeff_part = "" # No "1" for 1*a^k
-        elif cmath.isclose(self.coeff, -1.0):
-            coeff_part = "-" # Just a minus sign for -1*a^k
-        else:
-            # Format the coefficient. If it's complex, it will include parentheses.
-            coeff_part = _format_numeric_exponent(self.coeff, base, get_letter, precision)
+        if cmath.isclose(self.coeff, 1.0): coeff_part = ""
+        elif cmath.isclose(self.coeff, -1.0): coeff_part = "-"
+        else: coeff_part = _format_numeric_exponent(self.coeff, base, get_letter, precision)
 
-        # Part 2: Exponent String
         exp_part = ""
         if isinstance(self.exponent, AoPValue):
-            # Recursively format the exponent. Add parens if it's a sum.
             raw_exp_str = self.exponent.to_str(base, get_letter, OutputFormatMode.AOP, precision)
-            if len(self.exponent.terms) > 1:
-                exp_part = f"({raw_exp_str})"
-            else:
-                exp_part = raw_exp_str
+            exp_part = f"({raw_exp_str})" if ' + ' in raw_exp_str or ' - ' in raw_exp_str else raw_exp_str
         else:
-            # For numeric exponents, format them. _format_numeric_exponent is smart enough now.
-            exp_part = _format_numeric_exponent(self.exponent, base, get_letter, precision)
+            # FIX: Exponents are ALWAYS formatted as numbers, never letters.
+            # Pass a lambda that always returns None for the get_letter function.
+            exp_part = _format_numeric_exponent(self.exponent, base, lambda x: None, precision)
 
-        # Part 3: Combine them
-        # Handle special cases like a^1 -> a
-        if exp_part == "1":
-            base_str = "a"
-        else:
-            base_str = f"a^{exp_part}"
+        base_str = f"a^{exp_part}" if exp_part != "1" else "a"
 
-        if not coeff_part: # Coeff is 1
-            return base_str
-        if coeff_part == "-": # Coeff is -1
-            return f"-{base_str}"
+        if not coeff_part: return base_str
+        if coeff_part == "-": return f"-{base_str}"
 
-        # Check if we need an explicit multiplication sign
-        # No sign needed if coeff is a number and base_str starts with a letter, e.g., "2a"
-        if (coeff_part.replace('.', '', 1).replace('-', '', 1).isdigit() and base_str.startswith('a')):
-             return f"{coeff_part}{base_str}"
+        # Determine if a '*' is needed
+        if coeff_part.replace('.', '', 1).replace('-', '', 1).isdigit() and base_str.startswith('a'):
+            return f"{coeff_part}{base_str}"
 
         return f"{coeff_part}*{base_str}"

@@ -4,114 +4,94 @@ from decimal import Decimal
 from typing import List, Union
 from .aop_value import AoPValue, AoPTerm
 from .definitions import PracticalLimitError, AoPError
-# aopl_python_impl/aop_operations.py
 
 def simplify_value(value: AoPValue, base: int) -> AoPValue:
+    """A safe, non-recursive function to combine like terms and absorb coefficients."""
     if len(value.terms) <= 1:
+        # Even for a single term, try to absorb its coefficient if possible.
+        if len(value.terms) == 1:
+            term = value.terms[0]
+            if not cmath.isclose(term.coeff, 1.0) and not isinstance(term.exponent, AoPValue):
+                try:
+                    log_coeff = cmath.log(term.coeff) / cmath.log(base)
+                    if cmath.isfinite(log_coeff) and cmath.isclose(log_coeff.imag, 0):
+                        new_exp_val = log_coeff.real + complex(term.exponent)
+                        return AoPValue([AoPTerm(1.0, new_exp_val)])
+                except (ValueError, ZeroDivisionError):
+                    pass # Cannot absorb, return original term.
         return value
 
-    # Use a dictionary to group terms by their exponent.
-    # The key can be a number (for numeric exponents) or a string (for symbolic ones).
+    # Combine like terms
     exp_map = {}
-
     for term in value.terms:
-        key = None
-        if isinstance(term.exponent, AoPValue):
-            # For symbolic exponents, we need a stable, hashable representation.
-            # Recursively simplifying first makes it more stable.
-            simplified_exp = simplify_value(term.exponent, base)
-            key = repr(simplified_exp)
-            exponent_val = simplified_exp
-        else:
-            key = complex(term.exponent)
-            exponent_val = term.exponent
-
+        key = repr(term.exponent)
         if key in exp_map:
             exp_map[key].coeff += term.coeff
         else:
-            exp_map[key] = AoPTerm(term.coeff, exponent_val)
+            exp_map[key] = AoPTerm(term.coeff, term.exponent)
 
-    # Rebuild the list of terms, filtering out any that cancelled to zero.
     new_terms = [t for t in exp_map.values() if not cmath.isclose(t.coeff, 0)]
 
-    # If all terms cancelled, return a canonical zero.
-    if not new_terms:
-        return AoPValue.from_number(0)
-
+    if not new_terms: return AoPValue.from_number(0)
     return AoPValue(new_terms)
+
 def add_values(op1: AoPValue, op2: AoPValue, base: int) -> AoPValue:
+    """Adds two AoPValues by combining their terms and simplifying."""
     return simplify_value(AoPValue(op1.terms + op2.terms), base)
 
 def subtract_values(op1: AoPValue, op2: AoPValue, base: int) -> AoPValue:
+    """Subtracts op2 from op1 by negating op2's terms and adding."""
     neg_op2_terms = [AoPTerm(-t.coeff, t.exponent) for t in op2.terms]
-    return simplify_value(AoPValue(op1.terms + neg_op2_terms), base)
+    return add_values(op1, AoPValue(neg_op2_terms), base)
 
 def multiply_values(op1: AoPValue, op2: AoPValue, base: int) -> AoPValue:
-    # FIX: Default to symbolic multiplication (distributive law).
-    # This is essential for correctness. (t1*t2*...)*(tA*tB*...)
-    if not op1.terms or not op2.terms:
-        return AoPValue()
+    """Symbolically multiplies two AoPValues using the distributive law."""
+    if not op1.terms or not op2.terms: return AoPValue()
 
     new_terms: List[AoPTerm] = []
     for t1 in op1.terms:
         for t2 in op2.terms:
-            # New coefficient is the product of the old ones.
             new_coeff = t1.coeff * t2.coeff
 
-            # New exponent is the sum of the old ones.
-            # Convert exponents to AoPValue to use add_values.
-            exp1_aop = t1.exponent if isinstance(t1.exponent, AoPValue) else AoPValue.from_number(t1.exponent)
-            exp2_aop = t2.exponent if isinstance(t2.exponent, AoPValue) else AoPValue.from_number(t2.exponent)
+            e1_aop = t1.exponent if isinstance(t1.exponent, AoPValue) else AoPValue.from_number(t1.exponent)
+            e2_aop = t2.exponent if isinstance(t2.exponent, AoPValue) else AoPValue.from_number(t2.exponent)
+            new_exp_aop = add_values(e1_aop, e2_aop, base)
 
-            # add_values will correctly handle number+number, number+symbolic, etc.
-            new_exp = add_values(exp1_aop, exp2_aop, base)
+            # If the resulting exponent is just a number, unwrap it to a primitive.
+            final_exp = new_exp_aop
+            if len(new_exp_aop.terms) == 1 and new_exp_aop.terms[0].is_numeric_exponent_zero():
+                final_exp = new_exp_aop.terms[0].coeff
 
-            new_terms.append(AoPTerm(new_coeff, new_exp))
+            new_terms.append(AoPTerm(new_coeff, final_exp))
 
-    # Simplify the resulting sum of new terms.
     return simplify_value(AoPValue(new_terms), base)
 
-def divide_values(op1: AoPValue, op2: AoPValue, base: int) -> AoPValue:
-    try:
-        num1 = op1.to_numerical(base)
-        num2 = op2.to_numerical(base)
-        if cmath.isclose(num2, 0): raise ZeroDivisionError("Division by zero.")
-        return AoPValue.from_number(num1 / num2)
-    except (OverflowError, PracticalLimitError, NotImplementedError, ZeroDivisionError) as e:
-        raise AoPError(f"Cannot perform division: {e}")
-
-# aopl_python_impl/aop_operations.py
-
 def power_value(op1: AoPValue, op2: AoPValue, base: int) -> AoPValue:
-    # Symbolic path: (C*a^E1)^E2 = a^(E2 * (log(C) + E1))
-    # This is the primary path for single-term bases, crucial for hyper-powers.
+    # Symbolic evaluation is only well-defined for a single-term base.
     if len(op1.terms) == 1:
         t1 = op1.terms[0]
         try:
-            # Calculate log_base(C)
-            log_base_C1_aop = AoPValue()
-            if not cmath.isclose(t1.coeff, 0):
-                log_coeff_val = cmath.log(t1.coeff) / cmath.log(base)
-                if not cmath.isfinite(log_coeff_val):
-                    raise PracticalLimitError("Log of coefficient is not finite.")
-                log_base_C1_aop = AoPValue.from_number(log_coeff_val)
+            # Use the identity: (C*a^E1)^op2 = a^(op2 * (log_base(C) + E1))
+            log_coeff_aop = AoPValue.from_number(cmath.log(t1.coeff) / cmath.log(base))
+            e1_aop = t1.exponent if isinstance(t1.exponent, AoPValue) else AoPValue.from_number(t1.exponent)
 
-            # Get E1 as an AoPValue
-            E1_aop = t1.exponent if isinstance(t1.exponent, AoPValue) else AoPValue.from_number(t1.exponent)
+            # This is the term inside the parentheses: (log_base(C) + E1)
+            inner_exp = add_values(log_coeff_aop, e1_aop, base)
 
-            # Form the inner term: log(C) + E1
-            log_base_op1 = add_values(log_base_C1_aop, E1_aop, base)
+            # Now multiply by the outer exponent, op2
+            final_exp = multiply_values(op2, inner_exp, base)
 
-            # Multiply by the outer exponent: E2 * (log(C) + E1)
-            new_exponent = multiply_values(op2, log_base_op1, base)
+            # The result is base^(final_exp), which is represented as 1 * a^(final_exp)
+            # The exponent itself might be a simple number, so we unwrap it.
+            if len(final_exp.terms) == 1 and final_exp.terms[0].is_numeric_exponent_zero():
+                return AoPValue([AoPTerm(1.0, final_exp.terms[0].coeff)])
+            else:
+                return AoPValue([AoPTerm(1.0, final_exp)])
 
-            # The result is base^(new_exponent), which is 1 * a^(new_exponent)
-            return AoPValue([AoPTerm(1.0, new_exponent)])
-        except (ValueError, PracticalLimitError, NotImplementedError):
-            # If symbolic path fails, fall through to numerical attempt
-            pass
+        except (ValueError, ZeroDivisionError, PracticalLimitError):
+            pass # Fall through to numerical if symbolic fails.
 
-    # Numerical fallback for sums of terms or if the symbolic path failed.
+    # Numerical fallback for sums or if the symbolic path fails.
     try:
         num1 = op1.to_numerical(base)
         num2 = op2.to_numerical(base)
@@ -121,3 +101,22 @@ def power_value(op1: AoPValue, op2: AoPValue, base: int) -> AoPValue:
         return AoPValue.from_number(result_num)
     except (PracticalLimitError, OverflowError, ZeroDivisionError, NotImplementedError) as e:
         raise AoPError(f"Cannot evaluate power for expression: {op1!r}^{op2!r} ({e})")
+
+def divide_values(op1: AoPValue, op2: AoPValue, base: int) -> AoPValue:
+    """Divides op1 by op2, equivalent to op1 * (op2^-1)."""
+    try:
+        inverse_op2 = power_value(op2, AoPValue.from_number(-1), base)
+        return multiply_values(op1, inverse_op2, base)
+    except AoPError:
+        try:
+            num1 = op1.to_numerical(base)
+            num2 = op2.to_numerical(base)
+            if cmath.isclose(num2, 0): raise ZeroDivisionError("Division by zero.")
+            return AoPValue.from_number(num1 / num2)
+        except (OverflowError, PracticalLimitError, NotImplementedError, ZeroDivisionError) as e:
+            raise AoPError(f"Cannot perform division: {e}")
+
+def final_simplify(value: AoPValue, base: int) -> AoPValue:
+    """The master simplification function called once at the end of evaluation."""
+    simplified = simplify_value(value, base)
+    return simplified

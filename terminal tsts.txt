@@ -1,0 +1,86 @@
+
+ltrs "c^2" # Expected: f
+ltrs "2^j"
+ltrs "d^a" # Expected: O
+ltrs "b^c" # Expected: a^2c
+ltrs "2^3^2" # Expected: 512
+ltrs "j^j" # Expected: a^k
+ltrs "c^b^a" # Expected: a^3t
+ltrs "b^c^2" # Expected: a^2f
+ltrs "j^j^j" 
+ltrs "a^b^c^d" 
+ltrs "a^(b*c)" # Expected: a^e
+ltrs "2*a^(3*b)"
+ltrs a^4dy  # Expected: a^4D
+ltrs a^ccca # Expected: a^j
+ltrs a^ee # Expected: a^j
+ltrs abcd^abcd # Expected: a^k
+ltrs "j^j^j^j"
+ltrs --base 2 "ace" 
+ltrs --base 2 "h/d" 
+ltrs --base 2 "8a"
+ltrs --base 2 "6b" 
+ltrs --base 2 "b^c" 
+ltrs --base 2 "c^b"
+ltrs --base 2 "d^a"
+ltrs --base 2 "b^b^2"
+ltrs --base 2 "(b^c)^2" 
+ltrs --base 2 "j^b" 
+ltrs --base 2 "a^c^b" 
+ltrs --base 2 --precision 4 "a^1.5"
+ltrs --base 2 --precision 4 "a^i" 
+ltrs --base 2 --precision 4 "i^i"
+ltrs --base 2 "j*j*j" 
+ltrs --base 2 "j^j" 
+ltrs --base 2 "Y^Y" 
+ltrs --base 2 "a^a^a^b"
+ltrs "j^j" 
+ltrs "a^(j^j)" 
+ltrs "a^a^a^(3d + d)"
+ltrs "a^(f*Y + c)" 
+ltrs "a^(B*j + c)" 
+ltrs "a^(b^b)"
+ltrs "a^(3a + a)" 
+ltrs --base 2 "a^(a^h)" 
+ltrs --base 2 "a^a^(a^h)" 
+ltrs --base 2 "a^a^a^(a^h)" 
+ltrs "3^3^3^3"
+ltrs "3^(3^(3^(3^3)))" # Expected: Graham G1 approximation
+ltrs --precision 0 "e^e^e^e"
+ltrs "e^e^e^e^e"
+ltrs --base 2 "a^a^(j*j)" # Expected: Double exponential 2^2^100
+ltrs --base 2 "a^a^a^a^a^(j*j)" # Expected: Tower function
+ltrs "googol = a^b; googol^googol" # Expected: Variable assignment googol
+ltrs "x = j^j; y = x^x; z = y^y; z" # Expected: Chain operations
+ltrs "a^a^a^a^a^a^a^a^a^a^a^a^a^a^a^a^a^a^a^a" # Expected: Deep nesting limit
+ltrs "Y^Y^Y^Y^Y^Y^Y^Y^Y^Y" # Expected: Maximum letters
+ltrs "(a^b) + (a^b)" # Expected: Arithmetic with astronomical
+ltrs "(a^b) * (a^c)" # Expected: Multiplication with astronomical
+ltrs "a^d" # Expected: Cross-base consistency (base 10)
+ltrs --base 2 "a^d" # Expected: Cross-base consistency (base 2)
+ltrs "(a^b)^c" # Expected: Identity (a^b)^c = a^(b*c)
+ltrs "a^(b*c)" # Expected: Identity verification
+ltrs "3^3^3" # Expected: Complexity threshold
+ltrs "3^3^3^3" # Expected: Complexity threshold
+ltrs --base 2 "b^b^b^b" # Expected: Base 2 complexity
+ltrs --base 5 "b^b^b^b" # Expected: Base 5 complexity
+ltrs --base 2 "a^a^a^(a^256)" # Expected: A(4,4) scale
+ltrs "3^3^3^3" # Expected: Graham scale
+ltrs --precision 10 "a^(1.5)" # Expected: Precision with large numbers
+ltrs "a^#pi" 
+ltrs "a^(2+3#i)" # Expected: Complex numbers
+ltrs "3^3^3^3"
+ltrs "3^(3^(3^(3^3)))"
+ltrs --base 2 "a^a^(a^h)"
+ltrs --base 2 "a^a^a^(a^h)"
+ltrs "a^a^(m*j - g)"
+ltrs "y^a"
+ltrs "yy^a"
+ltrs "y^ab"
+ltrs "a^(a)" # Should be 10^10 = j
+ltrs "a^(aa)" 
+ltrs "(ab)^c" 
+ltrs "e/b" # Should be 100000/100 = 1000 = c
+ltrs "a^b^c" # Right associative: a^(b^c)
+ltrs "(a^b)^c" # Left associative equivalent
+ltrs "a+b^c" # Addition with exponentiation

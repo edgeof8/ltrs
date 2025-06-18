@@ -3,7 +3,7 @@ import re
 from .definitions import OutputFormatMode, OPERATORS, TOKEN_REGEX, AoPError, LETTER_TO_EXPONENT_MAP, EXPONENT_TO_LETTER_MAP
 from .aop_value import AoPValue
 from .aop_parser import tokenize_expression, infix_to_rpn, evaluate_rpn
-from .aop_operations import simplify_value
+from .aop_operations import final_simplify
 from .aop_term_handler import get_term_value
 # The formatter is gone, logic is in aop_value.to_str now.
 
@@ -31,7 +31,8 @@ class AoP_Calculator:
             tokens = tokenize_expression(expression, self.token_regex)
             rpn = infix_to_rpn(tokens, self.operators_map)
             result = evaluate_rpn(rpn, self.variables, get_term_value, self.base)
-            simplified_result = simplify_value(result, self.base)
+            # FIX: Use the new controlled simplification pipeline
+            simplified_result = final_simplify(result, self.base)
 
             def get_letter_func(exp: int) -> str:
                 return self.exponent_to_letter.get(exp, "")
