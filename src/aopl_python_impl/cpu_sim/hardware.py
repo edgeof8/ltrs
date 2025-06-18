@@ -97,12 +97,10 @@ class CPU:
 
     def _precompute_lookup_table(self):
         """Precomputes products for small numbers to populate the lookup table."""
-        # print(f"Precomputing lookup table for {self.LUT_CHUNK_SIZE}-bit chunks...")
         limit = 1 << self.LUT_CHUNK_SIZE
         for i in range(limit):
             for j in range(limit):
                 self.lookup_table[(i, j)] = i * j
-        # print("Lookup table precomputation complete.")
 
     def _get_chunks(self, n: int, chunk_size: int) -> List[int]:
         """Helper to break a number into chunks of chunk_size bits."""
@@ -231,7 +229,6 @@ class CPU:
         # LUT_CHUNK_SIZE is 8, so limit is 1 << 8 = 256
         # This means numbers from 0 to 255 can be looked up directly.
         if n1 < (1 << self.LUT_CHUNK_SIZE) and n2 < (1 << self.LUT_CHUNK_SIZE):
-            # print(f"Dispatch: Direct LUT ({n1} * {n2})") # Debug
             return self.lookup_table.get((n1, n2), n1 * n2) # Fallback to actual mult if somehow not in table (shouldn't happen)
 
         # Python 3.10+ for n.bit_count()
@@ -247,7 +244,6 @@ class CPU:
 
         # Rule 1: Karatsuba's Domain
         if max_bit_length > self.KARATSUBA_THRESHOLD_BITS:
-            # print(f"Dispatch: Karatsuba (bit_length={max_bit_length})") # Debug
             return self._multiply_karatsuba(n1, n2)
 
         # NEW Rule 1.5: Chunking LUT for moderate sizes if not caught by specific rules below
@@ -266,22 +262,18 @@ class CPU:
 
         if (n1_is_dense and n2_is_very_sparse) or \
            (n2_is_dense and n1_is_very_sparse):
-            # print(f"Dispatch: Schoolbook (n1_pop={n1_popcount}, n2_pop={n2_popcount}, max_bl={max_bit_length})") # Debug
             return self._multiply_schoolbook(n1, n2)
 
         # Rule 3: AoP's Niche (Sparse * Sparse)
         if n1_is_very_sparse and n2_is_very_sparse:
-            # print(f"Dispatch: AoP (Sparse*Sparse) (n1_pop={n1_popcount}, n2_pop={n2_popcount}, max_bl={max_bit_length})") # Debug
             return self._multiply_aop_optimized(n1, n2)
 
         # Rule 4: Default for numbers up to KARATSUBA_THRESHOLD_BITS that don't meet specific niche criteria
         # Reverted to AoP_Optimized as the general default for this range, as LookupTable (chunking)
         # became slower than AoP after the "fairness" correction for its summation.
-        # print(f"Dispatch: AoP (Default for moderate size) (max_bl={max_bit_length})") # Debug
         return self._multiply_aop_optimized(n1, n2)
 
         # Old Rule for Chunking LUT Default:
-        # # print(f"Dispatch: Chunking LUT (Default for moderate size) (max_bl={max_bit_length})") # Debug
         # return self._multiply_lookup_table(n1, n2)
         # This was based on the previous performance of _multiply_lookup_table before it used _add_primitive.
         # Now, AoP_Optimized is generally better than the "fair" _multiply_lookup_table for these sizes.

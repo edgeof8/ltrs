@@ -1,0 +1,1237 @@
+===== C:/Users/Administrator/Desktop/ltrs/src\aopl_python_impl\aop_ai_explainer.py =====
+# src/aopl_python_impl/aop_ai_explainer.py
+import os
+import requests
+import json
+
+# Environment variable for the API key
+API_KEY_ENV_VAR = "OPENROUTER_API_KEY"
+API_URL = "https://openrouter.ai/api/v1/chat/completions"
+DEFAULT_MODEL = "deepseek/deepseek-chat-v3-0324:free" # Updated to user's specific free model ID
+
+def get_explanation(expression: str, result: str, base: int, model: str = DEFAULT_MODEL) -> str:
+    """
+    Contacts an AI service to get an explanation for an AoP calculation.
+    """
+    api_key = os.environ.get(API_KEY_ENV_VAR)
+    if not api_key:
+        return (f"Error: AI Explainer feature requires an API key. "
+                f"Please set the {API_KEY_ENV_VAR} environment variable.")
+
+    system_prompt = f"""
+You are an expert mathematician and computer scientist assisting a user of a special calculator called "The Alphabet of Powers" (AoP).
+Your task is to provide a clear, concise, and insightful explanation for the result of a given calculation.
+
+The AoP system works as follows:
+- The base of the system is currently {base}.
+- Letters 'a' through 'z' represent the base to the power of 1 through 26 respectively.
+  - Example (base 10): a = 10^1, b = 10^2, c = 10^3, ..., z = 10^26.
+- Words are multiplicative: 'cat' means c * a * t. In base 10, this is 10^3 * 10^1 * 10^20 = 10^(3+1+20) = 10^24, which is 'x'.
+- Standard math operators (+, -, *, /, ^) and functions (sin, cos, tan, sqrt, log, ln, log2, asin, acos, atan, sinh, cosh, tanh) are supported.
+- Special constants like #pi (π), #e (Euler's number), and #phi (φ, the Golden Ratio), #tau (τ), #sqrt2 exist.
+- An output of 'AlphaZone(...)' means the number is too large for the a-z letter system (i.e., exponent > 26 for a coefficient of 1).
+- An output of 'Unity(1)' represents the numerical value 1 (i.e., base^0).
+- Numerical results are often preferred for simple numbers, but AoP letter form is used for values that fit the system.
+
+Your explanation should:
+1. Briefly state or confirm the result in plain terms if it's not obvious.
+2. Explain the evaluation process, especially how AoP terms were interpreted and simplified according to the current base.
+3. If applicable, highlight any interesting mathematical properties, provide context or scale for large/small numbers, or explain why an error might have occurred if the result indicates one.
+4. Be encouraging, educational, and easy to understand. Avoid overly technical jargon unless necessary, and explain it if used.
+5. If the expression is simple, keep the explanation concise. If complex, break it down.
+"""
+
+    user_prompt = f"The user entered the expression: `{expression}`\nThe calculator, with base {base}, returned the result: `{result}`\nPlease provide your explanation."
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://github.com/placeholder-username/letter-powers",
+        "X-Title": "AoP Ltrs Calculator AI Explainer"
+    }
+
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system_prompt.strip()},
+            {"role": "user", "content": user_prompt.strip()}
+        ],
+        "temperature": 0.7,
+        "max_tokens": 500
+    }
+
+    try:
+        print("🤖 AI is thinking...")
+        response = requests.post(API_URL, headers=headers, json=payload, timeout=25)
+        response.raise_for_status()
+
+        response_data = response.json()
+        if 'choices' in response_data and response_data['choices']:
+            explanation = response_data['choices'][0]['message']['content']
+            return f"\n🤖 AI Explanation:\n{explanation.strip()}"
+        else:
+            return f"Error: AI service returned an unexpected response format: {response_data}"
+
+    except requests.exceptions.Timeout:
+        return "Error: The request to the AI service timed out."
+    except requests.exceptions.HTTPError as http_err:
+        return f"Error: AI service returned an HTTP error: {http_err} - Response: {response.text}"
+    except requests.exceptions.RequestException as req_err:
+        return f"Error: Could not connect to the AI service. ({req_err})"
+    except KeyError:
+        return f"Error: AI service returned an incomplete or malformed response: {response.json()}"
+    except Exception as e:
+        return f"An unexpected error occurred while getting the AI explanation: {type(e).__name__}"
+    finally:
+        pass
+
+if __name__ == '__main__':
+    if os.environ.get(API_KEY_ENV_VAR):
+        print("Testing AI Explainer (this will make a real API call if key is valid):")
+
+        test_expr = "100a * 10b"
+        test_result_base10 = "f"
+        print(f"\n--- Explaining: '{test_expr}' -> '{test_result_base10}' (base 10) ---")
+        explanation1 = get_explanation(test_expr, test_result_base10, 10)
+        print(explanation1)
+
+        test_expr_2 = "cat / a"
+        test_result_2_base10 = "w"
+        print(f"\n--- Explaining: '{test_expr_2}' -> '{test_result_2_base10}' (base 10) ---")
+        explanation2 = get_explanation(test_expr_2, test_result_2_base10, 10)
+        print(explanation2)
+
+        test_expr_3 = "a+b"
+        test_result_3_base5 = "30"
+        print(f"\n--- Explaining: '{test_expr_3}' -> '{test_result_3_base5}' (base 5) ---")
+        explanation3 = get_explanation(test_expr_3, test_result_3_base5, 5)
+        print(explanation3)
+    else:
+        print(f"{API_KEY_ENV_VAR} not set. Skipping live AI explainer test.")
+
+
+===== C:/Users/Administrator/Desktop/ltrs/src\aopl_python_impl\aop_calculator.py =====
+# aopl_python_impl/aop_calculator.py
+import re
+from .definitions import OutputFormatMode, OPERATORS, TOKEN_REGEX, AoPError, LETTER_TO_EXPONENT_MAP, EXPONENT_TO_LETTER_MAP
+from .aop_value import AoPValue
+from .aop_parser import tokenize_expression, infix_to_rpn, evaluate_rpn
+from .aop_operations import simplify_value # Import from the new engine
+from .aop_term_handler import get_term_value
+from .aop_formatter import format_output
+
+class AoP_Calculator:
+    # (Class implementation is correct and remains unchanged)
+    def __init__(self, base: int = 10):
+        self.base = base
+        self.letter_to_exponent = LETTER_TO_EXPONENT_MAP
+        self.exponent_to_letter = EXPONENT_TO_LETTER_MAP
+        self.token_regex = TOKEN_REGEX
+        self.variables: dict[str, AoPValue] = {}
+        self.output_format_mode = OutputFormatMode.AUTO
+        self.precision = 10
+        self.operators_map = OPERATORS.copy()
+
+    def set_power_associativity(self, mode: str):
+        if mode.lower() in ('right', 'left'):
+            self.operators_map['^']['associativity'] = mode.lower()
+            self.operators_map['**']['associativity'] = mode.lower()
+        else:
+            raise ValueError("Invalid associativity mode. Use 'left' or 'right'.")
+
+    def evaluate_expression(self, expression: str) -> str:
+        try:
+            tokens = tokenize_expression(expression, self.token_regex)
+            rpn = infix_to_rpn(tokens, self.operators_map)
+            result = evaluate_rpn(rpn, self.variables, get_term_value, self.base)
+            simplified_result = simplify_value(result) # Removed base argument
+            def get_letter_func(exp: int) -> str:
+                return self.exponent_to_letter.get(exp, "")
+            return format_output(simplified_result, self.base, get_letter_func, self.output_format_mode, self.precision)
+        except (AoPError, ZeroDivisionError, OverflowError, ValueError, NotImplementedError) as e:
+            return str(e)
+
+
+===== C:/Users/Administrator/Desktop/ltrs/src\aopl_python_impl\aop_calculator_cli.py =====
+# aopl_python_impl/aop_calculator_cli.py
+
+import sys
+import argparse
+from .aop_calculator import AoP_Calculator
+from .definitions import OutputFormatMode
+
+def main():
+    parser = argparse.ArgumentParser(description="Alphabet of Powers Calculator")
+    parser.add_argument("expression", type=str, help="The expression to evaluate")
+    parser.add_argument("--base", type=int, default=10, help="Numerical base for calculations (default: 10)")
+    parser.add_argument("--mode", type=str, choices=["auto", "aop", "sci", "num"], default="auto", help="Output format mode (default: auto)")
+    parser.add_argument("--precision", type=int, default=10, help="Precision for numerical output (default: 10)")
+    args = parser.parse_args()
+
+    mode_map = {
+        "auto": OutputFormatMode.AUTO,
+        "aop": OutputFormatMode.AOP,
+        "sci": OutputFormatMode.SCIENTIFIC,
+        "num": OutputFormatMode.NUMERICAL
+    }
+    calculator = AoP_Calculator(base=args.base)
+
+    calculator.output_format_mode = mode_map[args.mode]
+    calculator.precision = args.precision
+
+    try:
+        result = calculator.evaluate_expression(args.expression)
+        if result.startswith("Error:"):
+            print(result, file=sys.stderr) # Print the specific error to stderr
+            sys.exit(1) # Exit with error code
+        else:
+            print(result) # Print successful result to stdout
+    except Exception as e: # Catch any other unexpected exceptions
+        print(f"Unexpected system error: {str(e)}", file=sys.stderr)
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()
+
+
+===== C:/Users/Administrator/Desktop/ltrs/src\aopl_python_impl\aop_core.py =====
+# aop_core.py - Simplified functional interface
+# This module provides a simple, function-based API that delegates
+# to an instance of the AoP_Calculator class from aop_calculator.py.
+# For more advanced usage or stateful calculations (like variables),
+# import and use AoP_Calculator directly from aop_calculator.py.
+
+from .aop_calculator import AoP_Calculator
+from .definitions import ValueTuple # Often useful for type hinting if users interact with raw values
+from .interfaces import CalculatorInterface # Import the protocol
+
+# Create a single, module-level instance to be reused.
+# Type hint it with the protocol for better type safety and clarity.
+_shared_aop_calculator: CalculatorInterface = AoP_Calculator()
+
+def evaluate_expression(expression_str: str) -> str:
+    """
+    Evaluates a complete Alphabet of Powers expression string using a shared,
+    reset calculator instance. This function ensures stateless behavior for each call
+    by clearing variables from the shared instance. For persistent variables
+    across calls, create and use an AoP_Calculator instance directly.
+
+    Args:
+        expression_str: The AoP expression string to evaluate.
+
+    Returns:
+        A string representing the calculated AoP value or an error message.
+    """
+    # Clear any variables from previous calls to ensure stateless behavior for this API
+    _shared_aop_calculator.variables.clear()
+    return _shared_aop_calculator.evaluate_expression(expression_str)
+
+# evaluate_simple_word function was removed as it's redundant.
+# evaluate_expression can handle simple words.
+
+# Add other simple pass-through functions if desired, for example:
+# def get_term_value_simple(term: str) -> ValueTuple:
+#     # Ensure statelessness if using the shared calculator
+#     _shared_aop_calculator.variables.clear()
+#     # Note: get_term_value in AoP_Calculator might not exist anymore or its signature changed.
+#     # This example assumes it would be adapted or AoP_Calculator would provide a suitable method.
+#     # For now, direct use of aop_term_handler.get_term_value with an empty var dict is better for statelessness.
+#     from .aop_term_handler import get_term_value
+#     return get_term_value(term, {})
+
+
+# Note: For any functions that might rely on or modify calculator state (like variables),
+# it's generally better to require the user to instantiate and use AoP_Calculator directly.
+# This simplified API in aop_core.py is for very basic, stateless operations.
+
+
+===== C:/Users/Administrator/Desktop/ltrs/src\aopl_python_impl\aop_engine.py =====
+# aopl_python_impl/aop_engine.py
+import cmath, math
+from decimal import Decimal, getcontext
+from typing import Union, List # Added List for type hints
+from .aop_value import AoPValue, AoPTerm, PracticalLimitError
+
+getcontext().prec = 100
+
+def simplify_value(val: AoPValue, base: int) -> AoPValue:
+    if len(val.terms) <= 1: return val
+    grouped = {}
+    new_terms: List[AoPTerm] = [] # Ensure new_terms is typed
+    for term in val.terms:
+        key_part: Union[complex, str]
+        if isinstance(term.exponent, (Decimal, complex)):
+            key_part = complex(term.exponent)
+        else: # AoPValue
+            key_part = repr(term.exponent)
+
+        key = (key_part, type(term.exponent)) # Use type as well for robust grouping
+
+        if key not in grouped: grouped[key] = []
+        grouped[key].append(term)
+
+    for key_data, term_list in grouped.items():
+        total_coeff = sum(t.coeff for t in term_list)
+        if not cmath.isclose(total_coeff, 0):
+            # Use the original exponent from the first term in the group
+            new_terms.append(AoPTerm(total_coeff, term_list[0].exponent))
+
+    return AoPValue(new_terms)
+
+def add_values(v1: AoPValue, v2: AoPValue, base: int) -> AoPValue:
+    return simplify_value(AoPValue(v1.terms + v2.terms), base)
+
+def subtract_values(v1: AoPValue, v2: AoPValue, base: int) -> AoPValue:
+    neg_v2_terms = [AoPTerm(-t.coeff, t.exponent) for t in v2.terms]
+    return simplify_value(AoPValue(v1.terms + neg_v2_terms), base)
+
+def multiply_values(v1: AoPValue, v2: AoPValue, base: int) -> AoPValue:
+    new_terms: List[AoPTerm] = []
+    for t1 in v1.terms:
+        for t2 in v2.terms:
+            new_coeff = t1.coeff * t2.coeff
+
+            new_exp_val: Union[AoPValue, complex, Decimal]
+            if isinstance(t1.exponent, AoPValue) or isinstance(t2.exponent, AoPValue):
+                exp1_aop = AoPValue.from_term(AoPTerm(complex(1.0), t1.exponent)) if not isinstance(t1.exponent, AoPValue) else t1.exponent
+                exp2_aop = AoPValue.from_term(AoPTerm(complex(1.0), t2.exponent)) if not isinstance(t2.exponent, AoPValue) else t2.exponent
+                new_exp_val = add_values(exp1_aop, exp2_aop, base)
+            else: # Both numeric
+                if isinstance(t1.exponent, complex) or isinstance(t2.exponent, complex):
+                    new_exp_val = complex(t1.exponent) + complex(t2.exponent)
+                else: # Both Decimal
+                    new_exp_val = Decimal(t1.exponent) + Decimal(t2.exponent)
+            new_terms.append(AoPTerm(new_coeff, new_exp_val))
+    return simplify_value(AoPValue(new_terms), base)
+
+def power_value(base_val_aop: AoPValue, power_val_aop: AoPValue, system_base: int) -> AoPValue:
+    if len(base_val_aop.terms) != 1: raise NotImplementedError("Power of a sum (multi-term AoPValue base) is not supported.")
+    base_term = base_val_aop.terms[0]
+
+    try:
+        power_numerical = power_val_aop.to_numerical(system_base) # complex
+
+        new_coeff = base_term.coeff ** power_numerical # complex = complex ** complex
+
+        current_base_exp = base_term.exponent # Union[AoPValue, complex, Decimal]
+        new_exponent_val: Union[AoPValue, complex, Decimal]
+
+        if isinstance(current_base_exp, AoPValue):
+            new_exponent_val = multiply_values(AoPValue.from_number(power_numerical), current_base_exp, system_base)
+        else: # current_base_exp is numeric (Decimal or complex)
+            if isinstance(current_base_exp, complex) or cmath.isclose(power_numerical.imag, 0) == False : # if current_base_exp is complex OR power_numerical is complex
+                new_exponent_val = complex(current_base_exp) * power_numerical
+            else: # Both are effectively real, use Decimal for precision
+                new_exponent_val = Decimal(str(current_base_exp)) * Decimal(str(power_numerical.real))
+
+
+        return AoPValue.from_term(AoPTerm(new_coeff, new_exponent_val))
+
+    except (OverflowError, PracticalLimitError):
+        if isinstance(base_term.exponent, AoPValue):
+            raise NotImplementedError("Recursive base to symbolic/recursive power not fully implemented.")
+
+        log_coeff_part: Union[Decimal, complex]
+        if cmath.isclose(base_term.coeff, 1.0):
+            log_coeff_part = Decimal(0)
+        elif base_term.coeff.imag != 0 or base_term.coeff.real < 0: # Coeff is complex or negative
+            log_coeff_part = cmath.log(base_term.coeff) / math.log(system_base) # Results in complex
+        else: # Coeff is positive real
+            log_coeff_part = Decimal(str(base_term.coeff.real)).ln() / Decimal(str(system_base)).ln()
+
+
+        effective_base_exponent: Union[Decimal, complex]
+        current_base_exp_numeric = base_term.exponent # Known to be numeric here (Decimal or complex)
+
+        if isinstance(log_coeff_part, complex) or isinstance(current_base_exp_numeric, complex):
+            effective_base_exponent = complex(log_coeff_part) + complex(current_base_exp_numeric)
+        else: # Both are Decimal
+            effective_base_exponent = log_coeff_part + Decimal(str(current_base_exp_numeric)) # Ensure current_base_exp_numeric is Decimal
+
+        new_final_exponent_aop = multiply_values(AoPValue.from_number(effective_base_exponent), power_val_aop, system_base)
+
+        return AoPValue.from_term(AoPTerm(complex(1.0), new_final_exponent_aop))
+
+def divide_values(v1: AoPValue, v2: AoPValue, base: int) -> AoPValue:
+    if len(v2.terms) == 1 and cmath.isclose(v2.terms[0].coeff, 0) and isinstance(v2.terms[0].exponent, (Decimal, complex, int, float)) and v2.terms[0].exponent == 0 :
+        # Check if v2 is effectively a single term equal to zero
+         raise ZeroDivisionError("Division by zero.")
+    try:
+        v2_numerical = v2.to_numerical(base)
+        if cmath.isclose(v2_numerical, 0j): raise ZeroDivisionError("Division by zero.")
+    except (OverflowError, PracticalLimitError): pass
+    return multiply_values(v1, power_value(v2, AoPValue.from_number(Decimal(-1)), base), base)
+
+
+===== C:/Users/Administrator/Desktop/ltrs/src\aopl_python_impl\aop_formatter.py =====
+# aopl_python_impl/aop_formatter.py
+import math, cmath
+from decimal import Decimal
+from typing import Callable, Optional, Union, List # Import List
+from .aop_value import AoPValue, AoPTerm, PracticalLimitError # Import AoPTerm and PracticalLimitError
+from .definitions import OutputFormatMode, LETTER_TO_EXPONENT_MAP as LE_MAP, EXPONENT_TO_LETTER_MAP as EL_MAP
+
+def _complex_to_str(c: complex, precision: int) -> str:
+    # This function is stable and correct
+    if cmath.isclose(c.imag, 0):
+        real_part = c.real
+        if cmath.isclose(real_part, round(real_part)): return str(int(round(real_part)))
+        return f"{real_part:.{precision}g}".rstrip('0').rstrip('.')
+    if cmath.isclose(c, 0j): return "0"
+    if cmath.isclose(c.real, 0):
+        imag_str = "j" if cmath.isclose(abs(c.imag), 1.0) else f"{abs(c.imag):.{precision}g}".rstrip('0').rstrip('.') + "j"
+        return f"{'-' if c.imag < 0 else ''}{imag_str}"
+    r_str = f"{c.real:.{precision}g}".rstrip('0').rstrip('.')
+    imag_str = "j" if cmath.isclose(abs(c.imag), 1.0) else f"{abs(c.imag):.{precision}g}".rstrip('0').rstrip('.') + "j"
+    return f"({r_str}{'+' if c.imag > 0 else '-'}{imag_str})"
+
+def _represent_numeric_exponent_as_coeff_letter_string(exp_int: int, base: int) -> Optional[str]:
+    if exp_int <= 0: return None
+    best_representation: Optional[str] = None
+    original_len = len(str(exp_int))
+    for letter_aop_exp_val in sorted(EL_MAP.keys(), reverse=True):
+        if letter_aop_exp_val <= 0: continue
+        letter_char = EL_MAP[letter_aop_exp_val]
+        try: letter_numerical_value = base ** letter_aop_exp_val
+        except OverflowError: continue
+        if letter_numerical_value > exp_int or exp_int % letter_numerical_value != 0: continue
+        coeff_K = exp_int // letter_numerical_value
+        current_repr = f"{coeff_K}{letter_char}" if coeff_K != 1 else letter_char
+        if best_representation is None or len(current_repr) < len(best_representation):
+            best_representation = current_repr
+    if best_representation and len(best_representation) < original_len:
+        return best_representation
+    return None
+
+def _represent_numeric_exponent(exp: Union[Decimal, complex], base: int, get_letter: Callable[[int], str], precision: int) -> str:
+    is_int_real = (isinstance(exp, Decimal) and exp == exp.to_integral_value()) or \
+                  (isinstance(exp, complex) and cmath.isclose(exp.imag, 0) and cmath.isclose(exp.real, round(exp.real)))
+
+    if is_int_real:
+        exp_int = int(round(exp.real)) if isinstance(exp, complex) else int(exp)
+        if letter := get_letter(exp_int): return letter
+
+        if factored := _represent_numeric_exponent_as_coeff_letter_string(exp_int, base): return f"a^{factored}"
+
+        return f"a^{exp_int}"
+
+    return f"a^({_complex_to_str(complex(exp), precision)})" # Ensure exp is complex for _complex_to_str
+
+def format_term(term: AoPTerm, base: int, get_letter: Callable[[int], str], mode: OutputFormatMode, precision: int) -> str:
+    coeff_str = ""
+    if not cmath.isclose(term.coeff, 1.0) or (isinstance(term.exponent, (Decimal, complex, int, float)) and term.exponent == 0): # Show coeff if exp is 0, even if coeff is 1
+        coeff_str = _complex_to_str(term.coeff, precision)
+
+    is_exp_zero = False
+    if isinstance(term.exponent, (Decimal, complex, int, float)): # int, float should be converted by AoPTerm
+        if isinstance(term.exponent, complex):
+            is_exp_zero = cmath.isclose(term.exponent, 0j)
+        elif isinstance(term.exponent, Decimal):
+            is_exp_zero = term.exponent.is_zero()
+        elif isinstance(term.exponent, (int, float)): # Should have been converted to Decimal
+            is_exp_zero = math.isclose(term.exponent, 0)
+
+    if is_exp_zero: return coeff_str or "1" # If coeff was 1 and exp is 0, result is "1"
+
+    exp_str = ""
+    if isinstance(term.exponent, AoPValue):
+        # Pass mode to recursive calls
+        exp_str = f"({format_output(term.exponent, base, get_letter, mode, precision)})"
+    else: # Numeric exponent (Decimal or complex)
+        exp_str = _represent_numeric_exponent(term.exponent, base, get_letter, precision)
+
+    if not coeff_str: return exp_str # Handles 1 * a^E or 1 * (recursive)
+
+    # Determine operator: implicit for single letter or a^letter, explicit "*" otherwise
+    op = ""
+    # If exp_str is like "a", "b", "a^k", "a^2c" (starts with 'a' and is simple)
+    if exp_str.startswith('a') and (len(exp_str) == 1 or (exp_str[1] == '^' and not '(' in exp_str)):
+        op = ""
+    elif exp_str.startswith('('): # For recursive exponents like (a^b)
+        op = ""
+    else:
+        op = "*"
+
+    return f"{coeff_str}{op}{exp_str}"
+
+def format_output(value: AoPValue, base: int, get_letter: Callable[[int], str], mode: OutputFormatMode, precision: int) -> str:
+    if not value.terms: return "0"
+
+    # Try to convert to a single number first for AUTO mode
+    if mode == OutputFormatMode.AUTO and len(value.terms) > 1:
+        try:
+            num = value.to_numerical(base)
+            return _complex_to_str(num, precision)
+        except (OverflowError, PracticalLimitError):
+            pass # Fallback to symbolic sum
+
+    # Format as a sum of terms
+    parts = []
+    for i, term in enumerate(value.terms):
+        term_str = format_term(term, base, get_letter, mode, precision) # Pass mode
+        if term_str == "0" and len(value.terms) > 1 : continue # Skip zero terms in a sum unless it's the only term
+
+        if i > 0 :
+            # Check if the term itself starts with a minus (e.g. from a negative coefficient)
+            if term_str.startswith('-'):
+                parts.append("-")
+                term_str = term_str[1:] # Remove the leading minus for spacing
+            elif term_str.startswith('(') and term_str[1] == '-': # Handles complex like (-1+j)
+                 parts.append("+") # Still add plus for clarity before a negative complex
+            elif term.coeff.real >= 0 and term.coeff.imag == 0: # Positive real coefficient
+                 parts.append("+")
+            elif term.coeff.imag !=0 : # For complex numbers, always add a plus if not first term
+                 parts.append("+")
+
+
+        parts.append(term_str)
+
+    if not parts: return "0" # If all terms were zero
+    return " ".join(parts)
+
+
+===== C:/Users/Administrator/Desktop/ltrs/src\aopl_python_impl\aop_operations.py =====
+# aopl_python_impl/aop_operations.py
+import cmath, math
+from decimal import Decimal, getcontext
+from typing import Union, List
+from .aop_value import AoPValue, AoPTerm, PracticalLimitError
+
+getcontext().prec = 100
+
+def simplify_value(val: AoPValue) -> AoPValue:
+    if len(val.terms) <= 1: return val
+    grouped = {}
+    for term in val.terms:
+        key = repr(term.exponent)
+        grouped.setdefault(key, []).append(term)
+    new_terms = [AoPTerm(sum(t.coeff for t in term_list), term_list[0].exponent) for term_list in grouped.values() if not cmath.isclose(sum(t.coeff for t in term_list), 0)]
+    return AoPValue(new_terms)
+
+def add_values(v1: AoPValue, v2: AoPValue, base: int = 10) -> AoPValue: return simplify_value(AoPValue(v1.terms + v2.terms))
+def subtract_values(v1: AoPValue, v2: AoPValue, base: int = 10) -> AoPValue: return simplify_value(AoPValue(v1.terms + [AoPTerm(-t.coeff, t.exponent) for t in v2.terms]))
+
+def multiply_values(v1: AoPValue, v2: AoPValue, base: int = 10) -> AoPValue:
+    new_terms = []
+    for t1 in v1.terms:
+        for t2 in v2.terms:
+            new_coeff = t1.coeff * t2.coeff
+            exp1_aop = t1.exponent if isinstance(t1.exponent, AoPValue) else AoPValue.from_term(AoPTerm(1.0, t1.exponent))
+            exp2_aop = t2.exponent if isinstance(t2.exponent, AoPValue) else AoPValue.from_term(AoPTerm(1.0, t2.exponent))
+            new_exp_aop = add_values(exp1_aop, exp2_aop, base)
+            if len(new_exp_aop.terms) == 1:
+                new_terms.append(AoPTerm(new_coeff, new_exp_aop.terms[0].exponent))
+            else:
+                new_terms.append(AoPTerm(new_coeff, new_exp_aop))
+    return simplify_value(AoPValue(new_terms))
+
+def power_value(base_val: AoPValue, power_val: AoPValue, base: int) -> AoPValue:
+    if len(base_val.terms) != 1: raise NotImplementedError("Power of a sum is not supported.")
+    base_term = base_val.terms[0]
+    try:
+        power_num = power_val.to_numerical(base)
+        new_coeff = base_term.coeff ** power_num
+        if isinstance(base_term.exponent, AoPValue):
+            new_exp = multiply_values(AoPValue.from_number(power_num), base_term.exponent, base)
+        else:
+            # Type-safe multiplication of exponents
+            if isinstance(base_term.exponent, complex) or not cmath.isclose(power_num.imag, 0):
+                new_exp = complex(base_term.exponent) * power_num
+            else:
+                new_exp = Decimal(str(base_term.exponent)) * Decimal(str(power_num.real))
+        return AoPValue.from_term(AoPTerm(new_coeff, new_exp))
+    except (OverflowError, PracticalLimitError):
+        if isinstance(base_term.exponent, AoPValue): raise NotImplementedError("Recursive base to recursive power not supported.")
+
+        if base_term.coeff.imag != 0 or base_term.coeff.real < 0:
+            raise NotImplementedError("Complex coefficients in symbolic power path not supported.")
+
+        log_base = (Decimal(str(base_term.coeff.real)).log10() / Decimal(base).log10())
+
+        if isinstance(base_term.exponent, complex):
+            if not cmath.isclose(base_term.exponent.imag, 0):
+                raise NotImplementedError("Complex exponents in symbolic power path not supported.")
+            log_base += Decimal(str(base_term.exponent.real))
+        else:
+            log_base += Decimal(base_term.exponent)
+
+        return AoPValue.from_term(AoPTerm(1.0, multiply_values(AoPValue.from_number(log_base), power_val, base)))
+
+def divide_values(v1: AoPValue, v2: AoPValue, base: int) -> AoPValue:
+    if len(v2.terms) == 1 and cmath.isclose(v2.terms[0].coeff, 0): raise ZeroDivisionError("Division by zero.")
+    return multiply_values(v1, power_value(v2, AoPValue.from_number(-1), base), base)
+
+
+===== C:/Users/Administrator/Desktop/ltrs/src\aopl_python_impl\aop_parser.py =====
+# aopl_python_impl/aop_parser.py
+import re
+from typing import List, Dict, Optional # Added Optional
+from .definitions import OPERATORS, Token, AoPError, TOKEN_REGEX # Added TOKEN_REGEX for tokenize_expression
+from .aop_value import AoPValue
+from .interfaces import TermGetter
+from . import aop_operations as engine # Use the new engine
+
+def _handle_op(stack: list[AoPValue], base: int, token: Token, op_func):
+    if len(stack) < 2: raise AoPError(f"Insufficient operands for {token.value}", token)
+    op2, op1 = stack.pop(), stack.pop()
+    stack.append(op_func(op1, op2, base))
+
+def _handle_add(stack: list[AoPValue], base: int, token: Token): _handle_op(stack, base, token, engine.add_values)
+def _handle_subtract(stack: list[AoPValue], base: int, token: Token): _handle_op(stack, base, token, engine.subtract_values)
+def _handle_multiply(stack: list[AoPValue], base: int, token: Token): _handle_op(stack, base, token, engine.multiply_values)
+def _handle_divide(stack: list[AoPValue], base: int, token: Token): _handle_op(stack, base, token, engine.divide_values)
+def _handle_power(stack: list[AoPValue], base: int, token: Token): _handle_op(stack, base, token, engine.power_value)
+
+OPERATOR_HANDLERS = {'+': _handle_add, '-': _handle_subtract, '*': _handle_multiply, '/': _handle_divide, '^': _handle_power, '**': _handle_power}
+
+# (The rest of the file - tokenize, RPN, etc. - is correct and remains unchanged)
+def insert_implicit_multiplication(tokens: List[Token]) -> List[Token]:
+    result_tokens: List[Token] = []
+    i = 0
+    while i < len(tokens):
+        token = tokens[i]
+        result_tokens.append(token)
+        if i + 1 < len(tokens):
+            next_token = tokens[i+1]
+            if (token.kind in ('NUMBER', 'COEFF_WORD') and next_token.kind == 'IDENTIFIER'):
+                 if not (i + 2 < len(tokens) and tokens[i+2].kind == 'OPERATOR' and tokens[i+2].value in ('^', '**')):
+                    result_tokens.append(Token('OPERATOR', '*', -1, -1))
+            elif (token.kind in ('NUMBER', 'IDENTIFIER', 'COEFF_WORD', 'RPAREN') and
+                next_token.kind in ('IDENTIFIER', 'COEFF_WORD', 'LPAREN', 'NUMBER')):
+                is_power_func_style = (token.kind == 'IDENTIFIER' and next_token.kind == 'LPAREN' and i > 0 and tokens[i-1].value in ('^', '**'))
+
+                is_next_identifier_power = (next_token.kind == 'IDENTIFIER' and
+                                            i + 2 < len(tokens) and
+                                            tokens[i+2].kind == 'OPERATOR' and
+                                            tokens[i+2].value in ('^', '**'))
+
+                if not is_power_func_style and not is_next_identifier_power:
+                    result_tokens.append(Token('OPERATOR', '*', -1, -1))
+        i += 1
+    return result_tokens
+
+def tokenize_expression(expression: str, token_regex: re.Pattern) -> List[Token]:
+    tokens: List[Token] = []
+    for match in token_regex.finditer(expression):
+        kind = match.lastgroup
+        if kind is None: continue
+        if kind == 'WHITESPACE': continue
+        if kind == 'MISMATCH': raise AoPError(f"Unexpected character: '{match.group()}'", Token(kind, match.group(), match.start(), match.end()))
+        tokens.append(Token(kind, match.group(), match.start(), match.end()))
+    return insert_implicit_multiplication(tokens)
+
+def infix_to_rpn(tokens: List[Token], operators_map: Dict[str, Dict]) -> List[Token]:
+    output_queue: List[Token] = []
+    operator_stack: List[Token] = []
+    for token in tokens:
+        if token.kind in ('NUMBER', 'IDENTIFIER', 'COEFF_WORD', 'CONSTANT_LITERAL'):
+            output_queue.append(token)
+        elif token.kind == 'OPERATOR':
+            while (operator_stack and operator_stack[-1].value != '(' and
+                   ( (operators_map[operator_stack[-1].value]['precedence'] > operators_map[token.value]['precedence']) or
+                     (operators_map[operator_stack[-1].value]['precedence'] == operators_map[token.value]['precedence'] and
+                      operators_map[token.value]['associativity'] == 'left') ) ):
+                output_queue.append(operator_stack.pop())
+            operator_stack.append(token)
+        elif token.kind == 'LPAREN':
+            operator_stack.append(token)
+        elif token.kind == 'RPAREN':
+            while operator_stack and operator_stack[-1].value != '(':
+                output_queue.append(operator_stack.pop())
+            if not operator_stack: raise AoPError("Mismatched parentheses", token)
+            operator_stack.pop()
+    while operator_stack:
+        if operator_stack[-1].value == '(': raise AoPError("Mismatched parentheses", operator_stack[-1])
+        output_queue.append(operator_stack.pop())
+    return output_queue
+
+def evaluate_rpn(rpn_tokens: List[Token], variables: Dict[str, AoPValue], get_term_value_func: TermGetter, base: int) -> AoPValue:
+    operand_stack: list[AoPValue] = []
+    for token in rpn_tokens:
+        if token.kind in ('NUMBER', 'IDENTIFIER', 'COEFF_WORD', 'CONSTANT_LITERAL'):
+            operand_stack.append(get_term_value_func(token.value, variables, token.kind))
+        elif token.kind == 'OPERATOR':
+            OPERATOR_HANDLERS[token.value](operand_stack, base, token)
+    if len(operand_stack) != 1:
+        if not operand_stack:
+            raise AoPError("Invalid expression: operand stack empty after evaluation.")
+        raise AoPError(f"Invalid expression: stack has {len(operand_stack)} items after evaluation, expected 1.")
+    return engine.simplify_value(operand_stack[0]) # Use simplify_value from engine (no base)
+
+
+===== C:/Users/Administrator/Desktop/ltrs/src\aopl_python_impl\aop_term_handler.py =====
+# aopl_python_impl/aop_term_handler.py
+import re
+from decimal import Decimal
+from .aop_value import AoPValue, AoPTerm # Import AoPTerm
+from .definitions import LETTER_TO_EXPONENT_MAP
+
+IMAGINARY_UNIT_J: AoPValue = AoPValue.from_term(AoPTerm(complex(0, 1), Decimal(0)))
+COEFF_WORD_PARSER = re.compile(r"([+-]?\d*\.?\d+(?:[eE][+-]?\d+)?)([a-yA-Y]+)")
+
+def calculate_word_exponent(word: str) -> int:
+    return sum(LETTER_TO_EXPONENT_MAP.get(char, 0) for char in word)
+
+def get_term_value(term_str: str, variables: dict[str, AoPValue], kind: str) -> AoPValue:
+    if kind == 'NUMBER': return AoPValue.from_number(Decimal(term_str)) # Use from_number for numeric literals
+    if kind == 'CONSTANT_LITERAL':
+        if term_str == '#j': return IMAGINARY_UNIT_J
+        raise ValueError(f"Unknown constant: {term_str}")
+    if kind == 'COEFF_WORD':
+        match = COEFF_WORD_PARSER.match(term_str)
+        if not match: raise ValueError(f"Invalid coeff-word: {term_str}")
+        # Coeff-word is a single term with a coefficient and a numeric exponent
+        return AoPValue.from_term(AoPTerm(complex(float(match.group(1))), Decimal(calculate_word_exponent(match.group(2)))))
+    if kind == 'IDENTIFIER':
+        if term_str in variables: return variables[term_str]
+        # Identifier is a single term with coeff 1 and numeric exponent
+        return AoPValue.from_term(AoPTerm(complex(1.0), Decimal(calculate_word_exponent(term_str))))
+    raise ValueError(f"Unknown term kind: {kind}")
+
+
+===== C:/Users/Administrator/Desktop/ltrs/src\aopl_python_impl\aop_value.py =====
+# aopl_python_impl/aop_value.py
+from __future__ import annotations
+import cmath, decimal
+from typing import List, Union, Optional
+from decimal import Decimal
+
+decimal.getcontext().prec = 100
+class PracticalLimitError(OverflowError): pass
+
+class AoPValue:
+    def __init__(self, terms: Optional[List['AoPTerm']] = None): self.terms: List[AoPTerm] = terms or []
+    @classmethod
+    def from_number(cls, num: Union[complex, float, int, Decimal]) -> AoPValue: return cls([AoPTerm(coeff=complex(num))])
+    @classmethod
+    def from_term(cls, term: 'AoPTerm') -> AoPValue: return cls([term])
+    def to_numerical(self, base: int) -> complex: return sum(t.to_numerical(base) for t in self.terms)
+    def __repr__(self) -> str: return f"AoPValue({self.terms!r})"
+
+class AoPTerm:
+    def __init__(self, coeff: complex=1.0, exponent: Union[AoPValue,complex,Decimal,int,float]=0.0):
+        self.coeff = complex(coeff)
+        self.exponent: Union[AoPValue, complex, Decimal] = Decimal(exponent) if isinstance(exponent, (int,float)) else exponent
+    def to_numerical(self, base: int) -> complex:
+        exp_val = self.exponent.to_numerical(base) if isinstance(self.exponent, AoPValue) else complex(self.exponent)
+        try:
+            if cmath.isclose(exp_val.imag, 0):
+                if exp_val.real > 300: raise PracticalLimitError()
+                return self.coeff * complex(Decimal(base) ** Decimal(exp_val.real))
+        except (decimal.Overflow, PracticalLimitError): raise OverflowError()
+        return self.coeff * (complex(base) ** exp_val)
+    def __repr__(self) -> str: return f"Term(c={self.coeff!r}, e={self.exponent!r})"
+
+
+===== C:/Users/Administrator/Desktop/ltrs/src\aopl_python_impl\aop_visualizer.py =====
+# aopl_python_impl/aop_visualizer.py
+
+import matplotlib.pyplot as plt
+import numpy as np
+from .aop_calculator import AoP_Calculator as Calculator
+from .definitions import ValueTuple
+
+def plot_expression(
+    calculator: Calculator,
+    expression_str: str,
+    variable_name: str,
+    start_str: str,
+    end_str: str,
+    steps: int = 200,
+    log_x: bool = False,
+    log_y: bool = False
+):
+    """
+    Evaluates an expression over a range and plots the result,
+    with optional logarithmic scales.
+    """
+    try:
+        start_val_tuple = calculator._evaluate_to_value_tuple(start_str)
+        end_val_tuple = calculator._evaluate_to_value_tuple(end_str)
+
+        start_num = start_val_tuple[0] * (calculator.base ** start_val_tuple[1])
+        end_num = end_val_tuple[0] * (calculator.base ** end_val_tuple[1])
+
+        if start_num >= end_num:
+            print(f"Error: The start of the range ({start_num}) must be less than the end ({end_num}).")
+            return
+
+        if log_x and start_num <= 0:
+            print(f"Error: Start of range ({start_num}) must be positive for a logarithmic x-axis.")
+            return
+
+        # Generate x_values: use logspace if log_x, otherwise linspace
+        if log_x:
+            # np.logspace needs log10 of start/end
+            x_values = np.logspace(np.log10(start_num), np.log10(end_num), steps)
+        else:
+            x_values = np.linspace(start_num, end_num, steps)
+
+        y_values = []
+        original_var_value = calculator.variables.get(variable_name)
+
+        for x_val in x_values:
+            calculator.variables[variable_name] = (x_val, 0)
+            try:
+                result_tuple = calculator._evaluate_to_value_tuple(expression_str)
+                y_num = result_tuple[0] * (calculator.base ** result_tuple[1])
+
+                if log_y and y_num <= 0:
+                    y_values.append(np.nan) # Cannot plot non-positive on log y-axis
+                    print(f"Warning: Non-positive result ({y_num:.2f}) for {variable_name}={x_val:.2f} skipped for log y-axis.")
+                else:
+                    y_values.append(y_num)
+            except Exception as e:
+                print(f"Warning: Evaluation failed for {variable_name}={x_val:.2f} ({e}). Skipping point.")
+                y_values.append(np.nan)
+
+        if original_var_value is not None:
+            calculator.variables[variable_name] = original_var_value
+        else:
+            if variable_name in calculator.variables:
+                del calculator.variables[variable_name]
+
+        # Convert y_values to numpy array for easier handling with nan
+        y_values_np = np.array(y_values, dtype=float)
+
+        plt.figure(figsize=(10, 6))
+
+        # Choose plot type based on log flags
+        if log_x and log_y:
+            plt.loglog(x_values, y_values_np)
+            plt.title(f"Graph of y = {expression_str} (Log-Log Scale)")
+        elif log_x:
+            plt.semilogx(x_values, y_values_np)
+            plt.title(f"Graph of y = {expression_str} (Semi-Log X Scale)")
+        elif log_y:
+            plt.semilogy(x_values, y_values_np)
+            plt.title(f"Graph of y = {expression_str} (Semi-Log Y Scale)")
+        else:
+            plt.plot(x_values, y_values_np)
+            plt.title(f"Graph of y = {expression_str} (Linear Scale)")
+
+        plt.xlabel(variable_name)
+        plt.ylabel("Result")
+        plt.grid(True, which="both", ls="-") # Grid for both major and minor ticks on log scales
+
+        # Add horizontal/vertical lines only if not log scale or if origin is in view for log
+        # For simplicity, let's always add them; matplotlib handles non-display if out of range.
+        if not log_y: plt.axhline(0, color='black', linewidth=0.5)
+        if not log_x: plt.axvline(0, color='black', linewidth=0.5)
+
+        plt.show()
+
+    except ImportError:
+        print("Error: Matplotlib is required for graphing but not installed. Please run: pip install matplotlib")
+    except Exception as e:
+        print(f"An error occurred during graphing: {e}")
+
+
+===== C:/Users/Administrator/Desktop/ltrs/src\aopl_python_impl\definitions.py =====
+# aopl_python_impl/definitions.py
+import re, string
+from typing import NamedTuple, List, Dict, Pattern, Optional, Tuple
+from enum import Enum
+
+class OutputFormatMode(Enum): AUTO = "auto"; AOP = "aop"; SCIENTIFIC = "sci"; NUMERICAL = "num"
+class Token(NamedTuple): kind: str; value: str; start: int; end: int
+class AoPError(ValueError):
+    def __init__(self, message: str, token: Optional[Token] = None):
+        self.message, self.token = message, token
+        super().__init__(message)
+
+LOWERCASE_AOP_LETTERS = string.ascii_lowercase[:25]
+UPPERCASE_AOP_LETTERS = string.ascii_uppercase[:25]
+LETTER_TO_EXPONENT_MAP: Dict[str, int] = {**{l: i + 1 for i, l in enumerate(LOWERCASE_AOP_LETTERS)}, **{l: i + 26 for i, l in enumerate(UPPERCASE_AOP_LETTERS)}}
+EXPONENT_TO_LETTER_MAP: Dict[int, str] = {v: k for k, v in LETTER_TO_EXPONENT_MAP.items()}
+
+_opt_sign = r"[+-]?"
+_number_bare = r"(?:\d+\.\d*|\.\d+)(?:[eE][+-]?\d+)?"
+_integer_bare = r"\d+"
+_any_number = f"(?:{_number_bare}|{_integer_bare})"
+_number_signed = f"{_opt_sign}{_any_number}"
+_word_simple = r"[a-yA-Y]+"
+_variable_name = r"[zZ_][a-zA-Z0-9_$]*"
+
+TOKEN_SPECIFICATION: List[Tuple[str, str]] = [
+    ('COEFF_WORD', f"{_number_signed}{_word_simple}"),
+    ('NUMBER', _number_signed),
+    ('IDENTIFIER', _word_simple),
+    ('OPERATOR', r"\*\*|[\+\-\*\/\^=]"),
+    ('LPAREN', r"\("), ('RPAREN', r"\)"),
+    ('WHITESPACE', r"\s+"), ('MISMATCH', r"."),
+]
+TOKEN_REGEX: Pattern[str] = re.compile('|'.join(f'(?P<{name}>{pattern})' for name, pattern in TOKEN_SPECIFICATION))
+OPERATORS: Dict[str, Dict] = {'=': {'precedence': 1, 'associativity': 'right'}, '+': {'precedence': 2, 'associativity': 'left'}, '-': {'precedence': 2, 'associativity': 'left'}, '*': {'precedence': 3, 'associativity': 'left'}, '/': {'precedence': 3, 'associativity': 'left'}, '^': {'precedence': 5, 'associativity': 'right'}, '**': {'precedence': 5, 'associativity': 'right'}}
+
+
+===== C:/Users/Administrator/Desktop/ltrs/src\aopl_python_impl\interfaces.py =====
+# aopl_python_impl/interfaces.py
+
+from typing import Callable, Dict
+from .aop_value import AoPValue # <-- Import the new class
+
+# Update the return type from ValueTuple to AoPValue
+TermGetter = Callable[[str, Dict[str, AoPValue], str], AoPValue]
+
+
+===== C:/Users/Administrator/Desktop/ltrs/src\aopl_python_impl\__init__.py =====
+# This file makes aopl_python_impl a Python package.
+
+
+===== C:/Users/Administrator/Desktop/ltrs/src\aopl_python_impl\cpu_sim\hardware.py =====
+# aopl_python_impl/cpu_sim/hardware.py
+
+from typing import List, Tuple, Callable
+import random # Added import for the __main__ block
+
+# These functions remain module-level as they are utility/primitive operations
+# used by the CPU methods and potentially elsewhere.
+
+# --- Representation and Conversion ---
+
+def number_to_bitlist(n: int) -> List[int]:
+    """Converts an integer to its bit-list representation (LSB first)."""
+    if n == 0: return [0]
+    bits = []
+    while n > 0:
+        bits.append(n & 1)
+        n >>= 1
+    return bits
+
+def bitlist_to_number(bits: List[int]) -> int:
+    """Converts a bit-list back to an integer."""
+    n = 0
+    for i, bit in enumerate(bits):
+        if bit == 1:
+            n += (1 << i)
+    return n
+
+# --- Simulated "Hardware" Primitives (Module-level helpers) ---
+
+def _add_primitive(b1: List[int], b2: List[int]) -> List[int]: # Renamed to avoid conflict if CPU had an _add method
+    """General-purpose adder. Returns a *new* bitlist (does not modify inputs)."""
+    result = []
+    carry = 0
+    i = 0
+    max_len = max(len(b1), len(b2))
+    b1_copy = b1[:]
+    b2_copy = b2[:]
+    while i < max_len or carry:
+        val1 = b1_copy[i] if i < len(b1_copy) else 0
+        val2 = b2_copy[i] if i < len(b2_copy) else 0
+        s = val1 + val2 + carry
+        result.append(s % 2)
+        carry = s // 2
+        i += 1
+    return result
+
+def _subtract_primitive(b1: List[int], b2: List[int]) -> List[int]: # Renamed
+    """Helper for Karatsuba. Assumes b1 >= b2. Returns a *new* bitlist."""
+    result = []
+    borrow = 0
+    i = 0
+    max_len = max(len(b1), len(b2))
+    b1_copy = b1[:]
+    b2_copy = b2[:]
+    while i < max_len:
+        val1 = b1_copy[i] if i < len(b1_copy) else 0
+        val2 = b2_copy[i] if i < len(b2_copy) else 0
+        s = val1 - val2 - borrow
+        if s < 0:
+            s += 2
+            borrow = 1
+        else:
+            borrow = 0
+        result.append(s)
+        i += 1
+    while len(result) > 1 and result[-1] == 0:
+        result.pop()
+    return result
+
+def _shift_primitive(bits: List[int], amount: int) -> List[int]: # Renamed
+    if not any(bits): return [0]
+    return [0] * amount + bits
+
+def _add_sparse_inplace_primitive(bits: List[int], exp: int) -> None: # Renamed
+    """Adds 2^exp to bits, modifying 'bits' in-place."""
+    i = exp
+    while True:
+        if i >= len(bits):
+            bits.extend([0] * (i - len(bits) + 1))
+        if bits[i] == 1:
+            bits[i] = 0
+            i += 1
+        else:
+            bits[i] = 1
+            return
+
+class CPU:
+    def __init__(self):
+        # Constants for decision logic, can be tuned
+        self.KARATSUBA_THRESHOLD_BITS = 1024
+        self.DENSE_THRESHOLD_FACTOR = 0.9 # e.g., 90% of bits are set
+        self.SPARSE_POPCOUNT_THRESHOLD = 2
+
+        self.LUT_CHUNK_SIZE = 8 # For 8-bit chunks
+        self.lookup_table: dict[tuple[int, int], int] = {}
+        self._precompute_lookup_table()
+
+    def _precompute_lookup_table(self):
+        """Precomputes products for small numbers to populate the lookup table."""
+        limit = 1 << self.LUT_CHUNK_SIZE
+        for i in range(limit):
+            for j in range(limit):
+                self.lookup_table[(i, j)] = i * j
+
+    def _get_chunks(self, n: int, chunk_size: int) -> List[int]:
+        """Helper to break a number into chunks of chunk_size bits."""
+        if n == 0: return [0]
+        chunks = []
+        mask = (1 << chunk_size) - 1
+        while n > 0:
+            chunks.append(n & mask)
+            n >>= chunk_size
+        return chunks if chunks else [0]
+
+    def _multiply_lookup_table(self, n1: int, n2: int) -> int:
+        """Algorithm 4: Lookup Table based multiplication."""
+        if n1 == 0 or n2 == 0: return 0
+
+        # Ensure numbers are positive for chunking logic, handle sign at the end if needed
+        # For this simulation, assuming positive inputs as other methods do.
+
+        n1_chunks = self._get_chunks(n1, self.LUT_CHUNK_SIZE)
+        n2_chunks = self._get_chunks(n2, self.LUT_CHUNK_SIZE)
+
+        total_result_bits = [0] # Initialize as bitlist for _add_primitive
+
+        for i, c_i in enumerate(n1_chunks):
+            for j, d_j in enumerate(n2_chunks):
+                partial_product_val = self.lookup_table.get((c_i, d_j), 0) # Should always be found
+
+                if partial_product_val == 0:
+                    continue
+
+                shift_amount = (i + j) * self.LUT_CHUNK_SIZE
+
+                # Convert shifted partial product to bitlist to use _add_primitive
+                # This is the "fair" way to do it in the simulation context
+                term_to_add_val = partial_product_val << shift_amount
+                term_to_add_bits = number_to_bitlist(term_to_add_val)
+
+                total_result_bits = _add_primitive(total_result_bits, term_to_add_bits)
+
+        return bitlist_to_number(total_result_bits)
+
+    def _multiply_schoolbook(self, n1: int, n2: int) -> int:
+        """Algorithm 1: Standard iterative schoolbook method."""
+        if n1 == 0 or n2 == 0: return 0
+        b1 = number_to_bitlist(n1)
+        b2 = number_to_bitlist(n2)
+        total = [0]
+        for i, bit_n2 in enumerate(b2):
+            if bit_n2 == 1:
+                term_to_add = _shift_primitive(b1, i)
+                total = _add_primitive(total, term_to_add)
+        return bitlist_to_number(total)
+
+    def _multiply_aop_optimized(self, n1: int, n2: int) -> int:
+        """Algorithm 2: The AoP/cross-product method (Optimized)."""
+        if n1 == 0 or n2 == 0: return 0
+        b1 = number_to_bitlist(n1)
+        b2 = number_to_bitlist(n2)
+        total_bits = [0]
+        exponents1 = [i for i, bit in enumerate(b1) if bit == 1]
+        exponents2 = [i for i, bit in enumerate(b2) if bit == 1]
+        if not exponents1 or not exponents2: return 0
+        for exp1 in exponents1:
+            for exp2 in exponents2:
+                new_exp = exp1 + exp2
+                _add_sparse_inplace_primitive(total_bits, new_exp)
+        return bitlist_to_number(total_bits)
+
+    def _karatsuba_recursive(self, b1: List[int], b2: List[int]) -> List[int]:
+        """Internal recursive part of Karatsuba."""
+        len_b1 = len(b1) if any(b1) else 1
+        len_b2 = len(b2) if any(b2) else 1
+        n = max(len_b1, len_b2)
+
+        if n <= 32: # Base case: switch to schoolbook for small numbers
+            # Here, we call the CPU's schoolbook method, not the global one directly
+            return number_to_bitlist(self._multiply_schoolbook(bitlist_to_number(b1), bitlist_to_number(b2)))
+
+        m = (n + 1) // 2
+        x0, x1 = b1[:m], b1[m:] if m < len(b1) else [0]
+        y0, y1 = b2[:m], b2[m:] if m < len(b2) else [0]
+
+        z2 = self._karatsuba_recursive(x1, y1)
+        z0 = self._karatsuba_recursive(x0, y0)
+
+        x1_plus_x0 = _add_primitive(x1, x0)
+        y1_plus_y0 = _add_primitive(y1, y0)
+        z1_intermediate = self._karatsuba_recursive(x1_plus_x0, y1_plus_y0)
+
+        term_sub_z2 = _subtract_primitive(z1_intermediate, z2)
+        middle_term = _subtract_primitive(term_sub_z2, z0)
+
+        part1_shifted = _shift_primitive(z2, 2 * m)
+        part2_shifted = _shift_primitive(middle_term, m)
+
+        sum_part1_part2 = _add_primitive(part1_shifted, part2_shifted)
+        final_result_bits = _add_primitive(sum_part1_part2, z0)
+
+        while len(final_result_bits) > 1 and final_result_bits[-1] == 0:
+            final_result_bits.pop()
+        if not final_result_bits: return [0]
+        return final_result_bits
+
+    def _multiply_karatsuba(self, n1: int, n2: int) -> int:
+        """Algorithm 3: The Karatsuba 'divide and conquer' algorithm."""
+        if n1 == 0 or n2 == 0: return 0
+        b1 = number_to_bitlist(n1)
+        b2 = number_to_bitlist(n2)
+        n_orig = max(len(b1) if any(b1) else 1, len(b2) if any(b2) else 1)
+        n_padded = 1
+        while n_padded < n_orig: n_padded <<= 1
+        b1.extend([0] * (n_padded - len(b1)))
+        b2.extend([0] * (n_padded - len(b2)))
+        result_bits = self._karatsuba_recursive(b1, b2)
+        return bitlist_to_number(result_bits)
+
+    def intelligent_multiply(self, n1: int, n2: int) -> int:
+        """
+        Intelligently dispatches to the most efficient multiplication algorithm
+        based on input characteristics.
+        """
+        if n1 == 0 or n2 == 0: return 0
+
+        # Rule 0: Direct LUT lookup for small numbers
+        # Check if both numbers are within the direct lookup range of the LUT
+        # LUT_CHUNK_SIZE is 8, so limit is 1 << 8 = 256
+        # This means numbers from 0 to 255 can be looked up directly.
+        if n1 < (1 << self.LUT_CHUNK_SIZE) and n2 < (1 << self.LUT_CHUNK_SIZE):
+            return self.lookup_table.get((n1, n2), n1 * n2) # Fallback to actual mult if somehow not in table (shouldn't happen)
+
+        # Python 3.10+ for n.bit_count()
+        # For older Python, use bin(n).count('1')
+        try:
+            n1_popcount = n1.bit_count()
+            n2_popcount = n2.bit_count()
+        except AttributeError: # Fallback for Python < 3.10
+            n1_popcount = bin(n1).count('1')
+            n2_popcount = bin(n2).count('1')
+
+        max_bit_length = max(n1.bit_length(), n2.bit_length())
+
+        # Rule 1: Karatsuba's Domain
+        if max_bit_length > self.KARATSUBA_THRESHOLD_BITS:
+            return self._multiply_karatsuba(n1, n2)
+
+        # NEW Rule 1.5: Chunking LUT for moderate sizes if not caught by specific rules below
+        # This rule is placed to allow specific niche algorithms (Schoolbook for dense*sparse, AoP for sparse*sparse)
+        # to be chosen if their conditions are met, otherwise, for general numbers up to KARATSUBA_THRESHOLD_BITS,
+        # use the chunking LUT.
+        # The performance data suggests _multiply_lookup_table (chunking) is generally good
+        # for numbers up to KARATSUBA_THRESHOLD_BITS in this Python simulation.
+
+        # Rule 2: Schoolbook's Niche (Dense * Sparse)
+        # Check if one is dense and the other is very sparse
+        n1_is_dense = n1_popcount > (n1.bit_length() * self.DENSE_THRESHOLD_FACTOR)
+        n2_is_dense = n2_popcount > (n2.bit_length() * self.DENSE_THRESHOLD_FACTOR)
+        n1_is_very_sparse = n1_popcount <= self.SPARSE_POPCOUNT_THRESHOLD
+        n2_is_very_sparse = n2_popcount <= self.SPARSE_POPCOUNT_THRESHOLD
+
+        if (n1_is_dense and n2_is_very_sparse) or \
+           (n2_is_dense and n1_is_very_sparse):
+            return self._multiply_schoolbook(n1, n2)
+
+        # Rule 3: AoP's Niche (Sparse * Sparse)
+        if n1_is_very_sparse and n2_is_very_sparse:
+            return self._multiply_aop_optimized(n1, n2)
+
+        # Rule 4: Default for numbers up to KARATSUBA_THRESHOLD_BITS that don't meet specific niche criteria
+        # Reverted to AoP_Optimized as the general default for this range, as LookupTable (chunking)
+        # became slower than AoP after the "fairness" correction for its summation.
+        return self._multiply_aop_optimized(n1, n2)
+
+        # Old Rule for Chunking LUT Default:
+        # return self._multiply_lookup_table(n1, n2)
+        # This was based on the previous performance of _multiply_lookup_table before it used _add_primitive.
+        # Now, AoP_Optimized is generally better than the "fair" _multiply_lookup_table for these sizes.
+
+        # If we had another threshold above which Chunking LUT became worse than AoP (but still below Karatsuba),
+        # then AoP could be a default for that specific intermediate range.
+        # For now, LUT chunking seems to cover well up to Karatsuba's threshold.
+
+
+# --- Standalone Complex Operations (can be moved into CPU or kept separate) ---
+# For now, keeping them as module-level functions that can take any multiply_func.
+# If they were CPU methods, they'd use self.intelligent_multiply or a specific one.
+
+def power_integer(base_n: int, exponent_n: int, multiply_func: Callable[[int, int], int]) -> int:
+    """
+    Calculates base_n ^ exponent_n using the provided multiplication function.
+    Uses exponentiation by squaring for efficiency.
+    """
+    if exponent_n < 0:
+        raise ValueError("Exponent must be non-negative for integer power.")
+    if exponent_n == 0: return 1
+    if base_n == 0: return 0
+
+    result = 1
+    current_power = base_n
+    while exponent_n > 0:
+        if exponent_n % 2 == 1:
+            result = multiply_func(result, current_power)
+        current_power = multiply_func(current_power, current_power)
+        exponent_n //= 2
+    return result
+
+def multiply_then_add(n1: int, n2: int, n3: int, multiply_func: Callable[[int, int], int]) -> int:
+    """
+    Calculates (n1 * n2) + n3 using the provided multiplication function
+    and the internal _add_primitive.
+    """
+    product_n = multiply_func(n1, n2)
+    product_bits = number_to_bitlist(product_n)
+    n3_bits = number_to_bitlist(n3)
+    sum_bits = _add_primitive(product_bits, n3_bits)
+    return bitlist_to_number(sum_bits)
+
+# --- For direct execution or testing of this module ---
+if __name__ == '__main__':
+    cpu = CPU()
+
+    # Example usages:
+    print("CPU Intelligent Multiply Examples:")
+    print(f"5 * 7 = {cpu.intelligent_multiply(5, 7)}")
+
+    # Karatsuba case
+    n_large1 = (1 << 1025) - 12345
+    n_large2 = (1 << 1025) - 67890
+    print(f"Large1 * Large2 (expect Karatsuba): {cpu.intelligent_multiply(n_large1, n_large2)}")
+
+    # Schoolbook case
+    n_dense = (1 << 128) -1
+    n_sparse_sb = 1 << 64
+    print(f"Dense * Sparse (expect Schoolbook): {cpu.intelligent_multiply(n_dense, n_sparse_sb)}")
+
+    # AoP Sparse * Sparse case
+    n_sparse1_aop = 1 << 60
+    n_sparse2_aop = 1 << 70
+    print(f"Sparse * Sparse (expect AoP): {cpu.intelligent_multiply(n_sparse1_aop, n_sparse2_aop)}")
+
+    # AoP Default case
+    n_mid1 = random.randint(1 << 500, (1 << 512) -1)
+    n_mid2 = random.randint(1 << 500, (1 << 512) -1)
+    print(f"Mid-size random (expect AoP): {cpu.intelligent_multiply(n_mid1, n_mid2)}")
+
+    print("\nStandalone Power and Multiply-Add Examples (using CPU's intelligent_multiply):")
+    print(f"power_integer(3, 5, cpu.intelligent_multiply) = {power_integer(3, 5, cpu.intelligent_multiply)}")
+    print(f"multiply_then_add(3, 5, 10, cpu.intelligent_multiply) = {multiply_then_add(3, 5, 10, cpu.intelligent_multiply)}")
+
+
+===== C:/Users/Administrator/Desktop/ltrs/src\aopl_python_impl\cpu_sim\__init__.py =====
+
+

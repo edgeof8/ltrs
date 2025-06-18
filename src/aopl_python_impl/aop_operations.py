@@ -1,150 +1,110 @@
 # aopl_python_impl/aop_operations.py
+import cmath, math
+from decimal import Decimal, getcontext
+from typing import Union, List
+from .aop_value import AoPValue, AoPTerm, PracticalLimitError
 
-import math
-import cmath
-from .aop_value import AoPValue, PracticalLimitError
-from decimal import Decimal
-from typing import Union, Optional
+getcontext().prec = 100
 
-DEBUG_AOP_OPERATIONS = False # Global debug flag for this module
+def simplify_value(val: AoPValue, base: int = 10) -> AoPValue:
+    """
+    Simplifies an AoPValue to its canonical form using a safe, multi-stage pipeline.
+    This is the definitive simplification engine for the calculator.
+    """
+    if not val.terms: return val
 
-def add_values(v1: AoPValue, v2: AoPValue, base: int) -> AoPValue:
-    try: return AoPValue(v1.to_numerical(base) + v2.to_numerical(base))
-    except OverflowError: raise OverflowError("Cannot add/subtract values of this magnitude.")
+    # Stage 1: Recursive Simplification of Exponents (Top-down)
+    processed_terms = []
+    for term in val.terms:
+        new_exp = term.exponent
+        if isinstance(new_exp, AoPValue):
+            new_exp = simplify_value(new_exp, base) # Recursion is safe here
+        processed_terms.append(AoPTerm(term.coeff, new_exp))
+    current_val = AoPValue(processed_terms)
 
-def subtract_values(v1: AoPValue, v2: AoPValue, base: int) -> AoPValue:
-    try: return AoPValue(v1.to_numerical(base) - v2.to_numerical(base))
-    except OverflowError: raise OverflowError("Cannot add/subtract values of this magnitude.")
+    # Stage 2: Coefficient Absorption (e.g., 10*a^k -> a^(1+k))
+    absorbed_terms = []
+    for term in current_val.terms:
+        coeff, exp = term.coeff, term.exponent
+        if cmath.isclose(coeff.imag, 0) and coeff.real > 0 and cmath.isclose(coeff.real, round(coeff.real)):
+            coeff_int = int(round(coeff.real))
+            if coeff_int != 1:
+                try:
+                    coeff_log = math.log(coeff_int, base)
+                    if cmath.isclose(coeff_log, round(coeff_log)):
+                        # Coeff is a power of the base, so we can absorb it.
+                        exp_aop = exp if isinstance(exp, AoPValue) else AoPValue.from_number(exp)
+                        coeff_aop = AoPValue.from_number(int(round(coeff_log)))
+                        new_exp_aop = add_values(coeff_aop, exp_aop, base) # add_values no longer simplifies
+                        absorbed_terms.append(AoPTerm(1.0, simplify_value(new_exp_aop, base))) # Re-simplify the new exponent
+                        continue
+                except (ValueError, OverflowError): pass
+        absorbed_terms.append(term)
+    current_val = AoPValue(absorbed_terms)
 
-def multiply_values(v1: AoPValue, v2: AoPValue) -> AoPValue:
-    v1_is_num = v1.is_numeric()
-    v2_is_num = v2.is_numeric()
+    # Stage 3: Combine like terms (e.g., a+a -> 2a)
+    if len(current_val.terms) > 1:
+        grouped = {}
+        for term in current_val.terms:
+            key = repr(term.exponent)
+            grouped.setdefault(key, []).append(term)
+        current_val = AoPValue([AoPTerm(sum(t.coeff for t in term_list), term_list[0].exponent) for term_list in grouped.values() if not cmath.isclose(sum(t.coeff for t in term_list), 0)])
 
-    if v1_is_num and not v2_is_num:
-        return AoPValue(v1.coeff * v2.coeff, v2.exponent)
+    # Stage 4: Final Conversion Checks
+    # Heuristic for derived values (e.g., 2^j)
+    if len(current_val.terms) == 1:
+        term = current_val.terms[0]
+        if not cmath.isclose(term.coeff.imag, 0) or not cmath.isclose(term.coeff.real, round(term.coeff.real)):
+            try: return AoPValue.from_number(current_val.to_numerical(base))
+            except Exception: pass
 
-    if not v1_is_num and v2_is_num:
-        return AoPValue(v1.coeff * v2.coeff, v1.exponent)
+    # Check for letter form (e.g., a*b -> c or j^j -> a^k)
+    try:
+        num = current_val.to_numerical(base)
+        if cmath.isclose(num.imag, 0) and num.real > 0:
+            log_val = math.log(num.real, base)
+            if cmath.isclose(log_val, round(log_val)):
+                return AoPValue([AoPTerm(1.0, int(round(log_val)))])
+    except Exception: pass
 
-    if not v1_is_num and not v2_is_num:
-        raise NotImplementedError("Multiplication of two recursive AoP values is not yet supported.")
+    return current_val
 
-    exp1_val = v1.exponent
-    assert isinstance(exp1_val, (complex, Decimal))
-    exp2_val = v2.exponent
-    assert isinstance(exp2_val, (complex, Decimal))
+def add_values(v1: AoPValue, v2: AoPValue, base: int = 10) -> AoPValue: return AoPValue(v1.terms + v2.terms)
+def subtract_values(v1: AoPValue, v2: AoPValue, base: int = 10) -> AoPValue: return AoPValue(v1.terms + [AoPTerm(-t.coeff, t.exponent) for t in v2.terms])
 
-    if isinstance(exp1_val, complex) or isinstance(exp2_val, complex):
-        exponent_result = complex(exp1_val) + complex(exp2_val)
-    else:
-        exponent_result = exp1_val + exp2_val
-
-    return AoPValue(v1.coeff * v2.coeff, exponent_result)
-
-
-def divide_values(v1: AoPValue, v2: AoPValue) -> AoPValue:
-    if cmath.isclose(v2.coeff, 0j): raise ZeroDivisionError("Division by zero.")
-    if not v1.is_numeric() and v2.is_numeric() and v2.exponent == 0:
-        return AoPValue(v1.coeff / v2.coeff, v1.exponent)
-
-    if not v1.is_numeric() or not v2.is_numeric():
-        raise NotImplementedError("Division with recursive exponents is not supported")
-
-    exp1_val = v1.exponent
-    assert isinstance(exp1_val, (complex, Decimal))
-    exp2_val = v2.exponent
-    assert isinstance(exp2_val, (complex, Decimal))
-
-    if isinstance(exp1_val, complex) or isinstance(exp2_val, complex):
-        exponent_result = complex(exp1_val) - complex(exp2_val)
-    else:
-        exponent_result = exp1_val - exp2_val
-
-    return AoPValue(v1.coeff / v2.coeff, exponent_result)
-
-def multiply_complex_by_aop(scalar: Union[complex, Decimal], val_aop: AoPValue) -> AoPValue:
-    if DEBUG_AOP_OPERATIONS: print(f"[DEBUG multiply_complex_by_aop] scalar: {scalar}, val_aop: {val_aop}")
-    scalar_aop = AoPValue(coeff=complex(scalar), exponent=0)
-    return multiply_values(scalar_aop, val_aop)
-
+def multiply_values(v1: AoPValue, v2: AoPValue, base: int = 10) -> AoPValue:
+    new_terms: List[AoPTerm] = []
+    for t1 in v1.terms:
+        for t2 in v2.terms:
+            new_coeff = t1.coeff * t2.coeff
+            exp1_aop = t1.exponent if isinstance(t1.exponent, AoPValue) else AoPValue.from_term(AoPTerm(1.0, t1.exponent))
+            exp2_aop = t2.exponent if isinstance(t2.exponent, AoPValue) else AoPValue.from_term(AoPTerm(1.0, t2.exponent))
+            new_exp_aop = add_values(exp1_aop, exp2_aop, base)
+            if len(new_exp_aop.terms) == 1:
+                new_terms.append(AoPTerm(new_coeff, new_exp_aop.terms[0].exponent))
+            else:
+                new_terms.append(AoPTerm(new_coeff, new_exp_aop))
+    return AoPValue(new_terms)
 
 def power_value(base_val: AoPValue, power_val: AoPValue, base: int) -> AoPValue:
-    if DEBUG_AOP_OPERATIONS: print(f"[DEBUG power_value] base_val: {base_val}, power_val: {power_val}, base: {base}")
-
-    base_val = simplify_value(base_val, base)
-    power_val = simplify_value(power_val, base)
-    if DEBUG_AOP_OPERATIONS: print(f"[DEBUG power_value AFTER_SIMPLIFY_ARGS] base_val: {base_val}, power_val: {power_val}")
-
+    if len(base_val.terms) != 1: raise NotImplementedError("Power of a sum is not supported.")
+    base_term = base_val.terms[0]
     try:
-        power_numerical = power_val.to_numerical(base)
-        if DEBUG_AOP_OPERATIONS: print(f"[DEBUG power_value] Power is numerically representable as {power_numerical}")
-
-        if not base_val.is_numeric():
-            if not cmath.isclose(base_val.coeff, 1.0):
-                raise NotImplementedError("Recursive base with coeff!=1 not supported")
-            assert isinstance(base_val.exponent, AoPValue)
-            new_exponent = multiply_complex_by_aop(power_numerical, base_val.exponent)
-            return AoPValue(1.0, new_exponent)
-
-        log_coeff = 0.0 + 0.0j
-        if not cmath.isclose(base_val.coeff, 1.0):
-            if base_val.coeff == 0: return AoPValue(0.0, 0.0)
-            log_coeff = cmath.log(base_val.coeff) / cmath.log(base)
-
-        base_exponent_numeric = complex(base_val.exponent)
-        final_exponent = power_numerical * (log_coeff + base_exponent_numeric)
-        return AoPValue(1.0, final_exponent)
-
+        power_num = power_val.to_numerical(base)
+        new_coeff = base_term.coeff ** power_num
+        if isinstance(base_term.exponent, AoPValue):
+            new_exp = multiply_values(AoPValue.from_number(power_num.real if isinstance(power_num, complex) else power_num), base_term.exponent, base)
+        else:
+            base_exp = float(base_term.exponent) if isinstance(base_term.exponent, (Decimal, int, float)) else float(complex(base_term.exponent).real)
+            power_exp = float(power_num.real) if isinstance(power_num, complex) else float(power_num)
+            new_exp = Decimal(base_exp) * Decimal(power_exp)
+        return AoPValue.from_term(AoPTerm(new_coeff, new_exp))
     except (OverflowError, PracticalLimitError):
-        if DEBUG_AOP_OPERATIONS: print(f"[DEBUG power_value] Power {power_val} is too large. Switching to symbolic hyper-power.")
+        if isinstance(base_term.exponent, AoPValue): raise NotImplementedError("Recursive base to recursive power not supported.")
+        log_base_val = (Decimal(str(base_term.coeff.real)).log10() / Decimal(str(base)).log10()) + Decimal(str(float(base_term.exponent) if isinstance(base_term.exponent, (Decimal, int, float)) else float(complex(base_term.exponent).real)))
+        new_exponent = multiply_values(AoPValue.from_number(log_base_val), power_val, base)
+        return AoPValue.from_term(AoPTerm(1.0, new_exponent))
 
-        if not base_val.is_numeric():
-             raise NotImplementedError("Recursive base to recursive (hyper) power is not yet supported.")
-
-        log_coeff = 0.0 + 0.0j
-        if not cmath.isclose(base_val.coeff, 1.0):
-            if base_val.coeff == 0: return AoPValue(0.0, 0.0)
-            log_coeff = cmath.log(base_val.coeff) / cmath.log(base)
-
-        total_base_exponent = log_coeff + complex(base_val.exponent)
-        new_exponent = multiply_complex_by_aop(total_base_exponent, power_val)
-        return AoPValue(1.0, new_exponent)
-
-
-def simplify_value(val: AoPValue, base: int) -> AoPValue:
-    if isinstance(val.exponent, AoPValue):
-        simplified_inner_exponent = simplify_value(val.exponent, base)
-        if val.exponent is not simplified_inner_exponent:
-            if DEBUG_AOP_OPERATIONS:
-                print(f"[DEBUG simplify_value] RecursiveUpdate: Original exponent {val.exponent} was simplified to {simplified_inner_exponent}")
-            val = AoPValue(val.coeff, simplified_inner_exponent)
-
-    if val.is_numeric():
-        coeff = val.coeff
-        current_exponent_val = val.exponent
-        if base <= 1 or cmath.isclose(coeff, 0j) or not cmath.isclose(coeff.imag, 0) or coeff.real <= 0:
-            return val
-
-        exp_real_part_dec: Optional[Decimal] = None
-        if isinstance(current_exponent_val, Decimal):
-            exp_real_part_dec = current_exponent_val
-        elif isinstance(current_exponent_val, complex):
-            if cmath.isclose(current_exponent_val.imag, 0):
-                try: exp_real_part_dec = Decimal(str(current_exponent_val.real))
-                except: return val
-            else: return val
-        else: return val
-
-        if exp_real_part_dec is None: return val
-
-        try:
-            p_float = math.log(coeff.real, float(base))
-            if math.isclose(p_float, round(p_float)):
-                p_decimal = Decimal(int(round(p_float)))
-                new_exponent_decimal = exp_real_part_dec + p_decimal
-                if DEBUG_AOP_OPERATIONS: print(f"[DEBUG simplify_value] NumericSimplify (log): {val} -> AoPValue(1.0, {new_exponent_decimal}) with p={p_decimal}")
-                return AoPValue(1.0, new_exponent_decimal)
-        except (ValueError, OverflowError, TypeError):
-            pass
-
-    return val
+def divide_values(v1: AoPValue, v2: AoPValue, base: int) -> AoPValue:
+    if len(v2.terms) == 1 and cmath.isclose(v2.terms[0].coeff, 0): raise ZeroDivisionError("Division by zero.")
+    return multiply_values(v1, power_value(v2, AoPValue.from_number(-1), base))

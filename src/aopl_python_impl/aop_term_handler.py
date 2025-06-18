@@ -1,41 +1,29 @@
-# FILE: src/aopl_python_impl/aop_term_handler.py
-
+# aopl_python_impl/aop_term_handler.py
 import re
+from decimal import Decimal
+from .aop_value import AoPValue, AoPTerm
 from .definitions import LETTER_TO_EXPONENT_MAP
-from .aop_value import AoPValue # This import is fine and necessary
-
-# FIX: Define the constant here instead of importing it.
-IMAGINARY_UNIT_J: AoPValue = AoPValue(complex(0, 1), 0.0)
 
 COEFF_WORD_PARSER = re.compile(r"([+-]?\d*\.?\d+(?:[eE][+-]?\d+)?)([a-yA-Y]+)")
 
 def calculate_word_exponent(word: str) -> int:
-    return sum(LETTER_TO_EXPONENT_MAP.get(char, 0) for char in word.lower())
+    return sum(LETTER_TO_EXPONENT_MAP.get(char, 0) for char in word)
 
 def get_term_value(term_str: str, variables: dict[str, AoPValue], kind: str) -> AoPValue:
+    # This is the unified entry point. Everything becomes an AoPValue immediately.
     if kind == 'NUMBER':
-        return AoPValue(complex(term_str), 0.0)
-
-    if kind == 'CONSTANT_LITERAL':
-        if term_str == '#j':
-            # Use the locally defined constant
-            return IMAGINARY_UNIT_J
-        raise ValueError(f"Unknown constant: {term_str}")
-
+        # A number like "110" becomes a term with exponent 0.
+        return AoPValue.from_term(AoPTerm(coeff=complex(Decimal(term_str)), exponent=0))
     if kind == 'COEFF_WORD':
         match = COEFF_WORD_PARSER.match(term_str)
-        if not match:
-            raise ValueError(f"Invalid coeff-word: {term_str}")
-        coeff = complex(float(match.group(1)))
-        expon = float(calculate_word_exponent(match.group(2)))
-        return AoPValue(coeff, expon)
-
+        if not match: raise ValueError(f"Invalid coeff-word: {term_str}")
+        coeff = complex(Decimal(match.group(1)))
+        exponent = Decimal(calculate_word_exponent(match.group(2)))
+        return AoPValue.from_term(AoPTerm(coeff, exponent))
     if kind == 'IDENTIFIER':
-        if term_str in variables:
-            return variables[term_str]
-        if all(c.lower() in LETTER_TO_EXPONENT_MAP for c in term_str):
-            expon = float(calculate_word_exponent(term_str))
-            return AoPValue(1.0, expon)
-        raise ValueError(f"Undefined variable or invalid word: '{term_str}'")
+        if term_str in variables: return variables[term_str]
+        # An identifier like "a" becomes a term with coeff 1 and its letter-value as the exponent.
+        exponent = Decimal(calculate_word_exponent(term_str))
+        return AoPValue.from_term(AoPTerm(complex(1.0), exponent))
 
     raise ValueError(f"Unknown term kind: {kind}")

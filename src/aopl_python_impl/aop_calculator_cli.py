@@ -19,21 +19,16 @@ def main():
         "sci": OutputFormatMode.SCIENTIFIC,
         "num": OutputFormatMode.NUMERICAL
     }
-    calculator = AoP_Calculator(base=args.base)
-
-    calculator.output_format_mode = mode_map[args.mode]
-    calculator.precision = args.precision
+    calculator = AoP_Calculator(base=args.base, output_format_mode=mode_map[args.mode], precision=args.precision)
 
     try:
         result = calculator.evaluate_expression(args.expression)
         if result.startswith("Error:"):
-            print(f"CLI: Detected error result: {result}", file=sys.stderr) # DEBUG
             print(result, file=sys.stderr) # Print the specific error to stderr
             sys.exit(1) # Exit with error code
         else:
             print(result) # Print successful result to stdout
     except Exception as e: # Catch any other unexpected exceptions
-        print(f"CLI: Caught unexpected system error: {str(e)}", file=sys.stderr) # DEBUG
         print(f"Unexpected system error: {str(e)}", file=sys.stderr)
         sys.exit(1)
 
