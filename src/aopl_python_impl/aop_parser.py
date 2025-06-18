@@ -4,24 +4,40 @@ from typing import List, Dict
 from .definitions import OPERATORS, Token, AoPError
 from .aop_value import AoPValue
 from .interfaces import TermGetter
-from .aop_operations import add_values, subtract_values, multiply_values, divide_values, power_value as engine
+# FIX: Do not import aop_operations at the top level to avoid circular import issues.
+# from . import aop_operations as ops
 
 def _handle_op(stack: list[AoPValue], base: int, token: Token, op_func):
     if len(stack) < 2: raise AoPError(f"Insufficient operands for {token.value}", token)
     op2, op1 = stack.pop(), stack.pop()
     stack.append(op_func(op1, op2, base))
 
-def _handle_add(stack: list[AoPValue], base: int, token: Token): _handle_op(stack, base, token, add_values)
-def _handle_subtract(stack: list[AoPValue], base: int, token: Token): _handle_op(stack, base, token, subtract_values)
-def _handle_multiply(stack: list[AoPValue], base: int, token: Token): _handle_op(stack, base, token, multiply_values)
-def _handle_divide(stack: list[AoPValue], base: int, token: Token): _handle_op(stack, base, token, divide_values)
-def _handle_power(stack: list[AoPValue], base: int, token: Token): _handle_op(stack, base, token, engine)
+# FIX: Import ops inside each handler function
+def _handle_add(stack: list[AoPValue], base: int, token: Token):
+    from . import aop_operations as ops
+    _handle_op(stack, base, token, ops.add_values)
+def _handle_subtract(stack: list[AoPValue], base: int, token: Token):
+    from . import aop_operations as ops
+    _handle_op(stack, base, token, ops.subtract_values)
+def _handle_multiply(stack: list[AoPValue], base: int, token: Token):
+    from . import aop_operations as ops
+    _handle_op(stack, base, token, ops.multiply_values)
+def _handle_divide(stack: list[AoPValue], base: int, token: Token):
+    from . import aop_operations as ops
+    _handle_op(stack, base, token, ops.divide_values)
+def _handle_power(stack: list[AoPValue], base: int, token: Token):
+    from . import aop_operations as ops
+    _handle_op(stack, base, token, ops.power_value)
 
 OPERATOR_HANDLERS = {'+': _handle_add, '-': _handle_subtract, '*': _handle_multiply, '/': _handle_divide, '^': _handle_power, '**': _handle_power}
-# (Rest of parser logic is stable and correct)
-# ...
+
+# ... (rest of the file is unchanged)
 
 def insert_implicit_multiplication(tokens: List[Token]) -> List[Token]:
+    """
+    This is the key to fixing expressions like '2a' and 'a(b+c)'.
+    It inserts a multiplication token '*' where it's implied.
+    """
     result = []
     i = 0
     while i < len(tokens):
@@ -29,14 +45,13 @@ def insert_implicit_multiplication(tokens: List[Token]) -> List[Token]:
         result.append(token)
         if i + 1 < len(tokens):
             next_token = tokens[i+1]
-            # Rule: Insert '*' between two terms if they are not separated by an operator.
-            # A term can be a NUMBER, IDENTIFIER, COEFF_WORD, or a group in parentheses (ending in RPAREN).
-            # The next term can be a NUMBER, IDENTIFIER, COEFF_WORD, or a group in parentheses (starting with LPAREN).
-            if (token.kind in ('NUMBER', 'IDENTIFIER', 'COEFF_WORD', 'RPAREN') and
-                next_token.kind in ('NUMBER', 'IDENTIFIER', 'COEFF_WORD', 'LPAREN')):
-                # Exception: Do not insert if it's for a power's parenthesized exponent, like `a^(b*c)`
-                if not (token.kind == 'IDENTIFIER' and next_token.kind == 'LPAREN' and i > 0 and tokens[i-1].value in ('^', '**')):
-                     result.append(Token('OPERATOR', '*', -1, -1))
+            # A value-like token is anything that's not an operator or right parenthesis.
+            is_val_like = token.kind in ('NUMBER', 'IDENTIFIER', 'COEFF_WORD', 'CONSTANT_LITERAL', 'RPAREN')
+            # The next token can be a value or the start of a parenthetical group.
+            is_next_val_like = next_token.kind in ('NUMBER', 'IDENTIFIER', 'COEFF_WORD', 'CONSTANT_LITERAL', 'LPAREN')
+
+            if is_val_like and is_next_val_like:
+                result.append(Token('OPERATOR', '*', -1, -1))
         i += 1
     return result
 

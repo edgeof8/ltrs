@@ -3,6 +3,7 @@ import re
 from .definitions import OutputFormatMode, OPERATORS, TOKEN_REGEX, AoPError, LETTER_TO_EXPONENT_MAP, EXPONENT_TO_LETTER_MAP
 from .aop_value import AoPValue
 from .aop_parser import tokenize_expression, infix_to_rpn, evaluate_rpn
+# This now imports the single, correct simplification function
 from .aop_operations import simplify_value
 from .aop_term_handler import get_term_value
 from .aop_formatter import format_output
@@ -28,10 +29,15 @@ class AoP_Calculator:
         try:
             tokens = tokenize_expression(expression, self.token_regex)
             rpn = infix_to_rpn(tokens, self.operators_map)
-            result = evaluate_rpn(rpn, self.variables, get_term_value, self.base)
-            simplified_result = simplify_value(result, self.base)
+            # The RPN evaluator produces a raw, unsimplified result
+            raw_result = evaluate_rpn(rpn, self.variables, get_term_value, self.base)
+
+            # The final, single simplification step cleans up the raw result
+            simplified_result = simplify_value(raw_result, self.base)
+
             def get_letter_func(exp: int) -> str:
                 return self.exponent_to_letter.get(exp, "")
+
             return format_output(simplified_result, self.base, get_letter_func, self.output_format_mode, self.precision)
         except (AoPError, ZeroDivisionError, OverflowError, ValueError, NotImplementedError) as e:
-            return str(e)
+            return f"Error: {str(e)}"

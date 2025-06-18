@@ -1,5 +1,6 @@
 # aopl_python_impl/aop_term_handler.py
 import re
+import math
 from decimal import Decimal
 from .aop_value import AoPValue, AoPTerm
 from .definitions import LETTER_TO_EXPONENT_MAP
@@ -13,7 +14,7 @@ def get_term_value(term_str: str, variables: dict[str, AoPValue], kind: str) -> 
     # This is the unified entry point. Everything becomes an AoPValue immediately.
     if kind == 'NUMBER':
         # A number like "110" becomes a term with exponent 0.
-        return AoPValue.from_term(AoPTerm(coeff=complex(Decimal(term_str)), exponent=0))
+        return AoPValue.from_number(Decimal(term_str))
     if kind == 'COEFF_WORD':
         match = COEFF_WORD_PARSER.match(term_str)
         if not match: raise ValueError(f"Invalid coeff-word: {term_str}")
@@ -25,5 +26,21 @@ def get_term_value(term_str: str, variables: dict[str, AoPValue], kind: str) -> 
         # An identifier like "a" becomes a term with coeff 1 and its letter-value as the exponent.
         exponent = Decimal(calculate_word_exponent(term_str))
         return AoPValue.from_term(AoPTerm(complex(1.0), exponent))
+    if kind == 'CONSTANT_LITERAL':
+        # FIX: Constants should represent numbers, not powers. Use from_number().
+        if term_str == "#pi":
+            return AoPValue.from_number(Decimal(math.pi))
+        elif term_str == "#e":
+            return AoPValue.from_number(Decimal(math.e))
+        elif term_str == "#phi": # Golden ratio
+            return AoPValue.from_number(Decimal('1.61803398874989484820458683436563811772030917980576'))
+        elif term_str == "#tau": # 2*pi
+            return AoPValue.from_number(Decimal(2 * math.pi))
+        elif term_str == "#sqrt2":
+            return AoPValue.from_number(Decimal(math.sqrt(2)))
+        elif term_str == "#j": # Imaginary unit constant - This was already correct.
+            return AoPValue.from_number(complex(0,1))
+        else:
+            raise ValueError(f"Unknown constant literal: {term_str}")
 
     raise ValueError(f"Unknown term kind: {kind}")

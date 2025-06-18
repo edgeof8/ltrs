@@ -22,9 +22,11 @@ _any_number = f"(?:{_number_bare}|{_integer_bare})"
 _number_signed = f"{_opt_sign}{_any_number}"
 _word_simple = r"[a-yA-Y]+"
 _variable_name = r"[zZ_][a-zA-Z0-9_$]*"
+_constants = r'#pi|#e|#phi|#tau|#sqrt2|#j'
 
 TOKEN_SPECIFICATION: List[Tuple[str, str]] = [
     ('COEFF_WORD', f"{_number_signed}{_word_simple}"),
+    ('CONSTANT_LITERAL', _constants),
     ('NUMBER', _number_signed),
     ('IDENTIFIER', _word_simple),
     ('OPERATOR', r"\*\*|[\+\-\*\/\^=]"),
