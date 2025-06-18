@@ -2,12 +2,11 @@
 
 import unittest
 from src.aopl_python_impl.aop_calculator import AoP_Calculator as AoPCalculator # Renamed import
-from src.aopl_python_impl.definitions import OutputFormatMode
+# Removed OutputFormatMode import as it's no longer used in AoP_Calculator
 
 class TestAoPCalculator(unittest.TestCase):
     def setUp(self):
         self.calculator = AoPCalculator(base=10) # Removed output_mode parameter
-        self.calculator.output_format_mode = OutputFormatMode.AOP # Set output_format_mode attribute
 
     def test_basic_addition(self):
         result = self.calculator.evaluate_expression("a + b") # Changed calculate to evaluate_expression

@@ -3,16 +3,14 @@ import re
 from .definitions import OutputFormatMode, OPERATORS, TOKEN_REGEX, AoPError, LETTER_TO_EXPONENT_MAP, EXPONENT_TO_LETTER_MAP
 from .aop_value import AoPValue
 from .aop_parser import tokenize_expression, infix_to_rpn, evaluate_rpn
-# This now imports the single, correct simplification function
 from .aop_operations import simplify_value
 from .aop_term_handler import get_term_value
-from .aop_formatter import format_output
+# The formatter is gone, logic is in aop_value.to_str now.
 
 class AoP_Calculator:
-    def __init__(self, base: int = 10, output_format_mode: OutputFormatMode = OutputFormatMode.AUTO, precision: int = 10):
+    def __init__(self, base: int = 10):
+        """Initializes the calculator with a specific base."""
         self.base = base
-        self.output_format_mode = output_format_mode
-        self.precision = precision
         self.letter_to_exponent = LETTER_TO_EXPONENT_MAP
         self.exponent_to_letter = EXPONENT_TO_LETTER_MAP
         self.token_regex = TOKEN_REGEX
@@ -25,19 +23,22 @@ class AoP_Calculator:
             self.operators_map['**']['associativity'] = mode.lower()
         else: raise ValueError("Invalid associativity mode. Use 'left' or 'right'.")
 
-    def evaluate_expression(self, expression: str) -> str:
+    def evaluate_expression(self, expression: str, mode: OutputFormatMode, precision: int) -> str:
+        """
+        Evaluates an expression and formats it according to the given mode and precision.
+        """
         try:
             tokens = tokenize_expression(expression, self.token_regex)
             rpn = infix_to_rpn(tokens, self.operators_map)
-            # The RPN evaluator produces a raw, unsimplified result
-            raw_result = evaluate_rpn(rpn, self.variables, get_term_value, self.base)
-
-            # The final, single simplification step cleans up the raw result
-            simplified_result = simplify_value(raw_result, self.base)
+            result = evaluate_rpn(rpn, self.variables, get_term_value, self.base)
+            simplified_result = simplify_value(result, self.base)
 
             def get_letter_func(exp: int) -> str:
                 return self.exponent_to_letter.get(exp, "")
 
-            return format_output(simplified_result, self.base, get_letter_func, self.output_format_mode, self.precision)
+            # The AoPValue object now knows how to format itself.
+            return simplified_result.to_str(self.base, get_letter_func, mode, precision)
+
         except (AoPError, ZeroDivisionError, OverflowError, ValueError, NotImplementedError) as e:
-            return f"Error: {str(e)}"
+            # Return a clean error string
+            return f"Error: {e}"

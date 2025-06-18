@@ -5,10 +5,15 @@ from enum import Enum
 
 class OutputFormatMode(Enum): AUTO = "auto"; AOP = "aop"; SCIENTIFIC = "sci"; NUMERICAL = "num"
 class Token(NamedTuple): kind: str; value: str; start: int; end: int
-class AoPError(ValueError):
+
+class AoPError(ValueError): # General parsing/evaluation error
     def __init__(self, message: str, token: Optional[Token] = None):
         self.message, self.token = message, token
         super().__init__(message)
+
+class PracticalLimitError(OverflowError): # Specific error for numerical limits
+    """Indicates a practical limit was exceeded during numerical evaluation."""
+    pass
 
 LOWERCASE_AOP_LETTERS = string.ascii_lowercase[:25]
 UPPERCASE_AOP_LETTERS = string.ascii_uppercase[:25]
