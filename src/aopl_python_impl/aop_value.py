@@ -3,10 +3,8 @@ from __future__ import annotations
 import cmath, decimal
 from typing import List, Union, Optional, Callable
 from decimal import Decimal
-# Import OutputFormatMode and PracticalLimitError from definitions
 from .definitions import OutputFormatMode, PracticalLimitError
-# Import formatter functions from aop_formatter
-from .aop_formatter import _complex_to_str as fmt_complex, _format_numeric_exponent as fmt_num_exp
+from .aop_formatter import _complex_to_str as fmt_complex, _format_numeric_exponent
 
 decimal.getcontext().prec = 100
 
@@ -16,8 +14,7 @@ class AoPValue:
 
     @classmethod
     def from_number(cls, num: Union[complex, float, int, Decimal]) -> AoPValue:
-        # This creates an AoPValue representing a number N as N*a^0
-        return cls([AoPTerm(coeff=complex(num), exponent=Decimal('0'))]) # Exponent is 0 for numbers
+        return cls([AoPTerm(coeff=complex(num), exponent=Decimal('0'))])
 
     @classmethod
     def from_term(cls, term: 'AoPTerm') -> AoPValue:
@@ -25,168 +22,139 @@ class AoPValue:
 
     def to_numerical(self, base: int) -> complex:
         total = complex(0)
-        try:
-            for t in self.terms:
-                total += t.to_numerical(base)
-        except PracticalLimitError:
-            raise
-        except OverflowError as e:
-            if not cmath.isfinite(total):
-                raise OverflowError("Sum of terms resulted in non-finite number.") from e
-            raise
+        for t in self.terms:
+            total += t.to_numerical(base)
+        if not cmath.isfinite(total):
+            raise OverflowError("Sum of terms resulted in non-finite number.")
         return total
 
+    def to_str(self, base: int, get_letter: Callable, mode: OutputFormatMode, precision: int) -> str:
+        if not self.terms: return "0"
+
+        # Try to simplify to a single number first for formatting
+        try:
+            # This is a non-mutating simplification for display purposes only
+            num_val = self.to_numerical(base)
+            return _format_numeric_exponent(num_val, base, get_letter, precision)
+        except (PracticalLimitError, OverflowError, NotImplementedError):
+            # Cannot be represented as a single number, so format symbolically.
+            pass
+
+        # FIX: Correctly build the string term-by-term
+        parts = []
+        for t in self.terms:
+            part_str = t.to_str(base, get_letter, mode, precision)
+            # AoPTerm.to_str will now handle its own sign for subsequent terms
+            parts.append(part_str)
+
+        # Join the parts, minding the signs
+        result = parts[0]
+        for part in parts[1:]:
+            if part.startswith('-'):
+                result += f" - {part[1:]}"
+            else:
+                result += f" + {part}"
+        return result
 
     def __repr__(self) -> str:
         return f"AoPValue({self.terms!r})"
 
-    def to_str(self, base: int, get_letter: Callable, mode: OutputFormatMode, precision: int) -> str:
-        # print(f"DEBUG AoPValue.to_str: Value={self!r}, Mode={mode}") # Optional top-level debug
-        if not self.terms: return "0"
-
-        if mode in (OutputFormatMode.SCIENTIFIC, OutputFormatMode.NUMERICAL):
-            try:
-                num = self.to_numerical(base)
-                if mode == OutputFormatMode.SCIENTIFIC:
-                    return f"{num.real:.{precision}e}" if cmath.isclose(num.imag, 0) else fmt_complex(num, precision)
-                else: # NUMERICAL
-                    return fmt_complex(num, precision)
-            except (OverflowError, PracticalLimitError, NotImplementedError) as e:
-                return f"Error: {e}"
-
-        if mode == OutputFormatMode.AUTO and len(self.terms) == 1:
-            term = self.terms[0]
-            if cmath.isclose(term.coeff, 1.0) and term.is_numeric_real_exponent_in_letter_range():
-                exp_int = int(round(complex(term.exponent).real))
-                if letter := get_letter(exp_int): # get_letter expects int
-                    return letter
-
-            if term.is_numeric_exponent_zero(): # Is it just a number C*a^0?
-                return fmt_complex(term.coeff, precision)
-
-        parts = [t.to_str(base, get_letter, precision) for t in self.terms]
-        result = parts[0]
-        for part in parts[1:]:
-            result += f" + {part}" if not part.startswith('-') else f" - {part[1:]}"
-        return result
+# aopl_python_impl/aop_value.py -> AoPTerm class
 
 class AoPTerm:
     def __init__(self, coeff: complex=1.0, exponent: Union[AoPValue,complex,Decimal,int,float]=0.0):
         self.coeff = complex(coeff)
         if isinstance(exponent, (int,float)):
-            self.exponent: Union[AoPValue, complex, Decimal] = Decimal(exponent)
+            self.exponent: Union[AoPValue, complex, Decimal] = Decimal(str(exponent))
         elif isinstance(exponent, complex):
             self.exponent = exponent
-        else: # AoPValue or Decimal
-            self.exponent = exponent
+        else: self.exponent = exponent
 
     def is_numeric_exponent_zero(self) -> bool:
-        """Checks if the exponent is numerically equivalent to zero."""
         if isinstance(self.exponent, (int, float, Decimal, complex)):
-            try:
-                return cmath.isclose(complex(self.exponent), 0)
-            except TypeError: # Should not happen if type is one of these
-                return False
-        return False # AoPValue exponent is not considered "numeric zero" by this method
-
-    def is_numeric_real_exponent_in_letter_range(self) -> bool:
-        """Checks if exponent is numeric, real, integral, and in range [1,50]."""
-        if isinstance(self.exponent, (int, float, Decimal, complex)):
-            try:
-                exp_comp = complex(self.exponent)
-                if cmath.isclose(exp_comp.imag, 0):
-                    real_part = exp_comp.real
-                    if cmath.isclose(real_part, round(real_part)):
-                        exp_int = int(round(real_part))
-                        return 1 <= exp_int <= 50
-            except TypeError:
-                return False
+            try: return cmath.isclose(complex(self.exponent), 0)
+            except TypeError: return False
         return False
 
     def to_numerical(self, base: int) -> complex:
-        exp_val: complex
+        exp_val_complex: complex
         if isinstance(self.exponent, AoPValue):
-            exp_val = self.exponent.to_numerical(base)
-        else:
-            exp_val = complex(self.exponent)
+            exp_val_complex = self.exponent.to_numerical(base)
+        else: exp_val_complex = complex(self.exponent)
+
+        if not cmath.isfinite(exp_val_complex):
+            raise PracticalLimitError("Exponent evaluates to a non-finite number.")
 
         try:
-            base_val = complex(base)
-            powered_base: complex
-
-            if cmath.isclose(exp_val.imag, 0):
-                real_exp = exp_val.real
-                if real_exp > 308 :
-                    raise PracticalLimitError(f"Exponent {real_exp} too large for numerical evaluation.")
-                if real_exp < -308 and base != 0:
-                    raise PracticalLimitError(f"Exponent {real_exp} too small (negative) for numerical evaluation.")
-
-                # Ensure self.exponent is Decimal if it started as int/float/Decimal for Decimal power
-                current_exp_for_power = self.exponent
-                if isinstance(current_exp_for_power, complex): # Should only happen if it was originally complex
-                    current_exp_for_power = Decimal(current_exp_for_power.real)
-
-
-                if isinstance(current_exp_for_power, Decimal) and \
-                   current_exp_for_power == current_exp_for_power.to_integral_value(rounding=decimal.ROUND_HALF_UP): # Check if it's an integer value
-                    try:
-                        # Use Decimal for potentially higher precision power with integer exponent
-                        # Ensure base is also treated as Decimal if it's an integer for this path
-                        base_for_dec_power = Decimal(base) if isinstance(base, int) else Decimal(str(base))
-                        powered_base = complex(base_for_dec_power ** current_exp_for_power)
-                    except decimal.Overflow:
-                        raise PracticalLimitError("Decimal power resulted in overflow.")
-                    except decimal.InvalidOperation:
-                        powered_base = base_val ** exp_val # Fallback to complex power
-                else:
-                    powered_base = base_val ** exp_val
+            if cmath.isclose(exp_val_complex.imag, 0) and cmath.isclose(self.coeff.imag, 0):
+                exp_dec = Decimal(str(exp_val_complex.real))
+                coeff_dec = Decimal(str(self.coeff.real))
+                base_dec = Decimal(str(base))
+                result_dec = coeff_dec * (base_dec ** exp_dec)
+                return complex(result_dec)
+            elif cmath.isclose(exp_val_complex.imag, 0):
+                exp_dec = Decimal(str(exp_val_complex.real))
+                base_dec = Decimal(str(base))
+                powered_base_dec = base_dec ** exp_dec
+                return self.coeff * complex(powered_base_dec)
             else:
-                if abs(exp_val.real) > 300 or abs(exp_val.imag) > 700:
+                if abs(exp_val_complex.real) > 700 or abs(exp_val_complex.imag) > 700:
                     raise PracticalLimitError("Exponent component too large for complex power.")
-                powered_base = base_val ** exp_val
-
-            if not cmath.isfinite(powered_base):
-                raise OverflowError("Result of base exponentiation is not finite.")
-
-            result = self.coeff * powered_base
-            if not cmath.isfinite(result):
-                raise OverflowError("Final result (coeff * powered_base) is not finite.")
-            return result
-        except (OverflowError, PracticalLimitError, ValueError, decimal.InvalidOperation) as e:
-            if isinstance(e, PracticalLimitError):
-                raise
-            raise OverflowError(f"Power evaluation failed for term ({self.coeff}*base^{exp_val}): {e}")
-
+                powered_base = complex(base) ** exp_val_complex
+                result = self.coeff * powered_base
+                if not cmath.isfinite(result): raise OverflowError("Result is not finite.")
+                return result
+        except (decimal.Overflow, decimal.InvalidOperation, OverflowError) as e:
+            raise PracticalLimitError(f"Numerical evaluation failed: {e}")
 
     def __repr__(self) -> str:
         return f"Term(c={self.coeff!r}, e={self.exponent!r})"
 
-    def to_str(self, base: int, get_letter: Callable, precision: int) -> str:
-        # print(f"DEBUG AoPTerm.to_str: Coeff={self.coeff}, Exponent={self.exponent} (type {type(self.exponent)})") # Keep for now
-        coeff_str = fmt_complex(self.coeff, precision)
-
+    def to_str(self, base: int, get_letter: Callable, mode: OutputFormatMode, precision: int) -> str:
+        # If term represents a pure number (C*a^0), format the number C.
         if self.is_numeric_exponent_zero():
-            # print(f"DEBUG AoPTerm.to_str: Exponent is zero. Returning coeff_str='{coeff_str}'")
-            return coeff_str
+             return _format_numeric_exponent(self.coeff, base, get_letter, precision)
 
-        exp_str = ""
+        # FIX: Streamlined and corrected string construction logic.
+
+        # Part 1: Coefficient String
+        coeff_part = ""
+        if cmath.isclose(self.coeff, 1.0):
+            coeff_part = "" # No "1" for 1*a^k
+        elif cmath.isclose(self.coeff, -1.0):
+            coeff_part = "-" # Just a minus sign for -1*a^k
+        else:
+            # Format the coefficient. If it's complex, it will include parentheses.
+            coeff_part = _format_numeric_exponent(self.coeff, base, get_letter, precision)
+
+        # Part 2: Exponent String
+        exp_part = ""
         if isinstance(self.exponent, AoPValue):
-            # print(f"DEBUG AoPTerm.to_str: Exponent is AoPValue. Calling self.exponent.to_str recursively.")
-            exp_str = self.exponent.to_str(base, get_letter, OutputFormatMode.AOP, precision)
-            # Parenthesize if it's a sum, product, or contains special characters that could cause ambiguity
-            if len(self.exponent.terms) > 1 or any(c in exp_str for c in ' *()+^'): # Added ^ to chars list
-                exp_str = f"({exp_str})"
-        else: # self.exponent is numeric (Decimal, complex, int, float)
-            # print(f"DEBUG AoPTerm.to_str: Exponent is numeric ({self.exponent}). Calling fmt_num_exp.")
-            exp_str = fmt_num_exp(self.exponent, base, get_letter, precision)
-            # print(f"DEBUG AoPTerm.to_str: fmt_num_exp returned '{exp_str}' for exponent {self.exponent}.")
+            # Recursively format the exponent. Add parens if it's a sum.
+            raw_exp_str = self.exponent.to_str(base, get_letter, OutputFormatMode.AOP, precision)
+            if len(self.exponent.terms) > 1:
+                exp_part = f"({raw_exp_str})"
+            else:
+                exp_part = raw_exp_str
+        else:
+            # For numeric exponents, format them. _format_numeric_exponent is smart enough now.
+            exp_part = _format_numeric_exponent(self.exponent, base, get_letter, precision)
 
-        if coeff_str == "1": return f"a^{exp_str}"
-        if coeff_str == "-1": return f"-a^{exp_str}"
+        # Part 3: Combine them
+        # Handle special cases like a^1 -> a
+        if exp_part == "1":
+            base_str = "a"
+        else:
+            base_str = f"a^{exp_part}"
 
-        if exp_str.isalnum() or \
-           (exp_str.startswith('-') and exp_str[1:].isalnum()) or \
-           (exp_str.startswith('+') and exp_str[1:].isalnum()): # Allow + for explicit positive exponents
-            return f"{coeff_str}a^{exp_str}"
+        if not coeff_part: # Coeff is 1
+            return base_str
+        if coeff_part == "-": # Coeff is -1
+            return f"-{base_str}"
 
-        return f"{coeff_str}*a^{exp_str}"
+        # Check if we need an explicit multiplication sign
+        # No sign needed if coeff is a number and base_str starts with a letter, e.g., "2a"
+        if (coeff_part.replace('.', '', 1).replace('-', '', 1).isdigit() and base_str.startswith('a')):
+             return f"{coeff_part}{base_str}"
+
+        return f"{coeff_part}*{base_str}"
