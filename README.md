@@ -1,11 +1,6 @@
 # The Alphabet of Powers (AoP) Calculator
 
-[![Python Version](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)[![Status](https://img.shields.io/badge/
-
-**The Alphabet of Powers (AoP) Calculator is not just another calculator. It's a tool for thinking about numbers on an astronomical scale.**
-
-Standard calculators fail around `10^308`. This calculator begins where they end. It can compute, represent, and simplify numbers so vast they cannot be written down in our universe. It does this by treating numbers not as single values, but as symbolic structures based on a simple, intuitive "alphabet" of exponents.
+Welcome to the Alphabet of Powers (AoP) Calculator, a unique command-line tool that explores a novel system of representing and manipulating numbers of all scales, from the everyday to the truly astronomical. This calculator is not just a tool; it's an exploration into number theory, symbolic algebra, and the limits of computation.
 
 ## The Core Concept
 
@@ -14,124 +9,157 @@ In the AoP system (with the default base 10), letters represent powers of the ba
 - **Lowercase `a-y`**: `a` = `10^1`, `b` = `10^2`, ..., `y` = `10^25`.
 - **Uppercase `A-Y`**: `A` = `10^26`, `B` = `10^27`, ..., `Y` = `10^50`.
 
-Words are multiplicative:
+Words are multiplicative, with their power being the sum of their letters' exponents:
 
-- `cab` means `c * a * b` -> `10^3 * 10^1 * 10^2` -> `10^(3+1+2) = 10^6`, which is `f`.
-- `aA` means `a * A` -> `10^1 * 10^26` -> `10^27`, which is `B`.
+- `cab` => `c*a*b` => `10^3 * 10^1 * 10^2` => `10^(3+1+2)` => `10^6`, which simplifies to **`f`**.
+- `aA` => `a*A` => `10^1 * 10^26` => `10^27`, which simplifies to **`B`**.
 
-This simple, powerful idea allows for a new way of understanding and manipulating numbers.
+This simple, powerful idea allows for a new way of understanding and manipulating numbers, especially at the hyper-power scale.
 
-## Features That Set It Apart
+## Features
 
-### 1. Hyper-Operation Engine
-
-This calculator was built to handle operations that would cause an immediate overflow error on any standard tool. It excels at tetration (repeated exponentiation), which is evaluated **right-associatively** to match mathematical convention.
-
-- **Standard Calculator:** `10^10^100` -> `Error`
-- **AoP Calculator:** `a^j^b` -> `a^(j^b)` -> `a^(a^k)`
-
-The AoP Calculator doesn't just store the expression; it *calculates* the result and simplifies it into a canonical AoP form.
-
-### 2. Recursive Symbolic Representation
-
-The true power lies in its internal engine. An AoP number is stored as a recursive structure: `Value = Coeff * (Base ^ Exponent)`, where the `Exponent` can be another `Value`. This allows for logarithmic memory compression.
-
-- The number representing `j^j^j^j` would require more atoms than exist in the universe to write down.
-- The AoP Calculator represents it elegantly as `a^a^a^a^31`, storing it in a tiny, nested data structure.
-
-### 3. Intuitive Language for Scale
-
-The AoP system transforms the incomprehensible scales of large numbers into a tangible, alphabetic system. The difference between `10^26` and `10^27` is hard to grasp, but the step from `A` to `B` is intuitive. This makes it an exceptionally powerful educational tool.
-
-## Full Feature List
-
-- **Symbolic Calculation**: Work with letters as powers (`cat = x`, `aA = B`).
-- **Hyper-Power Engine**: Natively handles tetration and other hyper-operations.
-- **Recursive Internal Representation**: Can represent numbers far beyond the limits of standard data types.
-- **Configurable Base**: Change the base to any number greater than 1 (default is 10).
-- **Power Associativity Setting**: Configure `^` to be left- or right-associative (default: `right`).
-- **Interactive REPL**: A powerful read-eval-print loop with history, variable assignment, and special commands.
-- **AI-Powered Explanations**: Get natural language explanations of complex calculations via OpenRouter.
-- **CPU Simulation**: A sub-module to explore the performance of different large-number multiplication algorithms.
+- **Symbolic & Numerical Engine**: The calculator uses a **Numeric-First, Symbolic-Fallback** engine. It attempts to compute all expressions as numbers, providing concrete answers when possible.
+- **Hyper-power Ready**: When a calculation would overflow standard numerical types (e.g., `3^3^3^3`), the engine gracefully falls back to a symbolic representation, allowing for the manipulation of numbers far beyond the limits of conventional calculators.
+- **Letter-First Formatting**: Results are always displayed in their most elegant and compact form. A result of `10^40` is not shown as a raw number, but as its canonical letter, **`O`**.
+- **Arbitrary Base**: Explore the AoP system in any integer base using the `--base` flag. Discover new mathematical relationships, such as `2d = e` in base 2 (`2 * 2^4 = 2^5`).
+- **Full Operator Support**: Supports `+`, `-`, `*`, `/`, and `^` (power), with correct order of operations and right-associativity for powers.
+- **Implicit Multiplication**: Understands natural algebraic syntax like `2b` (2 *b) and `a(b+c)` (a* (b+c)).
+- **Built-in Constants**: Recognizes `#pi`, `#e`, `#phi` (the golden ratio), `#tau` (2π), `#sqrt2`, and `#j` (the imaginary unit).
 
 ## Installation
 
-To get started, clone the repository and install the dependencies.
+1. Clone the repository:
 
-```bash
-git clone https://github.com/your-username/letter-powers.git
-cd letter-powers
-# It is recommended to use a virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
-pip install -r requirements.txt
-```
+    ```bash
+    git clone <your-repo-url>
+    cd <your-repo-directory>
+    ```
+
+2. (Optional) Create a virtual environment:
+
+    ```bash
+    python -m venv venv
+    source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
+    ```
+
+3. Install dependencies (if any):
+
+    ```bash
+    # Currently no external dependencies required for the core calculator
+    ```
+
+4. (Optional) Create a simple alias or script named `ltrs` for easy access:
+    - **Linux/macOS** (in your `.bashrc` or `.zshrc`):
+
+        ```bash
+        alias ltrs='python -m aopl_python_impl.aop_calculator_cli'
+        ```
+
+    - **Windows** (using a `ltrs.bat` file in your PATH):
+
+        ```batch
+        @echo off
+        python -m aopl_python_impl.aop_calculator_cli %*
+        ```
 
 ## Usage
 
-The primary interface is the command-line tool `ltrs`.
+The calculator is run from the command line.
 
-### Basic Operations
-
-```bash
-# Multiplication
-ltrs "c*a*t"
-> x
-
-# Division
-ltrs "x/a"
-> w
-
-# Addition (converts to numerical form)
-ltrs "a+b"
-> 110
-```
-
-### Powers and Hyper-Powers
-
-This is where the calculator shines. Remember, `^` is right-associative by default.
+### Basic Syntax
 
 ```bash
-# Simple powers
-ltrs "2j^2"
-> 4t
-
-# Tetration (a^b^c is evaluated as a^(b^c))
-ltrs "j^j"
-> a^k
-
-ltrs "j^j^j"
-> a^a^u
-
-# An unimaginably large number, calculated and simplified instantly.
-ltrs "j^j^j^j"
-> a^a^a^31
+ltrs "expression" [options]
 ```
 
-### Interactive REPL
+### Examples
 
-Launch the interactive calculator with `ltrs`.
+#### Simple Operations
 
-**REPL Commands:** `/help`, `/exit`, `/history`, `/explain`, `/vars`, `/setbase <num>`, `/setmode <mode>`, `/setprecision <num>`, `/setassoc <mode>`.
+- **`c^2`** (c squared)
 
-## Project Structure
+    ```bash
+    $ ltrs "c^2"
+    f
+    ```
 
-- `src/aopl_python_impl/`: Core implementation of the AoP system.
-- `tests/`: Unit and integration tests.
-- `docs/`: Additional documentation.
+    *Explanation: `c` is `10^3`. `(10^3)^2` is `10^6`, which is `f`.*
 
-## Development
+- **`e/b`** (e divided by b)
 
-To contribute or modify the project:
+    ```bash
+    $ ltrs "e/b"
+    c
+    ```
 
-1. Clone the repository.
-2. Install in editable mode: `pip install -e .`
-3. Run tests: `pytest`
+    *Explanation: `10^5 / 10^2` is `10^3`, which is `c`.*
 
-## License
+#### Symbolic Powers
 
-MIT
+- **`d^a`** (d to the power of a)
 
-## Contact
+    ```bash
+    $ ltrs "d^a"
+    O
+    ```
 
-For questions or contributions, please open an issue or pull request on the GitHub repository.
+    *Explanation: The engine evaluates this numerically. `d` is `10^4`, `a` is `10`. The result is `(10^4)^10 = 10^40`, which is `O`.*
+
+- **`b^c`** (b to the power of c)
+
+    ```bash
+    $ ltrs "b^c"
+    a^2c
+    ```
+
+    *Explanation: `(10^2)^(10^3)` is `10^2000`. The formatter elegantly represents `2000` as `2*1000`, which is `2c`.*
+
+#### Hyper-powers and Symbolic Fallback
+
+- **`j^j`** (j to the power of j)
+
+    ```bash
+    $ ltrs "j^j"
+    a^k
+    ```
+
+    *Explanation: `(10^10)^(10^10)` is `10^(10 * 10^10) = 10^(10^11)`. The exponent is `10^11`, which is `k`. The result is `a^k`.*
+
+- **The Graham's Number Precursor**
+
+    ```bash
+    $ ltrs "3^3^3^3"
+    a^3638334640024
+    ```
+
+    *Explanation: `3^(3^27)` is too large for any standard number type. The engine correctly overflows and switches to a symbolic representation, calculating the final exponent `log10(3) * 3^27` and displaying it as a power of `a`.*
+
+#### Different Bases
+
+- **Coefficient Absorption in Base 2**
+
+    ```bash
+    $ ltrs --base 2 "2d"
+    e
+    ```
+
+    *Explanation: In base 2, `2` is `2^1` or `a`. `d` is `2^4`. The expression is `a * d = 2^1 * 2^4 = 2^5`, which is `e`.*
+
+- **Symbolic Powers in Base 2**
+
+    ```bash
+    $ ltrs --base 2 "b^c"
+    p
+    ```
+
+    *Explanation: In base 2, `b` is `2^2`, `c` is `2^3=8`. The expression is `(2^2)^8 = 2^16`, which is `p`.*
+
+### Command-Line Options
+
+| Flag          | Alias | Description                                        | Default |
+|---------------|-------|----------------------------------------------------|---------|
+| `--base`      | `-b`  | The numerical base for calculations.               | `10`    |
+| `--mode`      | `-m`  | Output format: `auto`, `aop`, `sci`, `num`.        | `auto`  |
+| `--precision` | `-p`  | Decimal precision for numerical output.            | `10`    |
+| `--debug`     | `-d`  | Enable debug logging to `aop_calculator_debug.log`.| `False` |
+|---------------|-------|----------------------------------------------------|---------|

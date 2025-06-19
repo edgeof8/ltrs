@@ -27,19 +27,19 @@ def get_term_value(term_str: str, variables: dict[str, AoPValue], kind: str) -> 
         exponent = Decimal(calculate_word_exponent(term_str))
         return AoPValue.from_term(AoPTerm(complex(1.0), exponent))
     if kind == 'CONSTANT_LITERAL':
-        # FIX: Constants should represent numbers, not powers. Use from_number().
+        # Constants are numbers, so they should be represented as a coefficient with an exponent of 0.
         if term_str == "#pi":
             return AoPValue.from_number(Decimal(math.pi))
         elif term_str == "#e":
             return AoPValue.from_number(Decimal(math.e))
         elif term_str == "#phi": # Golden ratio
-            return AoPValue.from_number(Decimal('1.61803398874989484820458683436563811772030917980576'))
+            return AoPValue.from_number(Decimal("1.61803398874989484820"))
         elif term_str == "#tau": # 2*pi
             return AoPValue.from_number(Decimal(2 * math.pi))
         elif term_str == "#sqrt2":
             return AoPValue.from_number(Decimal(math.sqrt(2)))
-        elif term_str == "#j": # Imaginary unit constant - This was already correct.
-            return AoPValue.from_number(complex(0,1))
+        elif term_str == "#j": # Imaginary unit
+            return AoPValue.from_number(complex(0, 1))
         else:
             raise ValueError(f"Unknown constant literal: {term_str}")
 
