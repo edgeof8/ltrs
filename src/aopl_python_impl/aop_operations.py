@@ -41,40 +41,59 @@ def scalar_multiply(scalar: complex, val: AoPValue, base: int = 10) -> AoPValue:
     return AoPValue(new_terms)
 
 def multiply_values(v1: AoPValue, v2: AoPValue, base: int = 10) -> AoPValue:
+    # Optimization: if v1 is a single term that's a scalar
+    if len(v1.terms) == 1:
+        s1 = _try_term_to_scalar(v1.terms[0], base)
+        if s1 is not None:
+            return simplify_value(scalar_multiply(s1, v2, base), base)
+
+    # Optimization: if v2 is a single term that's a scalar
+    if len(v2.terms) == 1:
+        s2 = _try_term_to_scalar(v2.terms[0], base)
+        if s2 is not None:
+            return simplify_value(scalar_multiply(s2, v1, base), base)
+
+    # General case: term-by-term symbolic multiplication
     new_terms: List[AoPTerm] = []
     for t1 in v1.terms:
         for t2 in v2.terms:
-            # Check if the term's coefficient and exponent can be converted to a simple number
-            s1 = None
-            s2 = None
-            try:
-                if cmath.isclose(t1.coeff.imag, 0) and isinstance(t1.exponent, (int, float, Decimal, complex)) and cmath.isclose(complex(t1.exponent).imag, 0):
-                    s1 = t1.coeff.real * (base ** complex(t1.exponent).real)
-            except OverflowError:
-                s1 = None
-            try:
-                if cmath.isclose(t2.coeff.imag, 0) and isinstance(t2.exponent, (int, float, Decimal, complex)) and cmath.isclose(complex(t2.exponent).imag, 0):
-                    s2 = t2.coeff.real * (base ** complex(t2.exponent).real)
-            except OverflowError:
-                s2 = None
-
-            if s1 is not None and len(v1.terms) == 1:
-                new_terms.extend(scalar_multiply(s1, v2, base).terms)
-                break
-            if s2 is not None and len(v2.terms) == 1:
-                new_terms.extend(scalar_multiply(s2, v1, base).terms)
-                continue
-
             new_coeff = t1.coeff * t2.coeff
             exp1_aop = t1.exponent if isinstance(t1.exponent, AoPValue) else AoPValue.from_number(t1.exponent)
             exp2_aop = t2.exponent if isinstance(t2.exponent, AoPValue) else AoPValue.from_number(t2.exponent)
             new_exponent = add_values(exp1_aop, exp2_aop, base)
             new_terms.append(AoPTerm(new_coeff, new_exponent))
 
-        else:
-            continue
-        break
     return simplify_value(AoPValue(new_terms), base)
+
+def _try_term_to_scalar(term: AoPTerm, base: int) -> Union[complex, None]:
+    """Helper to try to convert a single term to a numerical scalar.
+       Returns None if it's symbolic, would overflow/underflow in a misleading way, or coeff is complex.
+    """
+    # Only attempt if coefficient is real for this specific optimization path.
+    # Complex coefficients with numeric exponents are handled by the general path or if the other operand is scalar.
+    if not cmath.isclose(term.coeff.imag, 0):
+        return None
+    # Exponent must be a simple number (not AoPValue or complex with imag part)
+    if not isinstance(term.exponent, (int, float, Decimal, complex)) or not cmath.isclose(complex(term.exponent).imag, 0):
+        return None
+
+    try:
+        exp_real = complex(term.exponent).real
+        if cmath.isclose(term.coeff, 0): # If coefficient is zero, term is scalar 0
+            return 0.0
+
+        # Check for base**exp underflow leading to 0 when it shouldn't for this optimization
+        val_base_part = float(base) ** exp_real # Use float for this check, consistent with original scalar attempt
+
+        if cmath.isclose(val_base_part, 0.0) and not cmath.isclose(float(base), 0.0) and not cmath.isclose(term.coeff.real,0.0) :
+            return None # Term is not truly zero, avoid scalar path that would make it so.
+
+        scalar_val = term.coeff.real * val_base_part
+        if not cmath.isfinite(scalar_val): # Check if product overflowed
+             return None
+        return scalar_val
+    except OverflowError: # Overflow from base ** exp_real
+        return None
 
 def power_value(base_val: AoPValue, power_val: AoPValue, base: int) -> AoPValue:
     logging.debug(f"Power: ({base_val!r}) ^ ({power_val!r})")
@@ -89,15 +108,30 @@ def power_value(base_val: AoPValue, power_val: AoPValue, base: int) -> AoPValue:
 
     # Try numerical path first.
     try:
-        power_num = s_power.to_numerical(base)
-        new_coeff = base_term.coeff ** power_num
-        new_exp = complex(base_term.exponent) * power_num
+        power_num_complex = s_power.to_numerical(base) # This returns complex
+        new_coeff_val = base_term.coeff ** power_num_complex # Coeff power is usually float/complex based
 
-        # This is the key change: if the result is too big, it will raise an OverflowError here
-        # which is caught below, triggering the symbolic path.
-        if not cmath.isfinite(new_coeff) or not cmath.isfinite(new_exp): raise OverflowError("Numerical power result is not finite")
-        logging.debug(f"Numeric power success. Result: c={new_coeff}, e={new_exp}")
-        return simplify_value(AoPValue([AoPTerm(new_coeff, new_exp)]), base)
+        # Preserve Decimal precision for exponent if possible
+        base_exp_val = base_term.exponent # Should be Decimal or AoPValue
+
+        # Determine the type for power_num for exponent multiplication
+        actual_power_for_exp_mult: Union[Decimal, complex]
+        if cmath.isclose(power_num_complex.imag, 0):
+            # Try to get original Decimal from s_power if it's a simple number that can be Decimal
+            try: actual_power_for_exp_mult = s_power.to_decimal(base)
+            except (TypeError, PracticalLimitError): # Fallback if s_power is complex, an AoPValue, or too large/small for Decimal
+                actual_power_for_exp_mult = Decimal(str(power_num_complex.real))
+        else: # Fallback to complex math if base_exp is not Decimal or power_num is complex
+            actual_power_for_exp_mult = power_num_complex
+
+        if isinstance(base_exp_val, Decimal) and isinstance(actual_power_for_exp_mult, Decimal):
+            new_exp_val = base_exp_val * actual_power_for_exp_mult
+        else: # One or both are complex or AoPValue (base_exp_val can be AoPValue that needs .to_numerical())
+            new_exp_val = complex(base_exp_val.to_numerical(base) if isinstance(base_exp_val, AoPValue) else base_exp_val) * power_num_complex
+
+        if not cmath.isfinite(new_coeff_val) or not cmath.isfinite(complex(new_exp_val)): raise OverflowError("Numerical power result is not finite")
+        logging.debug(f"Numeric power success. Result: c={new_coeff_val}, e={new_exp_val}")
+        return simplify_value(AoPValue([AoPTerm(new_coeff_val, new_exp_val)]), base)
     except (OverflowError, PracticalLimitError) as e:
         # If numerical path fails, fall back to symbolic.
         logging.debug(f"Numeric power failed ({type(e).__name__}: {e}). Falling back to symbolic path.")

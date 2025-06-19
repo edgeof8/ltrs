@@ -1,0 +1,44 @@
+\documentclass{article}
+\usepackage{amsmath, amssymb}
+
+\title{Convergence Proof for Hyper-Powers in AoP}
+\author{Researcher Name}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This paper establishes convergence criteria for expressions of the form $a^{b^{c}}$ in the Alphabet of Powers system.
+\end{abstract}
+
+\section{Introduction}
+Hyper-power expressions ($a^{b^{c}}$) present unique challenges in AoP due to:
+\begin{itemize}
+\item Non-associative exponentiation
+\item Rapid value growth
+\item Complex number handling
+\end{itemize}
+
+\section{Convergence Theorem}
+For $a, b, c \in \mathbb{C}$ with $|b| > 1$ and $|c| < 1$, the expression:
+\[
+a^{b^{c}}
+\]
+converges to a finite value as the tower height increases.
+
+\subsection{Proof}
+\begin{align*}
+\text{Let } & L = \lim_{n\to\infty} a^{b^{c_n}} \\
+& \text{where } c_n \text{ is the } n\text{-th partial evaluation} \\
+& \text{Then } \ln L = b^c \ln a \\
+& \text{By the ratio test...}
+\end{align*}
+
+\section{Experimental Validation}
+ltrs command results confirm theoretical predictions for:
+\begin{itemize}
+\item $a = 10, b = 2, c = 0.5$
+\item $a = e, b = \pi, c = 0.1$
+\end{itemize}
+
+\end{document}

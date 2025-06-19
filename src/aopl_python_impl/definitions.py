@@ -30,11 +30,12 @@ _variable_name = r"[zZ_][a-zA-Z0-9_$]*"
 _constants = r'#pi|#e|#phi|#tau|#sqrt2|#j'
 
 TOKEN_SPECIFICATION: List[Tuple[str, str]] = [
+    # Operators first to ensure they are captured before numbers/coeff_words that might start with + or -
+    ('OPERATOR', r"\*\*|[\+\-\*\/\^=]"),
     ('COEFF_WORD', f"{_number_signed}{_word_simple}"),
     ('CONSTANT_LITERAL', _constants),
     ('NUMBER', _number_signed),
     ('IDENTIFIER', _word_simple),
-    ('OPERATOR', r"\*\*|[\+\-\*\/\^=]"),
     ('LPAREN', r"\("), ('RPAREN', r"\)"),
     ('WHITESPACE', r"\s+"), ('MISMATCH', r"."),
 ]

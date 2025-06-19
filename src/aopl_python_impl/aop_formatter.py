@@ -8,15 +8,24 @@ from .definitions import OutputFormatMode, EXPONENT_TO_LETTER_MAP
 getcontext().prec = 200
 
 def _complex_to_str(c: complex, precision: int) -> str:
-    if cmath.isclose(c.imag, 0):
+    # Define a suitable absolute tolerance for checking closeness to zero
+    abs_tol_zero = 1e-12 # Adjusted tolerance
+    if cmath.isclose(c.imag, 0, abs_tol=abs_tol_zero):
         real_part = c.real
-        if cmath.isclose(real_part, round(real_part)): return str(int(round(real_part)))
+        # For real part, check if it's an integer
+        if cmath.isclose(real_part, round(real_part), rel_tol=1e-9, abs_tol=abs_tol_zero): # Use rel_tol for round check
+            return str(int(round(real_part)))
         return f"{real_part:.{precision}g}".rstrip('0').rstrip('.')
-    if cmath.isclose(c, 0j): return "0"
-    if cmath.isclose(c.real, 0):
-        imag_str = "j" if cmath.isclose(abs(c.imag), 1.0) else f"{abs(c.imag):.{precision}g}j".replace("j-", "-j")
+    if cmath.isclose(c.real, 0, abs_tol=abs_tol_zero) and cmath.isclose(c.imag, 0, abs_tol=abs_tol_zero): return "0"
+    if cmath.isclose(c.real, 0, abs_tol=abs_tol_zero):
+        # Use #j for the imaginary unit in output
+        imag_coeff_str = "" if cmath.isclose(abs(c.imag), 1.0, rel_tol=1e-9, abs_tol=abs_tol_zero) else f"{abs(c.imag):.{precision}g}"
+        imag_str = f"{imag_coeff_str}#j"
         return imag_str if c.imag > 0 else f"-{imag_str}"
-    return f"({c.real:.{precision}g}{c.imag:+.{precision}g}j)".replace("+-","-")
+    # Use #j for the imaginary unit in output
+    real_part_str = f"{c.real:.{precision}g}"
+    imag_part_str = f"{c.imag:+.{precision}g}#j" # Add #j here
+    return f"({real_part_str}{imag_part_str})".replace("+-","-")
 
 def _format_number_as_aop(num: Union[Decimal, complex, float, int], base: int, get_letter: Callable, precision: int, allow_squash: bool = False, is_coeff_formatting: bool = False) -> str:
     if isinstance(num, complex):
@@ -34,8 +43,13 @@ def _format_number_as_aop(num: Union[Decimal, complex, float, int], base: int, g
     # Priority 1: Direct letter representation (e.g., 2 -> b)
     # Only apply if not formatting a coefficient that happens to be in the 1-50 range.
     if not is_coeff_formatting and num_decimal == num_decimal.to_integral_value():
-        num_int = int(num_decimal)
-        if 1 <= num_int <= 50:
+        num_int = int(num_decimal.to_integral_value(rounding=decimal.ROUND_HALF_UP))
+        # If formatting the number 1 as a standalone value (where allow_squash is true,
+        # passed from format_term's numeric path), it should be "1".
+        # The letter 'a' (for base 10) represents 10^1, not the number 1.
+        if num_int == 1 and allow_squash:
+            return "1" # Explicitly format the number 1 as "1"
+        elif 1 <= num_int <= 50:
             if letter := get_letter(num_int):
                 return letter
 
@@ -70,36 +84,39 @@ def _format_number_as_aop(num: Union[Decimal, complex, float, int], base: int, g
     return _complex_to_str(complex(num_decimal), precision)
 
 def format_term(term: AoPTerm, base: int, get_letter: Callable, precision: int) -> str:
-    coeff_str = _complex_to_str(term.coeff, precision)
+    # Numeric-First Formatting for individual terms
+    try:
+        # Attempt to get the full numerical value of the term
+        # AoPTerm.to_numerical() uses Decimal for precision
+        numerical_value_of_term = term.to_numerical(base)
+        # If successful, format this single numerical value using the AoP rules
+        # allow_squash=True because this is the term's complete value
+        return _format_number_as_aop(numerical_value_of_term, base, get_letter, precision, allow_squash=True, is_coeff_formatting=False)
+    except PracticalLimitError: # Catches OverflowError from to_numerical if exponent is too large/symbolic
+        # Symbolic Fallback Formatting if term cannot be represented as a single number
+        coeff_str = _complex_to_str(term.coeff, precision)
+        exp_str = ""
+        if isinstance(term.exponent, AoPValue):
+            # The exponent is already an AoPValue (symbolic structure)
+            exp_str = format_output(term.exponent, base, get_letter, OutputFormatMode.AOP, precision)
+            # Add parentheses if the exponent's string form is complex
+            if len(term.exponent.terms) > 1 or any(c in exp_str for c in ' *()+^-'): # Check for operators too
+                exp_str = f"({exp_str})"
+        else: # Exponent is a simple number (but couldn't be evaluated with coeff above, e.g. coeff is complex, or exp is complex)
+              # Or, term.to_numerical failed for other reasons but exponent is simple.
+            # Format the exponent number. Allow squashing if coeff is 1 (e.g. a^10000 -> a^(a^d))
+            # is_coeff_formatting=False because this is an exponent value.
+            can_squash_exponent = cmath.isclose(term.coeff, 1.0) and cmath.isclose(term.coeff.imag,0)
+            exp_str = _format_number_as_aop(term.exponent, base, get_letter, precision, allow_squash=can_squash_exponent, is_coeff_formatting=False)
 
-    # Case 1: Term is a simple number (exponent is effectively 0)
-    # Example: 2000 -> "2c", or 100 -> "b" (if base=10 and 100 itself is requested, not as an exponent of 'a')
-    if isinstance(term.exponent, (int, float, Decimal, complex)) and complex(term.exponent) == 0:
-        # Format the coefficient itself as an AoP number. Allow squashing if it's a perfect power of base.
-        return _format_number_as_aop(term.coeff, base, get_letter, precision, allow_squash=True, is_coeff_formatting=False)
+        if cmath.isclose(term.coeff, 1.0) and cmath.isclose(term.coeff.imag,0): return f"a^{exp_str}"
+        if cmath.isclose(term.coeff, -1.0) and cmath.isclose(term.coeff.imag,0): return f"-a^{exp_str}"
 
-    # Case 2: Term is of the form Coeff * base^Exponent (where Exponent is not 0)
-    # Example: Term(coeff=2, exponent=100) -> "2*a^b" (for base 10)
-    # Example: Term(coeff=1, exponent=2000) -> "a^2c" (for base 10)
-    exp_str = ""
-    if isinstance(term.exponent, AoPValue):
-        # This is tricky. If the exponent is an AoPValue, its string representation is already handled.
-        exp_str = format_output(term.exponent, base, get_letter, OutputFormatMode.AOP, precision)
-        if len(term.exponent.terms) > 1 or any(c in exp_str for c in ' *()+'):
-            exp_str = f"({exp_str})"
-    else: # Exponent is a number
-        # Format the exponent part.
-        # If coeff is 1 (it's an 'a^exponent_val' term), allow squashing of exponent_val.
-        # e.g., for a^10000 (coeff=1, exp=10000), 10000 can become a^d. Result: a^(a^d)
-        # For 2*a^2000 (coeff=2, exp=2000), 2000 becomes 2c. Result: 2*a^2c
-        can_squash_exponent = cmath.isclose(term.coeff, 1.0)
-        exp_str = _format_number_as_aop(term.exponent, base, get_letter, precision, allow_squash=can_squash_exponent, is_coeff_formatting=False)
+        # If exponent is 0 for a symbolic/complex coefficient, it should be just the coefficient string
+        if isinstance(term.exponent, (Decimal, complex, int, float)) and complex(term.exponent) == 0:
+             return coeff_str # e.g. for a complex coefficient like (1+2#j) * base^0
 
-    if coeff_str == "1": return f"a^{exp_str}"
-    if coeff_str == "-1": return f"-a^{exp_str}"
-
-    # Default for Coeff * base^Exponent (where Coeff is not 1 or -1)
-    return f"{coeff_str}*a^{exp_str}"
+        return f"{coeff_str}*a^{exp_str}"
 
 def format_output(value: AoPValue, base: int, get_letter: Callable, mode: OutputFormatMode, precision: int) -> str:
     if not value.terms: return "0"

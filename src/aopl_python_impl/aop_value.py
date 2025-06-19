@@ -53,9 +53,28 @@ class AoPValue:
 class AoPTerm:
     def __init__(self, coeff: complex=1.0, exponent: Union[AoPValue,complex,Decimal,int,float]=0.0):
         self.coeff = complex(coeff)
-        if isinstance(exponent, (int,float)): self.exponent: Union[AoPValue, complex, Decimal] = Decimal(str(exponent))
-        elif isinstance(exponent, complex): self.exponent = exponent
-        else: self.exponent = exponent
+        normalized_exponent: Union[AoPValue, complex, Decimal]
+        if isinstance(exponent, AoPValue):
+            normalized_exponent = exponent
+        elif isinstance(exponent, complex):
+            if cmath.isclose(exponent.imag, 0):
+                # Convert to Decimal and normalize if it's an integer
+                d_exp = Decimal(exponent.real) # Use .real directly
+                if d_exp == d_exp.to_integral_value():
+                    normalized_exponent = d_exp.quantize(Decimal('1')) # e.g., Decimal('3')
+                else:
+                    normalized_exponent = d_exp # e.g., Decimal('3.5')
+            else:
+                normalized_exponent = exponent # Keep as complex if imag part is non-zero
+        elif isinstance(exponent, (int, float, Decimal)):
+            d_exp = Decimal(exponent) # Use direct conversion
+            if d_exp == d_exp.to_integral_value():
+                normalized_exponent = d_exp.quantize(Decimal('1'))
+            else:
+                normalized_exponent = d_exp
+        else: # Should not be reached if type hints are followed, but as a fallback
+            normalized_exponent = exponent
+        self.exponent = normalized_exponent
     def is_numeric_exponent_zero(self) -> bool:
         """Checks if the exponent is numerically equal to 0."""
         if isinstance(self.exponent, (int, float, Decimal, complex)):

@@ -29,6 +29,12 @@ def _handle_power(stack: list[AoPValue], base: int, token: Token):
     from . import aop_operations as ops
     _handle_op(stack, base, token, ops.power_value)
 
+def _handle_unary_minus_op(stack: list[AoPValue], base: int, token: Token): # New handler
+    from . import aop_operations as ops # Import ops locally
+    if not stack: raise AoPError("Insufficient operand for unary minus", token)
+    # For AoP, unary minus is multiplying by -1.
+    stack.append(ops.scalar_multiply(complex(-1.0), stack.pop(), base))
+
 OPERATOR_HANDLERS = {'+': _handle_add, '-': _handle_subtract, '*': _handle_multiply, '/': _handle_divide, '^': _handle_power, '**': _handle_power}
 
 # ... (rest of the file is unchanged)
@@ -77,44 +83,76 @@ def infix_to_rpn(tokens: List[Token], operators_map: Dict[str, Dict]) -> List[To
     # Implicit multiplication (e.g., '2b' or 'ab') must have the highest precedence to group terms before exponentiation.
     implicit_op_props = {'precedence': 6, 'associativity': 'left'}
 
-    for token in tokens:
-        if token.kind in ('NUMBER', 'IDENTIFIER', 'COEFF_WORD', 'CONSTANT_LITERAL'):
-            output_queue.append(token)
-        elif token.kind == 'OPERATOR' or token.kind == 'IMPLICIT_OPERATOR':
-            op_props = implicit_op_props if token.kind == 'IMPLICIT_OPERATOR' else operators_map[token.value]
+    # Define a constant for the internal name of the unary minus operator
+    UMINUS_INTERNAL_OP_NAME = '_UMINUS_'
+
+    _operators_map_extended = operators_map.copy()
+    # Unary minus precedence: higher than mul/div (3), and higher than power (5) to ensure correct binding.
+    # Power is R-assoc. Unary minus is R-assoc.
+    # To ensure a^-b is a^(-b), UMINUS needs to bind to 'b' before '^' considers '-b' as its RHS.
+    _operators_map_extended[UMINUS_INTERNAL_OP_NAME] = {'precedence': 5.5, 'associativity': 'right'} # Higher than ^ (5)
+
+    for i, token_obj in enumerate(tokens):
+        current_token_value = token_obj.value
+        current_token_kind = token_obj.kind
+        is_identified_unary_op = False
+
+        if current_token_kind == 'OPERATOR' and current_token_value == '-':
+            # Context check for unary minus
+            if i == 0 or tokens[i-1].kind in ('OPERATOR', 'LPAREN', 'IMPLICIT_OPERATOR'):
+                is_identified_unary_op = True
+                current_token_value = UMINUS_INTERNAL_OP_NAME # Reassign value for logic
+
+        if current_token_kind in ('NUMBER', 'IDENTIFIER', 'COEFF_WORD', 'CONSTANT_LITERAL'):
+            output_queue.append(token_obj)
+        elif current_token_kind == 'OPERATOR' or token_obj.kind == 'IMPLICIT_OPERATOR': # Use token_obj.kind for implicit
+
+            op_to_process = current_token_value # This might be UMINUS_INTERNAL_OP_NAME or original like '+'
+            op_props = implicit_op_props if token_obj.kind == 'IMPLICIT_OPERATOR' else _operators_map_extended[op_to_process]
 
             while (operator_stack and operator_stack[-1].value != '('):
-                stack_op = operator_stack[-1]
-                stack_op_props = implicit_op_props if stack_op.kind == 'IMPLICIT_OPERATOR' else operators_map[stack_op.value]
+                stack_op_token = operator_stack[-1]
+                # Stack op value could also be UMINUS_INTERNAL_OP_NAME
+                stack_op_value_for_lookup = stack_op_token.value
+                stack_op_props = implicit_op_props if stack_op_token.kind == 'IMPLICIT_OPERATOR' else _operators_map_extended[stack_op_value_for_lookup]
 
                 if (stack_op_props['precedence'] > op_props['precedence']) or \
                    (stack_op_props['precedence'] == op_props['precedence'] and op_props['associativity'] == 'left'):
                     output_queue.append(operator_stack.pop())
                 else:
                     break
-            operator_stack.append(token)
-        elif token.kind == 'LPAREN':
-            operator_stack.append(token)
-        elif token.kind == 'RPAREN':
+            # Push the original token_obj, but replace its .value if it was identified as unary
+            operator_stack.append(token_obj._replace(value=op_to_process))
+        elif current_token_kind == 'LPAREN':
+            operator_stack.append(token_obj)
+        elif current_token_kind == 'RPAREN':
             while operator_stack and operator_stack[-1].value != '(':
                 output_queue.append(operator_stack.pop())
-            if not operator_stack: raise AoPError("Mismatched parentheses", token)
+            if not operator_stack: raise AoPError("Mismatched parentheses", token_obj)
             operator_stack.pop()
+
     while operator_stack:
-        if operator_stack[-1].value == '(': raise AoPError("Mismatched parentheses", operator_stack[-1])
-        output_queue.append(operator_stack.pop())
+        stack_top_token = operator_stack.pop()
+        if stack_top_token.value == '(':
+            raise AoPError("Mismatched parentheses", stack_top_token)
+        output_queue.append(stack_top_token)
+
     logging.debug(f"RPN queue: {output_queue}")
     return output_queue
 
 def evaluate_rpn(rpn_tokens: List[Token], variables: Dict[str, AoPValue], get_term_value_func: TermGetter, base: int) -> AoPValue:
     stack: list[AoPValue] = []
+    UMINUS_INTERNAL_OP_NAME = '_UMINUS_'
+    current_op_handlers = OPERATOR_HANDLERS.copy()
+    current_op_handlers[UMINUS_INTERNAL_OP_NAME] = _handle_unary_minus_op
+
     for token in rpn_tokens:
         if token.kind in ('NUMBER', 'IDENTIFIER', 'COEFF_WORD', 'CONSTANT_LITERAL'):
             stack.append(get_term_value_func(token.value, variables, token.kind))
             logging.debug(f"Pushed to stack: {stack[-1]!r}")
-        elif token.kind == 'OPERATOR' or token.kind == 'IMPLICIT_OPERATOR':
-            if token.value in OPERATOR_HANDLERS:
-                OPERATOR_HANDLERS[token.value](stack, base, token)
+        elif token.kind == 'OPERATOR' or token.kind == 'IMPLICIT_OPERATOR' or token.value == UMINUS_INTERNAL_OP_NAME:
+            if token.value in current_op_handlers:
+                current_op_handlers[token.value](stack, base, token)
             else:
                 raise AoPError(f"Unsupported operator: {token.value}", token)
     if len(stack) != 1:
