@@ -33,6 +33,10 @@ def _handle_equals(stack: list[AoPValue], base: int, token: Token): # New handle
     from . import aop_operations as ops
     _handle_op(stack, base, token, ops.equals_values)
 
+def _handle_equals(stack: list[AoPValue], base: int, token: Token): # New handler
+    from . import aop_operations as ops
+    _handle_op(stack, base, token, ops.equals_values)
+
 def _handle_unary_minus_op(stack: list[AoPValue], base: int, token: Token): # New handler
     from . import aop_operations as ops # Import ops locally
     if not stack: raise AoPError("Insufficient operand for unary minus", token)
@@ -40,6 +44,7 @@ def _handle_unary_minus_op(stack: list[AoPValue], base: int, token: Token): # Ne
     stack.append(ops.scalar_multiply(complex(-1.0), stack.pop(), base))
 
 OPERATOR_HANDLERS = {'+': _handle_add, '-': _handle_subtract, '*': _handle_multiply, '/': _handle_divide, '^': _handle_power, '**': _handle_power}
+OPERATOR_HANDLERS['=='] = _handle_equals # Add handler for ==
 OPERATOR_HANDLERS['=='] = _handle_equals # Add handler for ==
 
 # ... (rest of the file is unchanged)
