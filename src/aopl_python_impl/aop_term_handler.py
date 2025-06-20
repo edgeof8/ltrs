@@ -21,6 +21,9 @@ def get_term_value(term_str: str, variables: dict[str, AoPValue], kind: str) -> 
         coeff = complex(Decimal(match.group(1)))
         exponent = Decimal(calculate_word_exponent(match.group(2)))
         return AoPValue.from_term(AoPTerm(coeff, exponent))
+    if kind == 'VARIABLE':
+        if term_str in variables: return variables[term_str]
+        raise ValueError(f"Unknown identifier or variable: {term_str}")
     if kind == 'IDENTIFIER':
         if term_str in variables: return variables[term_str]
         # An identifier like "a" becomes a term with coeff 1 and its letter-value as the exponent.

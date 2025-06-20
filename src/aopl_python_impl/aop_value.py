@@ -59,17 +59,38 @@ class AoPTerm:
         elif isinstance(exponent, complex):
             if cmath.isclose(exponent.imag, 0):
                 # Convert to Decimal and normalize if it's an integer
-                d_exp = Decimal(exponent.real) # Use .real directly
-                if d_exp == d_exp.to_integral_value():
-                    normalized_exponent = d_exp.quantize(Decimal('1')) # e.g., Decimal('3')
+                d_exp = Decimal(str(exponent.real)) # Convert float to Decimal via string for precision
+                # Only quantize if it has a fractional part that is effectively zero (e.g. "3.000")
+                # and it's not an already plain integer (like Decimal('200') which has exponent 0)
+                # or a very large number where quantize might fail.
+                # A Decimal is an integer if its exponent is non-negative after normalization,
+                # or if it has a negative exponent but d_exp == d_exp.to_integral_value().
+                # Check if the Decimal has a fractional part by examining its exponent
+                exp_tuple = d_exp.as_tuple()
+                if isinstance(exp_tuple.exponent, int) and exp_tuple.exponent < 0: # Has digits after decimal point (e.g. 3.0, 3.5)
+                    if d_exp == d_exp.to_integral_value(rounding=decimal.ROUND_FLOOR): # e.g., 3.0
+                        try:
+                            normalized_exponent = d_exp.quantize(Decimal('1')) # Attempt to make it Decimal('3')
+                        except decimal.InvalidOperation:
+                            normalized_exponent = d_exp.to_integral_value(rounding=decimal.ROUND_FLOOR) # Fallback for huge numbers
+                    else: # e.g. 3.5
+                        normalized_exponent = d_exp
                 else:
-                    normalized_exponent = d_exp # e.g., Decimal('3.5')
+                    normalized_exponent = d_exp # Already an integer (like Decimal('200')) or has non-zero fraction
             else:
                 normalized_exponent = exponent # Keep as complex if imag part is non-zero
         elif isinstance(exponent, (int, float, Decimal)):
             d_exp = Decimal(exponent) # Use direct conversion
-            if d_exp == d_exp.to_integral_value():
-                normalized_exponent = d_exp.quantize(Decimal('1'))
+            # Check if the Decimal has a fractional part by examining its exponent
+            exp_tuple = d_exp.as_tuple()
+            if isinstance(exp_tuple.exponent, int) and exp_tuple.exponent < 0: # Has digits after decimal point
+                if d_exp == d_exp.to_integral_value(rounding=decimal.ROUND_FLOOR):
+                    try:
+                        normalized_exponent = d_exp.quantize(Decimal('1'))
+                    except decimal.InvalidOperation:
+                        normalized_exponent = d_exp.to_integral_value(rounding=decimal.ROUND_FLOOR)
+                else:
+                    normalized_exponent = d_exp
             else:
                 normalized_exponent = d_exp
         else: # Should not be reached if type hints are followed, but as a fallback
@@ -82,18 +103,35 @@ class AoPTerm:
             except TypeError: return False
         return False
     def to_numerical(self, base: int) -> complex:
-        if cmath.isclose(self.coeff, 0): return complex(0)
-        exp_val_complex: complex
-        if isinstance(self.exponent, AoPValue): exp_val_complex = self.exponent.to_numerical(base)
+        """Converts the AoPTerm to a complex number, if possible. Raises PracticalLimitError if too large."""
+        if isinstance(self.exponent, AoPValue):
+            exp_val_complex = self.exponent.to_numerical(base)
         else: exp_val_complex = complex(self.exponent)
         if not cmath.isfinite(exp_val_complex): raise PracticalLimitError("Exponent evaluates to a non-finite number.")
         try:
-            if cmath.isclose(exp_val_complex.imag, 0) and cmath.isclose(self.coeff.imag, 0):
-                return complex(Decimal(str(self.coeff.real)) * (Decimal(str(base)) ** Decimal(str(exp_val_complex.real))))
-            powered_base = complex(base) ** exp_val_complex
-            result = self.coeff * powered_base
-            if not cmath.isfinite(result): raise OverflowError("Result is not finite.")
-            return result
+            # Path for real coefficients and real exponents (use Decimal for precision)
+            if cmath.isclose(exp_val_complex.imag, 0, abs_tol=1e-14) and \
+               cmath.isclose(self.coeff.imag, 0, abs_tol=1e-14):
+                dec_coeff = Decimal(str(self.coeff.real))
+                dec_base = Decimal(str(base))
+                dec_exp_exponent = Decimal(str(exp_val_complex.real))
+
+                powered_base_dec = dec_base ** dec_exp_exponent # Can raise decimal.Overflow
+                result_dec = dec_coeff * powered_base_dec       # Can raise decimal.Overflow
+
+                # Now, convert to complex for the return type, but check for float overflow
+                if not result_dec.is_finite(): # e.g. Decimal('NaN'), Decimal('Inf')
+                    raise PracticalLimitError(f"Decimal calculation resulted in non-finite value: {result_dec}")
+
+                result_complex = complex(result_dec)
+                if not cmath.isfinite(result_complex) and result_dec.is_finite(): # Finite Decimal became non-finite float
+                    raise PracticalLimitError(f"Result {result_dec} (finite Decimal) became non-finite when converting to complex for float limits.")
+                return result_complex
+            else: # Path for complex coefficients or complex exponents
+                powered_base = complex(base) ** exp_val_complex
+                result_complex = self.coeff * powered_base
+                if not cmath.isfinite(result_complex): raise OverflowError("Result is not finite.") # Caught below
+                return result_complex
         except (decimal.Overflow, decimal.InvalidOperation, OverflowError) as e: raise PracticalLimitError(f"Numerical evaluation failed: {e}")
     def __repr__(self) -> str: return f"Term(c={self.coeff!r}, e={self.exponent!r})"
 

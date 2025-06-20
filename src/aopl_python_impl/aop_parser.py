@@ -147,7 +147,7 @@ def evaluate_rpn(rpn_tokens: List[Token], variables: Dict[str, AoPValue], get_te
     current_op_handlers[UMINUS_INTERNAL_OP_NAME] = _handle_unary_minus_op
 
     for token in rpn_tokens:
-        if token.kind in ('NUMBER', 'IDENTIFIER', 'COEFF_WORD', 'CONSTANT_LITERAL'):
+        if token.kind in ('NUMBER', 'IDENTIFIER', 'VARIABLE', 'COEFF_WORD', 'CONSTANT_LITERAL'):
             stack.append(get_term_value_func(token.value, variables, token.kind))
             logging.debug(f"Pushed to stack: {stack[-1]!r}")
         elif token.kind == 'OPERATOR' or token.kind == 'IMPLICIT_OPERATOR' or token.value == UMINUS_INTERNAL_OP_NAME:

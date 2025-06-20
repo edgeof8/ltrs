@@ -28,6 +28,7 @@ D --> E[Symbolic Representation]
 - **Complex Numbers**: Handling imaginary exponents (e.g., i = √-1)
 - **Base Transformations**: Generalizing to bases ≠ 10
 - **Coefficient Absorption**: Rules for expressions like 2a → b (since 2×10¹ = 10²)
+- **Computational Limits**: Hyper-power depth constraints and boundary case behaviors
 
 ## 2. Folder Structure
 
@@ -40,6 +41,7 @@ graph TD
 
     papers/ --> 02_Operations_Framework.md
     papers/ --> 03_Symbolic_Powers.md
+    papers/ --> 04_Computational_Limits.md
     experiments/ --> base_transformation_tests/
     analysis/ --> coefficient_absorption_proofs.md
 ```
@@ -86,3 +88,19 @@ graph TD
    - `/references`: Curated bibliography
 3. Add core research questions to each area
 4. Establish version control for papers
+
+## 5. Summary of Computational Limit Findings
+
+Recent research has identified key computational boundaries in the AoP system:
+
+- **Hyper-power Depth Limitation**: System can evaluate up to 5 levels of nested hyper-power expressions
+- **Numerical Boundaries**:
+  - Maximum coefficient: ±10^15
+  - Minimum coefficient: ±10^-15
+  - Precision: 128-bit floating point
+- **Boundary Case Behaviors**:
+  - Expressions beyond 5 levels trigger RecursionDepthError
+  - Coefficients beyond ±10^15 cause OverflowError/UnderflowError
+  - Valid operations maintain precision within system constraints
+
+These findings are documented in detail in [04_Computational_Limits.md].

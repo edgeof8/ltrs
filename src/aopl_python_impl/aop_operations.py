@@ -1,33 +1,96 @@
 # aopl_python_impl/aop_operations.py
 import cmath, math, decimal, logging
 from decimal import Decimal, getcontext
-from typing import Union, List
+from typing import Union, List, Dict, Tuple
 from .aop_value import AoPValue, AoPTerm, PracticalLimitError
 
 getcontext().prec = 200
 
 def simplify_value(val: AoPValue, base: int = 10) -> AoPValue:
     logging.debug(f"Simplifying: {val!r}")
-    if not val.terms: return val
+    if not val.terms: return AoPValue() # Return empty AoPValue for "0" or empty input
+
+    # Step 1: Recursively simplify exponents of all terms
     processed_terms = [AoPTerm(term.coeff, simplify_value(term.exponent, base) if isinstance(term.exponent, AoPValue) else term.exponent) for term in val.terms]
     current_val = AoPValue(processed_terms)
 
-    if len(current_val.terms) == 1:
-        term = current_val.terms[0]
-        if cmath.isclose(term.coeff.imag, 0) and term.coeff.real > 0 and not cmath.isclose(term.coeff.real, 1.0):
+    # Step 2: Attempt to numerically sum terms if all are simple numbers or can be evaluated
+    if len(current_val.terms) > 1:
+        can_attempt_numerical_sum = True
+        for term in current_val.terms:
+            # A term cannot be part of a simple numerical sum if its exponent is itself a multi-term AoPValue
+            # or a complex AoPValue that doesn't simplify to a number.
+            # A single-term AoPValue exponent might be okay if that single term is numeric.
+            if isinstance(term.exponent, AoPValue) and len(term.exponent.terms) > 1:
+                can_attempt_numerical_sum = False
+                break
+            if isinstance(term.exponent, AoPValue) and len(term.exponent.terms) == 1:
+                # Check if the single term exponent is itself non-numeric (e.g. a^b as an exponent)
+                sub_exp = term.exponent.terms[0].exponent
+                if isinstance(sub_exp, AoPValue) or \
+                   (isinstance(sub_exp, complex) and not cmath.isclose(sub_exp.imag,0)):
+                    can_attempt_numerical_sum = False
+                    break
+
+        if can_attempt_numerical_sum:
             try:
-                log_coeff_val = (Decimal(str(term.coeff.real))).log10() / Decimal(base).log10()
-                if abs(log_coeff_val - log_coeff_val.to_integral_value(rounding=decimal.ROUND_HALF_UP)) < Decimal("1e-100"):
-                    new_exp_part = AoPValue.from_number(log_coeff_val.to_integral_value(rounding=decimal.ROUND_HALF_UP))
-                    old_exp_part = term.exponent if isinstance(term.exponent, AoPValue) else AoPValue.from_number(term.exponent)
-                    final_exp = add_values(new_exp_part, old_exp_part, base)
-                    return AoPValue([AoPTerm(1.0, final_exp.to_simple_number() or final_exp)])
-            except Exception:
+                numerical_sum_val = current_val.to_numerical(base) # This sums all terms numerically
+                # If successful and finite, replace current_val with a single term representing this sum
+                if cmath.isfinite(numerical_sum_val):
+                    logging.debug(f"Numerical sum of terms successful: {numerical_sum_val}")
+                    # The exponent of a summed numerical value is 0
+                    # AoPTerm constructor will handle Decimal conversion for real parts
+                    current_val = AoPValue([AoPTerm(coeff=numerical_sum_val, exponent=0)])
+                else:
+                    logging.debug("Numerical sum resulted in non-finite value.")
+            except (PracticalLimitError, TypeError, decimal.InvalidOperation):
+                logging.debug("Numerical summation of terms failed or not applicable, proceeding with symbolic sum.")
+                # Fall through to symbolic grouping if numerical sum fails
                 pass
 
-    if len(current_val.terms) > 1:
-        grouped = {}; [grouped.setdefault(repr(t.exponent), []).append(t) for t in current_val.terms]
-        current_val = AoPValue([AoPTerm(sum(t.coeff for t in term_list), term_list[0].exponent) for term_list in grouped.values() if not cmath.isclose(sum(t.coeff for t in term_list), 0)])
+    # Step 3: Group terms with identical exponents (symbolic sum)
+    # This is also the path taken if numerical summation wasn't possible or was skipped.
+    if len(current_val.terms) > 1: # Check again, as numerical sum might have reduced it to 1 term
+        grouped: Dict[Union[str, Tuple[str, str]], List[AoPTerm]] = {}
+        for t in current_val.terms:
+            exp_key_obj = t.exponent
+            if isinstance(exp_key_obj, AoPValue): exp_key = repr(exp_key_obj) # AoPValues are hashable via repr
+            elif isinstance(exp_key_obj, complex): exp_key = (repr(exp_key_obj.real), repr(exp_key_obj.imag))
+            else: exp_key = repr(exp_key_obj) # For Decimal, int, float
+            grouped.setdefault(exp_key, []).append(t)
+
+        summed_terms: List[AoPTerm] = []
+        for term_list in grouped.values():
+            total_coeff = sum(t.coeff for t in term_list)
+            if not cmath.isclose(total_coeff, 0.0, abs_tol=1e-100): # Use a very small abs_tol for comparing coeff to zero
+                summed_terms.append(AoPTerm(total_coeff, term_list[0].exponent))
+        current_val = AoPValue(summed_terms)
+
+    # Step 4: Simplify single term (e.g., coefficient absorption)
+    # This applies if current_val was initially 1 term, or reduced to 1 by numerical/symbolic sum.
+    if len(current_val.terms) == 1:
+        term = current_val.terms[0]
+        # Absorb coefficient into exponent if coeff is a positive real power of the base
+        # and the exponent is a simple number (or can be added to).
+        if cmath.isclose(term.coeff.imag, 0) and term.coeff.real > 0 and not cmath.isclose(term.coeff.real, 1.0):
+            if not isinstance(term.exponent, AoPValue) and isinstance(term.coeff.real, (float,int,Decimal)): # Check added for coeff type
+                try:
+                    # Use natural log for consistency and to handle arbitrary bases properly
+                    log_coeff_val = Decimal(str(term.coeff.real)).ln() / Decimal(str(base)).ln()
+                    if abs(log_coeff_val - log_coeff_val.to_integral_value(rounding=decimal.ROUND_HALF_UP)) < Decimal("1e-50"): # High precision check
+                        coeff_exp_part_val = log_coeff_val.to_integral_value(rounding=decimal.ROUND_HALF_UP)
+
+                        if isinstance(term.exponent, (Decimal, complex, int, float)):
+                            # Ensure current exponent is treated as Decimal if it's real
+                            current_exp_is_complex_real = isinstance(term.exponent, complex) and cmath.isclose(term.exponent.imag, 0)
+                            current_exp_val_decimal = Decimal(str(term.exponent.real)) if current_exp_is_complex_real else Decimal(str(term.exponent))
+
+                            new_exponent_val = current_exp_val_decimal + coeff_exp_part_val
+                            current_val = AoPValue([AoPTerm(1.0, new_exponent_val)]) # Normalized by AoPTerm
+                            logging.debug(f"Absorbed coefficient into exponent, new term: {current_val.terms[0]!r}")
+                except Exception as e: # Catch broader exceptions during log/decimal math
+                    logging.debug(f"Could not absorb coefficient for term {term!r}: {e}")
+                    pass
 
     return current_val
 
