@@ -1,7 +1,7 @@
 # aopl_python_impl/aop_parser.py
 import re, logging
 from typing import List, Dict
-from .definitions import OPERATORS, Token, AoPError
+from .definitions import OPERATORS, Token, AoPError, LETTER_TO_EXPONENT_MAP
 from .aop_value import AoPValue
 from .interfaces import TermGetter
 # FIX: Do not import aop_operations at the top level to avoid circular import issues.
@@ -29,6 +29,10 @@ def _handle_power(stack: list[AoPValue], base: int, token: Token):
     from . import aop_operations as ops
     _handle_op(stack, base, token, ops.power_value)
 
+def _handle_equals(stack: list[AoPValue], base: int, token: Token): # New handler
+    from . import aop_operations as ops
+    _handle_op(stack, base, token, ops.equals_values)
+
 def _handle_unary_minus_op(stack: list[AoPValue], base: int, token: Token): # New handler
     from . import aop_operations as ops # Import ops locally
     if not stack: raise AoPError("Insufficient operand for unary minus", token)
@@ -36,6 +40,7 @@ def _handle_unary_minus_op(stack: list[AoPValue], base: int, token: Token): # Ne
     stack.append(ops.scalar_multiply(complex(-1.0), stack.pop(), base))
 
 OPERATOR_HANDLERS = {'+': _handle_add, '-': _handle_subtract, '*': _handle_multiply, '/': _handle_divide, '^': _handle_power, '**': _handle_power}
+OPERATOR_HANDLERS['=='] = _handle_equals # Add handler for ==
 
 # ... (rest of the file is unchanged)
 
@@ -72,6 +77,15 @@ def tokenize_expression(expression: str, token_regex: re.Pattern) -> List[Token]
         elif kind == 'MISMATCH':
             raise AoPError(f"Unexpected character: '{match.group()}'", Token(kind, match.group(), match.start(), match.end()))
     logging.debug(f"Raw tokens: {raw_tokens}")
+    # Normalize lowercase 'z' to uppercase 'Z' if 'Z' is a defined AoP letter.
+    # This effectively makes 'z' an input alias for 'Z'.
+    normalized_tokens_for_z_alias = []
+    for rt_token in raw_tokens:  # Renamed loop variable to avoid conflict
+        if rt_token.kind == 'IDENTIFIER' and rt_token.value == 'z' and 'Z' in LETTER_TO_EXPONENT_MAP:
+            normalized_tokens_for_z_alias.append(rt_token._replace(value='Z'))
+        else:
+            normalized_tokens_for_z_alias.append(rt_token)
+    raw_tokens = normalized_tokens_for_z_alias  # Update raw_tokens
     tokens = insert_implicit_multiplication(raw_tokens)
     logging.debug(f"Tokens after implicit multiplication: {tokens}")
     return tokens

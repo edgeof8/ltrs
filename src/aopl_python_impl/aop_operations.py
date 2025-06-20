@@ -229,3 +229,25 @@ def subtract_values(v1: AoPValue, v2: AoPValue, base: int = 10) -> AoPValue:
 
 def divide_values(v1: AoPValue, v2: AoPValue, base: int = 10) -> AoPValue:
     return multiply_values(v1, power_value(v2, AoPValue.from_number(-1), base), base)
+
+def equals_values(v1: AoPValue, v2: AoPValue, base: int = 10) -> AoPValue:
+    """Compares two AoPValues for numerical equality.
+    Returns AoPValue(1) if equal, AoPValue(0) if not.
+    Uses a tolerance for floating point comparisons.
+    """
+    try:
+        num1 = v1.to_numerical(base)
+        num2 = v2.to_numerical(base)
+
+        # For complex numbers, cmath.isclose compares both real and imaginary parts.
+        # Define a suitable tolerance.
+        if cmath.isclose(num1, num2, rel_tol=1e-9, abs_tol=1e-12): # Adjust tolerance as needed
+            return AoPValue.from_number(1)
+        else:
+            return AoPValue.from_number(0)
+    except PracticalLimitError: # If either value cannot be converted to a number (e.g., too large, symbolic)
+        logging.debug(f"Cannot numerically compare for equality due to PracticalLimitError: {v1!r} vs {v2!r}")
+        return AoPValue.from_number(0) # Or raise an error, or return a special "undefined" AoPValue
+    except Exception as e: # Other unexpected errors during conversion
+        logging.error(f"Error during equality comparison: {e}")
+        return AoPValue.from_number(0) # Default to not equal on error

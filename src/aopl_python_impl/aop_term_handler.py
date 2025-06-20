@@ -5,10 +5,14 @@ from decimal import Decimal
 from .aop_value import AoPValue, AoPTerm
 from .definitions import LETTER_TO_EXPONENT_MAP
 
-COEFF_WORD_PARSER = re.compile(r"([+-]?\d*\.?\d+(?:[eE][+-]?\d+)?)([a-yA-Y]+)")
+COEFF_WORD_PARSER = re.compile(r"([+-]?\d*\.?\d+(?:[eE][+-]?\d+)?)([a-yA-YzZ]+)")
 
 def calculate_word_exponent(word: str) -> int:
-    return sum(LETTER_TO_EXPONENT_MAP.get(char, 0) for char in word)
+    exp_sum = 0
+    for char in word:
+        char_to_lookup = 'Z' if char == 'z' and 'Z' in LETTER_TO_EXPONENT_MAP else char
+        exp_sum += LETTER_TO_EXPONENT_MAP.get(char_to_lookup, 0)
+    return exp_sum
 
 def get_term_value(term_str: str, variables: dict[str, AoPValue], kind: str) -> AoPValue:
     # This is the unified entry point. Everything becomes an AoPValue immediately.
@@ -43,6 +47,10 @@ def get_term_value(term_str: str, variables: dict[str, AoPValue], kind: str) -> 
             return AoPValue.from_number(Decimal(math.sqrt(2)))
         elif term_str == "#j": # Imaginary unit
             return AoPValue.from_number(complex(0, 1))
+        elif term_str == "#sqrt3":
+            return AoPValue.from_number(Decimal(math.sqrt(3)))
+        elif term_str == "#ln2": # Natural log of 2
+            return AoPValue.from_number(Decimal(math.log(2)))
         else:
             raise ValueError(f"Unknown constant literal: {term_str}")
 
