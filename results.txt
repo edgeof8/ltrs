@@ -1,0 +1,52 @@
+Skipped line 1: # Basic letter value tests
+Input: a
+Output: a
+---
+Input: Y
+Output: Y
+---
+Input: Z
+Output: Z
+---
+Input: z
+Output: Z
+---
+Skipped line 6: 
+Skipped line 7: # Word formation test
+Input: ab
+Output: c
+---
+Skipped line 9: 
+Skipped line 10: # Basic arithmetic operations
+Input: a + b
+Output: 110
+---
+Input: c * d
+Output: g
+---
+Skipped line 13: 
+Skipped line 14: # Power operation
+Input: b ^ c
+Output: a^2c
+---
+Skipped line 16: 
+Skipped line 17: # Equality checks
+Input: a * b == c
+Output: 1
+---
+Input: c == ab
+Output: 1
+---
+Skipped line 20: 
+Skipped line 21: # Variable assignment and usage
+Input: $mytest = f / e
+Output: Error: Unknown identifier or variable: $mytest
+---
+Input: $mytest
+Output: Error: Unknown identifier or variable: $mytest
+---
+Skipped line 24: 
+Skipped line 25: # Predefined variable test
+Input: $googol
+Output: Z
+---

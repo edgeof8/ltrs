@@ -46,8 +46,6 @@ Your explanation should:
     ]
 
     try:
-        print("🤖 AI is thinking...")
-
         if OPENROUTER_API_KEY:
             headers = {
                 "Authorization": f"Bearer {OPENROUTER_API_KEY}",

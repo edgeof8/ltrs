@@ -29,6 +29,20 @@ def _handle_power(stack: list[AoPValue], base: int, token: Token):
     from . import aop_operations as ops
     _handle_op(stack, base, token, ops.power_value)
 
+def _handle_assignment(stack: list[AoPValue], variables: Dict[str, AoPValue], token: Token):
+    # For RPN: $var, value, =
+    # Stack has [..., var_name_token, value_obj]
+    if len(stack) < 2: raise AoPError("Insufficient operands for assignment", token)
+    value_to_assign = stack.pop() # This is an AoPValue
+    var_token = stack.pop()       # This should be the VARIABLE Token itself, or just its name string
+    if not isinstance(var_token, Token) or var_token.kind != 'VARIABLE':
+        raise AoPError(f"Invalid L-value for assignment: {var_token!r}", token)
+    variables[var_token.value] = value_to_assign # Store in the shared variables dict
+    stack.append(value_to_assign) # Assignment expression evaluates to the assigned value
+
+# Note: _handle_assignment itself is not directly in OPERATOR_HANDLERS
+# because it needs the 'variables' dict, which is only available in evaluate_rpn.
+
 def _handle_equals(stack: list[AoPValue], base: int, token: Token): # New handler
     from . import aop_operations as ops
     _handle_op(stack, base, token, ops.equals_values)
@@ -40,7 +54,8 @@ def _handle_unary_minus_op(stack: list[AoPValue], base: int, token: Token): # Ne
     stack.append(ops.scalar_multiply(complex(-1.0), stack.pop(), base))
 
 OPERATOR_HANDLERS = {'+': _handle_add, '-': _handle_subtract, '*': _handle_multiply, '/': _handle_divide, '^': _handle_power, '**': _handle_power}
-OPERATOR_HANDLERS['=='] = _handle_equals # Add handler for ==
+OPERATOR_HANDLERS['=='] = _handle_equals
+# OPERATOR_HANDLERS['='] will be handled specially in evaluate_rpn
 
 # ... (rest of the file is unchanged)
 
@@ -117,8 +132,8 @@ def infix_to_rpn(tokens: List[Token], operators_map: Dict[str, Dict]) -> List[To
                 is_identified_unary_op = True
                 current_token_value = UMINUS_INTERNAL_OP_NAME # Reassign value for logic
 
-        if current_token_kind in ('NUMBER', 'IDENTIFIER', 'COEFF_WORD', 'CONSTANT_LITERAL'):
-            output_queue.append(token_obj)
+        if current_token_kind in ('NUMBER', 'IDENTIFIER', 'COEFF_WORD', 'CONSTANT_LITERAL', 'VARIABLE'): # Add VARIABLE
+            output_queue.append(token_obj) # Push VARIABLE token itself to RPN queue
         elif current_token_kind == 'OPERATOR' or token_obj.kind == 'IMPLICIT_OPERATOR': # Use token_obj.kind for implicit
 
             op_to_process = current_token_value # This might be UMINUS_INTERNAL_OP_NAME or original like '+'
@@ -164,11 +179,16 @@ def evaluate_rpn(rpn_tokens: List[Token], variables: Dict[str, AoPValue], get_te
         if token.kind in ('NUMBER', 'IDENTIFIER', 'VARIABLE', 'COEFF_WORD', 'CONSTANT_LITERAL'):
             stack.append(get_term_value_func(token.value, variables, token.kind))
             logging.debug(f"Pushed to stack: {stack[-1]!r}")
-        elif token.kind == 'OPERATOR' or token.kind == 'IMPLICIT_OPERATOR' or token.value == UMINUS_INTERNAL_OP_NAME:
-            if token.value in current_op_handlers:
-                current_op_handlers[token.value](stack, base, token)
+        elif token.kind == 'OPERATOR' or token.kind == 'IMPLICIT_OPERATOR' or token.value == UMINUS_INTERNAL_OP_NAME : # Added UMINUS check
+            if token.value == '=': # Special direct handling for assignment
+                # _handle_assignment needs the 'variables' dict from this scope
+                _handle_assignment(stack, variables, token) # Pass variables dict directly
             else:
-                raise AoPError(f"Unsupported operator: {token.value}", token)
+                # For other operators that are in current_op_handlers
+                if token.value in current_op_handlers:
+                    current_op_handlers[token.value](stack, base, token)
+                else:
+                    raise AoPError(f"Unsupported operator: {token.value}", token)
     if len(stack) != 1:
         raise AoPError("Invalid expression: check operators and operands.", rpn_tokens[-1] if rpn_tokens else None)
     logging.debug(f"Final RPN result: {stack[0]!r}")

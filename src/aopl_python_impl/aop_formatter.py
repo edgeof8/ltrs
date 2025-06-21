@@ -76,15 +76,26 @@ def _format_number_as_aop(num: Union[Decimal, complex, float, int], base: int, g
             num_decimal = num_decimal.quantize(Decimal('1'), rounding=decimal.ROUND_HALF_UP)
 
     if not num_decimal.is_finite(): return str(num_decimal) # Handles 'Infinity', 'NaN'
-    if num_decimal.is_zero(): return "0"
+    if num_decimal.is_zero(): return "0" # The number 0 itself always formats to "0"
+    if num_decimal == Decimal(1) and not is_coeff_formatting and allow_squash : return "1" # Standalone number 1 is "1"
 
-    # Priority 1: Direct letter representation (e.g., 2 -> b in base 10)
-    if not is_coeff_formatting and num_decimal == num_decimal.to_integral_value(rounding=decimal.ROUND_HALF_UP):
-        num_int = int(num_decimal.to_integral_value(rounding=decimal.ROUND_HALF_UP))
-        if num_int == 1 and allow_squash: # If formatting the number 1 as a standalone value.
-            return "1"
-        elif 1 <= num_int <= 50:
-            if letter := get_letter(num_int): return letter
+    # Priority 1: Direct Letter for VALUE (e.g., if num_decimal is 100 (base 10), it should become 'b')
+    # This rule applies if the number itself IS the value represented by an AoP letter.
+    if not is_coeff_formatting: # Only for standalone values
+        # Check if num_decimal is a value represented by an AoP letter (e.g., 100 (base 10) is 'b')
+        # This must come AFTER the True/False check for 1/0 if we want 1/0 to be True/False.
+        # If a letter happens to be base^1 or base^0, this could conflict.
+        # Let's assume letters are for exponents > 1 for this specific rule.
+        # Ensure it's not 1 (already handled) and is a positive integer.
+        if num_decimal > Decimal(1) and \
+           num_decimal == num_decimal.to_integral_value(rounding=decimal.ROUND_HALF_UP):
+            try: # Check if num_decimal is base^L_exp
+                log_val = num_decimal.ln() / Decimal(base).ln()
+                if abs(log_val - log_val.to_integral_value(rounding=decimal.ROUND_HALF_UP)) < Decimal("1e-50"):
+                    exponent_represented = int(log_val.to_integral_value(rounding=decimal.ROUND_HALF_UP))
+                    if exponent_represented in EXPONENT_TO_LETTER_MAP: # Check if this exponent has a letter
+                        return EXPONENT_TO_LETTER_MAP[exponent_represented] # e.g., value 100 -> 'b'
+            except Exception: pass
 
     # Priority 1.5 (Squash for Coefficients to a^ExpNumStr form) has been removed.
     # The enhanced Priority 2 (Coeff-Letter^Power) is generally preferred for coefficients.
@@ -131,7 +142,14 @@ def _format_number_as_aop(num: Union[Decimal, complex, float, int], base: int, g
 
                 if power_of_letter > 1:
                     result_str += f"^{power_str}" # Parentheses around power_str not needed for simple int
-                return result_str
+
+                # Heuristic: Only use this form if it's strictly shorter than the plain number string,
+                # or if we are formatting a coefficient (where AoP structure is preferred).
+                plain_number_str = str(original_num_int_val)
+                if is_coeff_formatting or len(result_str) < len(plain_number_str):
+                    return result_str
+                # Else, this Coeff-Letter^Power form is not better, continue loop for other letters
+                # or fall through to P3/P4 if no other letter yields a shorter P2 form.
         # Fall through if no suitable Coeff-Letter^Power found by this enhanced P2
         # The original P2 logic (simple coeff*letter) is now superseded by this more general one.
         # If the loop completes without returning, it means num_int_val was not formattable by this P2.
@@ -150,11 +168,14 @@ def _format_number_as_aop(num: Union[Decimal, complex, float, int], base: int, g
 
     # Priority 4: Fallback to plain string representation
     if isinstance(num_decimal, Decimal) and num_decimal.is_finite():
-        if num_decimal == num_decimal.to_integral_value(rounding=decimal.ROUND_HALF_UP):
-            return str(num_decimal.to_integral_value(rounding=decimal.ROUND_HALF_UP))
-        # For non-integer Decimals, or those that couldn't be formatted otherwise.
-        # Use 'g' for general format, which might be scientific for large/small numbers.
-        return f"{num_decimal:.{precision}g}".rstrip('0').rstrip('.')
+        # For finite Decimals, use their direct string representation.
+        # str(Decimal) usually provides full precision without forcing E-notation unless necessary
+        # for very extreme exponents outside typical fixed-point representation.
+        s = str(num_decimal)
+        # If Decimal was an integer but str() added ".0" (e.g. from quantize or some operations)
+        if num_decimal.as_tuple().exponent == 0 and s.endswith(".0"): # Check if it's an integer ending in .0
+            s = s[:-2]
+        return s
     return _complex_to_str(complex(num_decimal), precision) # For initial complex, or non-finite Decimals
 
 
@@ -210,7 +231,11 @@ def format_term(term: AoPTerm, base: int, get_letter: Callable, precision: int) 
         if is_exp_zero and exp_str == "0": # Check formatted string too
              return coeff_str # e.g. for a complex coefficient like (1+2#j) * base^0
 
-        return f"{coeff_str}*a^{exp_str}"
+        display_coeff_str = coeff_str
+        # If base is 10, coefficient is "10", and we are multiplying an "a^..." part, prefer "a" for the coefficient.
+        if base == 10 and coeff_str == "10" and exp_str: # Ensure exp_str is not empty
+            display_coeff_str = "a"
+        return f"{display_coeff_str}*a^{exp_str}"
 
 def format_output(value: AoPValue, base: int, get_letter: Callable, mode: OutputFormatMode, precision: int) -> str:
     if not value.terms: return "0"

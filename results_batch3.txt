@@ -1,0 +1,39 @@
+Skipped line 1: # Testing constants without comment prefix if possible (removing # if treated as comment)
+Input: pi
+Output: y
+---
+Input: e
+Output: e
+---
+Input: phi
+Output: H
+---
+Skipped line 5: 
+Skipped line 6: # Testing hyper-powers and nested operations
+Input: b ^ (c ^ d)
+Output: a^(2*a^3d)
+---
+Input: a ^ Z
+Output: a^Z
+---
+Skipped line 9: 
+Skipped line 10: # Testing edge cases
+Input: Z ^ Z
+Output: a^bZ
+---
+Input: 0 * Z
+Output: 0
+---
+Skipped line 13: 
+Skipped line 14: # Retesting variable assignment with alternative syntax
+Input: testvar = a * b
+Output: Error: Invalid L-value for assignment: AoPValue([Term(c=(1+0j), e=Decimal('105'))])
+---
+Input: testvar
+Output: eZ
+---
+Skipped line 17: 
+Skipped line 18: # Testing equality with large numbers
+Input: Z == $googol
+Output: 1
+---

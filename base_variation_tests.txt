@@ -1,0 +1,10 @@
+--base 2
+a
+b
+a+b
+b^c
+--base 16
+a
+b
+a+b
+b^c

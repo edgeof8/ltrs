@@ -1,46 +1,53 @@
-# Welcome to the Alphabet of Powers (AoP) Wiki
+# Welcome to the Alphabet of Powers (AoP) Suite
 
-This wiki provides comprehensive documentation for the "Alphabet of Powers" (`ltrs`) Python library and command-line tool.
+This wiki provides comprehensive documentation for the **AoP Suite** - a powerful toolkit for exploring mathematical concepts at any scale. The suite includes:
+
+1. **AoP Calculation Engine**: Core computational library and CLI
+2. **Cosmic Scratchpad**: Interactive graphical environment for visual exploration
 
 ## What is the Alphabet of Powers?
 
-The Alphabet of Powers (AoP) is a mathematical system where letters of the alphabet correspond to powers of a given base (default is 10). This revolutionary approach allows working with numbers of astronomical scale that are impossible to represent in standard notation.
+The Alphabet of Powers (AoP) is a mathematical system where letters represent powers of a base number (default 10). This innovative approach enables working with numbers of astronomical scale that are impossible to represent in standard notation.
 
-The `ltrs` tool enables you to:
+### The AoP Suite enables you to:
 
-- Perform calculations with numbers beyond standard computational limits
-- Simplify massive expressions into compact symbolic forms
-- Explore hyper-operations like tetration (repeated exponentiation)
-- Visualize complex functions through built-in graphing
-- Understand concepts through AI-powered explanations
-- Benchmark computational algorithms with the CPU simulation module
+- **Perform calculations** beyond standard computational limits
+- **Simplify massive expressions** into compact symbolic forms
+- **Explore hyper-operations** like tetration (repeated exponentiation)
+- **Create visual workflows** with node-based calculations
+- **Understand concepts** through AI-powered explanations
+- **Benchmark algorithms** with the CPU simulation module
 
 ## Project Highlights
 
 ### 🌌 Beyond Standard Limits
-
 Where traditional calculators fail (around 10^308), AoP continues, handling numbers like j^j^j^j (10^(10^10^10)) effortlessly.
 
-### 🔬 Advanced Computational Engine
+### 🎨 Cosmic Scratchpad
+- Infinite zoomable canvas for mathematical exploration
+- Node-based calculations with real-time dependency tracking
+- Drawing tools for annotations and diagrams
+- Interactive base changing with live updates
 
+### 🔬 Advanced Computational Engine
 - Recursive symbolic representation
 - Configurable base and associativity
 - Support for complex numbers and mathematical functions
-
-### 🧠 Educational Value
-
-Transforms incomprehensible scales into an intuitive alphabetic system, making it a powerful tool for learning exponential mathematics.
+- Intelligent formatting for clarity
 
 ## Navigating the Wiki
 
-Explore different aspects of the `ltrs` tool:
+Explore different aspects of the AoP Suite:
 
 - **[[Installation]]**: Setup and configuration
-- **[[Usage]]**: CLI and REPL guide
+- **[[CLI Usage]]**: Command-line interface guide
+- **[[Cosmic Scratchpad Guide]]**: Graphical interface tutorial
 - **[[AoP System Rules]]**: Core mathematical principles
 - **[[Examples]]**: Practical demonstrations
 - **[[CPU Simulation]]**: Algorithm benchmarking module
-- **API Reference**: Developer documentation (coming soon)
-- **Contributing**: Guidelines for contributors (coming soon)
+- **API Reference**: Developer documentation
+- **Contributing**: Guidelines for contributors
 
-We hope you find this tool both fascinating and powerful for exploring mathematical concepts!
+![Cosmic Scratchpad Interface](screenshot.png) *Example Cosmic Scratchpad session showing variable dependencies*
+
+We hope you find this suite both fascinating and powerful for exploring mathematical concepts!

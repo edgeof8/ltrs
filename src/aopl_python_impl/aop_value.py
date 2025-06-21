@@ -1,6 +1,6 @@
 # aopl_python_impl/aop_value.py
 from __future__ import annotations
-import cmath, decimal
+import cmath, decimal, logging
 from typing import List, Union, Optional, Callable
 from decimal import Decimal
 from .definitions import OutputFormatMode, PracticalLimitError
@@ -53,6 +53,7 @@ class AoPValue:
 class AoPTerm:
     def __init__(self, coeff: complex=1.0, exponent: Union[AoPValue,complex,Decimal,int,float]=0.0):
         self.coeff = complex(coeff)
+        original_exponent_repr = repr(exponent) # For logging
         normalized_exponent: Union[AoPValue, complex, Decimal]
         if isinstance(exponent, AoPValue):
             normalized_exponent = exponent
@@ -96,6 +97,8 @@ class AoPTerm:
         else: # Should not be reached if type hints are followed, but as a fallback
             normalized_exponent = exponent
         self.exponent = normalized_exponent
+        if repr(self.exponent) != original_exponent_repr:
+            logging.debug(f"AoPTerm.__init__: exponent normalized from {original_exponent_repr} to {repr(self.exponent)}")
     def is_numeric_exponent_zero(self) -> bool:
         """Checks if the exponent is numerically equal to 0."""
         if isinstance(self.exponent, (int, float, Decimal, complex)):

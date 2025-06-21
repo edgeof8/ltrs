@@ -1,0 +1,19 @@
+# Testing constants without comment prefix if possible (removing # if treated as comment)
+pi
+e
+phi
+
+# Testing hyper-powers and nested operations
+b ^ (c ^ d)
+a ^ Z
+
+# Testing edge cases
+Z ^ Z
+0 * Z
+
+# Retesting variable assignment with alternative syntax
+testvar = a * b
+testvar
+
+# Testing equality with large numbers
+Z == $googol

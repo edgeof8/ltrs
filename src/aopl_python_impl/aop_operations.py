@@ -7,20 +7,20 @@ from .aop_value import AoPValue, AoPTerm, PracticalLimitError
 getcontext().prec = 200
 
 def simplify_value(val: AoPValue, base: int = 10) -> AoPValue:
-    logging.debug(f"Simplifying: {val!r}")
+    logging.debug(f"simplify_value: INPUT = {val!r}") # Changed log prefix for clarity
     if not val.terms: return AoPValue() # Return empty AoPValue for "0" or empty input
 
     # Step 1: Recursively simplify exponents of all terms
+    logging.debug(f"simplify_value: Step 1 - Simplifying exponents within terms...")
     processed_terms = [AoPTerm(term.coeff, simplify_value(term.exponent, base) if isinstance(term.exponent, AoPValue) else term.exponent) for term in val.terms]
     current_val = AoPValue(processed_terms)
+    logging.debug(f"simplify_value: After Step 1 (exp simp) = {current_val!r}")
 
     # Step 2: Attempt to numerically sum terms if all are simple numbers or can be evaluated
     if len(current_val.terms) > 1:
         can_attempt_numerical_sum = True
-        for term in current_val.terms:
-            # A term cannot be part of a simple numerical sum if its exponent is itself a multi-term AoPValue
-            # or a complex AoPValue that doesn't simplify to a number.
-            # A single-term AoPValue exponent might be okay if that single term is numeric.
+        logging.debug(f"simplify_value: Step 2 - Attempting numerical sum for {len(current_val.terms)} terms.")
+        for term_idx, term in enumerate(current_val.terms):
             if isinstance(term.exponent, AoPValue) and len(term.exponent.terms) > 1:
                 can_attempt_numerical_sum = False
                 break
@@ -30,27 +30,26 @@ def simplify_value(val: AoPValue, base: int = 10) -> AoPValue:
                 if isinstance(sub_exp, AoPValue) or \
                    (isinstance(sub_exp, complex) and not cmath.isclose(sub_exp.imag,0)):
                     can_attempt_numerical_sum = False
+                    logging.debug(f"simplify_value: Term {term_idx} has complex/AoPValue exponent {sub_exp!r}, cannot numerically sum all.")
                     break
+        logging.debug(f"simplify_value: can_attempt_numerical_sum = {can_attempt_numerical_sum}")
 
         if can_attempt_numerical_sum:
             try:
                 numerical_sum_val = current_val.to_numerical(base) # This sums all terms numerically
-                # If successful and finite, replace current_val with a single term representing this sum
                 if cmath.isfinite(numerical_sum_val):
-                    logging.debug(f"Numerical sum of terms successful: {numerical_sum_val}")
-                    # The exponent of a summed numerical value is 0
-                    # AoPTerm constructor will handle Decimal conversion for real parts
+                    logging.debug(f"simplify_value: Step 2 - Numerical sum successful: {numerical_sum_val}")
                     current_val = AoPValue([AoPTerm(coeff=numerical_sum_val, exponent=0)])
                 else:
-                    logging.debug("Numerical sum resulted in non-finite value.")
+                    logging.debug(f"simplify_value: Step 2 - Numerical sum resulted in non-finite value: {numerical_sum_val}.")
             except (PracticalLimitError, TypeError, decimal.InvalidOperation):
-                logging.debug("Numerical summation of terms failed or not applicable, proceeding with symbolic sum.")
-                # Fall through to symbolic grouping if numerical sum fails
+                logging.debug("simplify_value: Step 2 - Numerical summation failed (PracticalLimitError/TypeError/DecimalError), proceeding with symbolic sum.")
                 pass
+        logging.debug(f"simplify_value: After Step 2 (num sum) = {current_val!r}")
 
     # Step 3: Group terms with identical exponents (symbolic sum)
-    # This is also the path taken if numerical summation wasn't possible or was skipped.
     if len(current_val.terms) > 1: # Check again, as numerical sum might have reduced it to 1 term
+        logging.debug(f"simplify_value: Step 3 - Grouping {len(current_val.terms)} terms symbolically.")
         grouped: Dict[Union[str, Tuple[str, str]], List[AoPTerm]] = {}
         for t in current_val.terms:
             exp_key_obj = t.exponent
@@ -62,24 +61,25 @@ def simplify_value(val: AoPValue, base: int = 10) -> AoPValue:
         summed_terms: List[AoPTerm] = []
         for term_list in grouped.values():
             total_coeff = sum(t.coeff for t in term_list)
-            if not cmath.isclose(total_coeff, 0.0, abs_tol=1e-100): # Use a very small abs_tol for comparing coeff to zero
+            if not cmath.isclose(total_coeff, 0.0, abs_tol=1e-100):
                 summed_terms.append(AoPTerm(total_coeff, term_list[0].exponent))
         current_val = AoPValue(summed_terms)
+    logging.debug(f"simplify_value: After Step 3 (sym sum) = {current_val!r}")
 
     # Step 4: Simplify single term (e.g., coefficient absorption)
-    # This applies if current_val was initially 1 term, or reduced to 1 by numerical/symbolic sum.
     if len(current_val.terms) == 1:
+        logging.debug(f"simplify_value: Step 4 - Simplifying single term: {current_val.terms[0]!r}")
         term = current_val.terms[0]
-        # Absorb coefficient into exponent if coeff is a positive real power of the base
-        # and the exponent is a simple number (or can be added to).
         if cmath.isclose(term.coeff.imag, 0) and term.coeff.real > 0 and not cmath.isclose(term.coeff.real, 1.0):
-            if not isinstance(term.exponent, AoPValue) and isinstance(term.coeff.real, (float,int,Decimal)): # Check added for coeff type
+            if isinstance(term.coeff.real, (float,int,Decimal)): # Check added for coeff type
                 try:
                     # Use natural log for consistency and to handle arbitrary bases properly
                     log_coeff_val = Decimal(str(term.coeff.real)).ln() / Decimal(str(base)).ln()
+                    logging.debug(f"simplify_value: Step 4 - Term: {term!r}, log_coeff_val: {log_coeff_val}")
+
                     if abs(log_coeff_val - log_coeff_val.to_integral_value(rounding=decimal.ROUND_HALF_UP)) < Decimal("1e-50"): # High precision check
                         coeff_exp_part_val = log_coeff_val.to_integral_value(rounding=decimal.ROUND_HALF_UP)
-
+                        logging.debug(f"simplify_value: Step 4 - Coeff is power of base, exponent part: {coeff_exp_part_val}")
                         if isinstance(term.exponent, (Decimal, complex, int, float)):
                             # Ensure current exponent is treated as Decimal if it's real
                             current_exp_is_complex_real = isinstance(term.exponent, complex) and cmath.isclose(term.exponent.imag, 0)
@@ -87,60 +87,90 @@ def simplify_value(val: AoPValue, base: int = 10) -> AoPValue:
 
                             new_exponent_val = current_exp_val_decimal + coeff_exp_part_val
                             current_val = AoPValue([AoPTerm(1.0, new_exponent_val)]) # Normalized by AoPTerm
-                            logging.debug(f"Absorbed coefficient into exponent, new term: {current_val.terms[0]!r}")
-                except Exception as e: # Catch broader exceptions during log/decimal math
-                    logging.debug(f"Could not absorb coefficient for term {term!r}: {e}")
+                            logging.debug(f"simplify_value: Step 4 - Absorbed coefficient into simple exponent. New term: {current_val.terms[0]!r}")
+                        elif isinstance(term.exponent, AoPValue):
+                            # NEW: Absorb coefficient if exponent is AoPValue
+                            # Create an AoPValue for the exponent part derived from the coefficient
+                            coeff_exp_aop_val = AoPValue.from_number(coeff_exp_part_val) # e.g., 1 -> Term(1,0)
+                            # Add this to the existing AoPValue exponent
+                            new_aoP_exponent = add_values(coeff_exp_aop_val, term.exponent, base) # add_values calls simplify
+                            current_val = AoPValue([AoPTerm(1.0, new_aoP_exponent)])
+                            logging.debug(f"simplify_value: Step 4 - Absorbed coefficient into AoPValue exponent. New exponent obj: {new_aoP_exponent!r}, New term: {current_val.terms[0]!r}")
+                        else:
+                            logging.debug(f"simplify_value: Step 4 - Current exponent {term.exponent!r} type not suitable for absorption.")
+                    else:
+                        logging.debug(f"simplify_value: Step 4 - log_coeff_val not integer, no absorption.")
+                except Exception as e:
+                    logging.debug(f"simplify_value: Step 4 - Error during coeff absorption for term {term!r}: {e}")
                     pass
-
+    logging.debug(f"simplify_value: FINAL RETURN = {current_val!r}")
     return current_val
 
 def add_values(v1: AoPValue, v2: AoPValue, base: int = 10) -> AoPValue:
     return simplify_value(AoPValue(v1.terms + v2.terms), base)
 
 def scalar_multiply(scalar: complex, val: AoPValue, base: int = 10) -> AoPValue:
+    logging.debug(f"scalar_multiply: scalar={scalar!r}, val={val!r}")
     if cmath.isclose(scalar, 0): return AoPValue()
     if cmath.isclose(scalar, 1): return val
     new_terms = [AoPTerm(term.coeff * scalar, term.exponent) for term in val.terms]
+    logging.debug(f"scalar_multiply: new_terms={new_terms!r}")
     return AoPValue(new_terms)
 
 def multiply_values(v1: AoPValue, v2: AoPValue, base: int = 10) -> AoPValue:
+    logging.debug(f"multiply_values: v1={v1!r}, v2={v2!r}")
     # Optimization: if v1 is a single term that's a scalar
     if len(v1.terms) == 1:
         s1 = _try_term_to_scalar(v1.terms[0], base)
+        logging.debug(f"multiply_values: s1 (from v1.terms[0]={v1.terms[0]!r}) = {s1!r}")
         if s1 is not None:
-            return simplify_value(scalar_multiply(s1, v2, base), base)
+            result_after_scalar_mult = scalar_multiply(s1, v2, base)
+            logging.debug(f"multiply_values: Path s1 scalar. Result of scalar_multiply = {result_after_scalar_mult!r}")
+            return simplify_value(result_after_scalar_mult, base)
 
     # Optimization: if v2 is a single term that's a scalar
     if len(v2.terms) == 1:
         s2 = _try_term_to_scalar(v2.terms[0], base)
+        logging.debug(f"multiply_values: s2 (from v2.terms[0]={v2.terms[0]!r}) = {s2!r}")
         if s2 is not None:
-            return simplify_value(scalar_multiply(s2, v1, base), base)
+            result_after_scalar_mult = scalar_multiply(s2, v1, base)
+            logging.debug(f"multiply_values: Path s2 scalar. Result of scalar_multiply = {result_after_scalar_mult!r}")
+            return simplify_value(result_after_scalar_mult, base)
 
     # General case: term-by-term symbolic multiplication
+    logging.debug(f"multiply_values: General symbolic path for v1={v1!r}, v2={v2!r}")
     new_terms: List[AoPTerm] = []
     for t1 in v1.terms:
         for t2 in v2.terms:
+            logging.debug(f"multiply_values: Multiplying t1={t1!r}, t2={t2!r}")
             new_coeff = t1.coeff * t2.coeff
             exp1_aop = t1.exponent if isinstance(t1.exponent, AoPValue) else AoPValue.from_number(t1.exponent)
             exp2_aop = t2.exponent if isinstance(t2.exponent, AoPValue) else AoPValue.from_number(t2.exponent)
-            new_exponent = add_values(exp1_aop, exp2_aop, base)
+            new_exponent = add_values(exp1_aop, exp2_aop, base) # add_values itself calls simplify_value
+            logging.debug(f"multiply_values: t1*t2 -> new_coeff={new_coeff!r}, new_exponent_obj={new_exponent!r}")
             new_terms.append(AoPTerm(new_coeff, new_exponent))
 
+    logging.debug(f"multiply_values: Symbolic path new_terms before final simplify = {new_terms!r}")
     return simplify_value(AoPValue(new_terms), base)
 
 def _try_term_to_scalar(term: AoPTerm, base: int) -> Union[complex, None]:
     """Helper to try to convert a single term to a numerical scalar.
        Returns None if it's symbolic, would overflow/underflow in a misleading way, or coeff is complex.
     """
-    # Only attempt if coefficient is real for this specific optimization path.
-    # Complex coefficients with numeric exponents are handled by the general path or if the other operand is scalar.
-    if not cmath.isclose(term.coeff.imag, 0):
-        return None
-    # Exponent must be a simple number (not AoPValue or complex with imag part)
-    if not isinstance(term.exponent, (int, float, Decimal, complex)) or not cmath.isclose(complex(term.exponent).imag, 0):
+    # This optimization is for when the entire term can be represented as a single complex number
+    if isinstance(term.exponent, AoPValue):
         return None
 
     try:
+        # Use the term's own high-precision conversion method
+        numerical_value = term.to_numerical(base)
+
+        if cmath.isfinite(numerical_value):
+            return numerical_value
+        return None
+
+    except PracticalLimitError:
+        return None
         exp_real = complex(term.exponent).real
         if cmath.isclose(term.coeff, 0): # If coefficient is zero, term is scalar 0
             return 0.0
@@ -177,20 +207,27 @@ def power_value(base_val: AoPValue, power_val: AoPValue, base: int) -> AoPValue:
         # Preserve Decimal precision for exponent if possible
         base_exp_val = base_term.exponent # Should be Decimal or AoPValue
 
-        # Determine the type for power_num for exponent multiplication
-        actual_power_for_exp_mult: Union[Decimal, complex]
-        if cmath.isclose(power_num_complex.imag, 0):
-            # Try to get original Decimal from s_power if it's a simple number that can be Decimal
-            try: actual_power_for_exp_mult = s_power.to_decimal(base)
-            except (TypeError, PracticalLimitError): # Fallback if s_power is complex, an AoPValue, or too large/small for Decimal
-                actual_power_for_exp_mult = Decimal(str(power_num_complex.real))
-        else: # Fallback to complex math if base_exp is not Decimal or power_num is complex
-            actual_power_for_exp_mult = power_num_complex
+        # Convert base exponent to a number, preferring Decimal
+        base_exp_num: Union[Decimal, complex]
+        if isinstance(base_term.exponent, AoPValue):
+            base_exp_num = base_term.exponent.to_numerical(base)
+        else: # It's already a number
+            base_exp_num = base_term.exponent
 
-        if isinstance(base_exp_val, Decimal) and isinstance(actual_power_for_exp_mult, Decimal):
-            new_exp_val = base_exp_val * actual_power_for_exp_mult
-        else: # One or both are complex or AoPValue (base_exp_val can be AoPValue that needs .to_numerical())
-            new_exp_val = complex(base_exp_val.to_numerical(base) if isinstance(base_exp_val, AoPValue) else base_exp_val) * power_num_complex
+        # Multiply the exponents, preserving Decimal precision if both are real
+        new_exp_val: Union[Decimal, complex]
+        if cmath.isclose(power_num_complex.imag, 0):
+            # Power is real, try to use Decimal math
+            power_num_decimal = Decimal(str(power_num_complex.real))
+            if isinstance(base_exp_num, complex) and cmath.isclose(base_exp_num.imag, 0):
+                base_exp_num = Decimal(str(base_exp_num.real))
+
+            if isinstance(base_exp_num, Decimal):
+                new_exp_val = base_exp_num * power_num_decimal # High precision path
+            else: # Base exponent was complex, power is real
+                new_exp_val = base_exp_num * power_num_complex.real
+        else: # Power is complex, use complex math
+            new_exp_val = complex(base_exp_num) * power_num_complex
 
         if not cmath.isfinite(new_coeff_val) or not cmath.isfinite(complex(new_exp_val)): raise OverflowError("Numerical power result is not finite")
         logging.debug(f"Numeric power success. Result: c={new_coeff_val}, e={new_exp_val}")

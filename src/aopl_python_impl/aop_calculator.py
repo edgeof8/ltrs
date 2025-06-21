@@ -19,7 +19,7 @@ class AoP_Calculator:
         self.exponent_to_letter = EXPONENT_TO_LETTER_MAP
         self.token_regex = TOKEN_REGEX
         self.variables: dict[str, AoPValue] = {}
-        self.operators_map = OPERATORS.copy()
+        self.operators_map = OPERATORS.copy() # type: ignore
         if load_default_vars:
             self._load_default_variables()
 

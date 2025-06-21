@@ -1,0 +1,8 @@
+a
+Y
+Z
+ab
+a+b
+c*d
+b^c
+a*b == c

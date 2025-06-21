@@ -1,165 +1,146 @@
-# The Alphabet of Powers (AoP) Calculator
 
-Welcome to the Alphabet of Powers (AoP) Calculator, a unique command-line tool that explores a novel system of representing and manipulating numbers of all scales, from the everyday to the truly astronomical. This calculator is not just a tool; it's an exploration into number theory, symbolic algebra, and the limits of computation.
+# Cosmic Scratchpad & The Alphabet of Powers Engine
 
-## The Core Concept
+Welcome to the Alphabet of Powers (AoP) project, a suite featuring a powerful symbolic algebra engine and the **Cosmic Scratchpad**—an innovative, node-based graphical environment for exploring numbers of all scales, from the everyday to the truly astronomical.
 
-In the AoP system (with the default base 10), letters represent powers of the base:
+This is more than just a calculator; it's a visual tool for exploring number theory, symbolic algebra, and the very limits of computation in an interactive, infinite canvas.
 
-- **Lowercase `a-y`**: `a` = `10^1`, `b` = `10^2`, ..., `y` = `10^25`.
-- **Uppercase `A-Y`**: `A` = `10^26`, `B` = `10^27`, ..., `Y` = `10^50`.
 
-Words are multiplicative, with their power being the sum of their letters' exponents:
+*(A sample session showing variable dependencies, slash commands, and calculations.)*
 
-- `cab` => `c*a*b` => `10^3 * 10^1 * 10^2` => `10^(3+1+2)` => `10^6`, which simplifies to **`f`**.
-- `aA` => `a*A` => `10^1 * 10^26` => `10^27`, which simplifies to **`B`**.
+## I. The Cosmic Scratchpad GUI
 
-This simple, powerful idea allows for a new way of understanding and manipulating numbers, especially at the hyper-power scale.
+The Cosmic Scratchpad is the heart of the project—an interactive, graphical environment for AoP calculations and mathematical exploration.
 
-## Features
+**Key Features:**
 
-- **Symbolic & Numerical Engine**: The calculator uses a **Numeric-First, Symbolic-Fallback** engine. It attempts to compute all expressions as numbers, providing concrete answers when possible.
-- **Hyper-power Ready**: When a calculation would overflow standard numerical types (e.g., `3^3^3^3`), the engine gracefully falls back to a symbolic representation, allowing for the manipulation of numbers far beyond the limits of conventional calculators.
-- **Letter-First Formatting**: Results are always displayed in their most elegant and compact form. A result of `10^40` is not shown as a raw number, but as its canonical letter, **`O`**.
-- **Arbitrary Base**: Explore the AoP system in any integer base using the `--base` flag. Discover new mathematical relationships, such as `2d = e` in base 2 (`2 * 2^4 = 2^5`).
-- **Full Operator Support**: Supports `+`, `-`, `*`, `/`, and `^` (power), with correct order of operations and right-associativity for powers.
-- **Implicit Multiplication**: Understands natural algebraic syntax like `2b` (2 *b) and `a(b+c)` (a* (b+c)).
-- **Built-in Constants**: Recognizes `#pi`, `#e`, `#phi` (the golden ratio), `#tau` (2π), `#sqrt2`, and `#j` (the imaginary unit).
+*   **Infinite Canvas:** A zoomable, pannable canvas to lay out your thoughts, connect ideas, and build complex calculations visually.
+*   **Live Calculation Nodes:**
+    *   Click anywhere to create a new calculation node. Results update live as you type.
+    *   **Multi-line Scripts:** Use `Shift+Enter` for new lines to write sequential statements within a single node.
+    *   **Variable Assignments:** Define variables like `$myvar = a*b` and use them in other nodes.
+    *   **Automatic Dependency Graph:** Nodes automatically update when variables they depend on change, creating a reactive calculation environment.
+    *   **Resizable Nodes with Auto-Font:** Drag a node's corner to resize it. The font size automatically adjusts to fit the new bounds!
+*   **Drawing & Annotation Tools:**
+    *   **Line Tool:** Draw lines to connect ideas or highlight relationships.
+    *   **Text Note Tool:** Add non-calculating text annotations to your canvas. Also resizable with auto-sizing fonts.
+    *   **Pen Tool:** Freehand draw for sketches, diagrams, or emphasis.
+*   **Interactive Base Changing:** Instantly change the numerical base for the entire scratchpad and watch all calculations update in real-time.
+*   **Powerful Slash Commands:**
+    *   `/help`: Shows available commands.
+    *   `/vars`: Lists all defined variables and their current values.
+    *   `/constants`: Lists predefined numerical constants like `#pi`, `#e`, `#sqrt2`, and `#j` (the imaginary unit).
+    *   `/letters` or `/aopabet`: Displays the current letter-to-exponent mapping for the active base.
+    *   `/setbase <num>`: Changes the calculator base for the entire scene.
+    *   `/delvar <$var>`: Deletes a variable and updates dependent nodes.
+    *   `/explain [expr|last]`: Provides an AI-generated explanation for an expression or the last calculation (requires setup).
+    *   `/explain model <name>`: Sets the AI model for explanations (e.g., a local Ollama model or an OpenRouter model).
+*   **File Operations:** Save and load your scratchpad sessions as `.cosmic` JSON files.
+
+**Running the Cosmic Scratchpad:**
+```bash
+python main.py
+```
+
+## II. The Alphabet of Powers (Core Concept)
+
+The AoP system provides a novel, compact way to represent and manipulate numbers, especially very large ones. By default, it operates in base 10.
+
+- **Lowercase `a-y`**: `a` = `base^1`, `b` = `base^2`, ..., `y` = `base^25`.
+- **Uppercase `A-Y`**: `A` = `base^26`, `B` = `base^27`, ..., `Y` = `base^50`.
+- **Special Letter `Z`**: `Z` = `base^100`. The lowercase `z` is a convenient alias for `Z`.
+
+Words are formed by multiplication, with exponents adding together:
+- **`cab`** (base 10) => `c*a*b` => `10^3 * 10^1 * 10^2` => `10^(3+1+2)` => `10^6`, which simplifies to **`f`**.
+- **`aZ`** (base 10) => `a*Z` => `10^1 * 10^100` => `10^101`. The formatter simplifies this to **`a^101`** or a similar symbolic form.
+
+## III. The AoP Engine (CLI)
+
+Underpinning the Cosmic Scratchpad is a robust command-line engine that can also be used independently for quick calculations.
+
+**Engine Features:**
+
+*   **Numeric-First, Symbolic-Fallback:** The engine uses a high-precision (`200` digits) `Decimal` backend to perform numerical calculations whenever possible. For hyper-powers or complex symbolic expressions that would overflow, it gracefully falls back to a symbolic representation.
+*   **Elegant Formatting:** Results are displayed in their most compact AoP form (e.g., `10^100` is `Z`).
+*   **Arbitrary Base:** Explore AoP in any integer base via the `--base` flag.
+*   **Full Operator Support**: `+`, `-`, `*`, `/`, `==` (equality), and `^` (power), with correct order of operations (right-associativity for `^`).
+*   **Implicit Multiplication:** Understands natural algebraic syntax like `2b` (2\*b) and `a(b+c)` (a\*(b+c)).
+*   **Built-in Constants**: `#pi`, `#e`, `#phi`, `#tau`, `#sqrt2`, `#j`, `#sqrt3`, `#ln2`.
+
+**Command-Line Usage & Examples:**
+
+```bash
+# Assuming 'ltrs' alias is set up for the CLI script
+# (See Installation section)
+
+# Simple multiplication and simplification
+$ ltrs "cab"
+f
+
+# Hyper-powers and symbolic fallback
+$ ltrs "3^3^3^3"
+a^3638334640024
+
+# Symbolic representation of massive numbers
+$ ltrs "b^b^b"
+a^(2*Z^2)
+# Explanation: b^(b^b) -> (10^2)^((10^2)^(10^2)) -> 10^(2 * 10^200) -> a^(2*(10^100)^2) -> a^(2*Z^2)
+
+# Coefficient absorption in a different base
+$ ltrs --base 2 "2d"
+e
+# Explanation: In base 2, '2' is 'a' (2^1) and 'd' is 2^4. So, 2 * 2^4 = 2^5, which is 'e'.
+```
 
 ## Installation
 
-1. Clone the repository:
-
+1.  **Clone the Repository:**
     ```bash
-    git clone <your-repo-url>
-    cd <your-repo-directory>
+    git clone https://github.com/your-username/your-repo-name.git
+    cd your-repo-name
     ```
 
-2. (Optional) Create a virtual environment:
-
+2.  **(Recommended) Create a Virtual Environment:**
     ```bash
     python -m venv venv
-    source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
+    # On Windows: venv\Scripts\activate
+    # On macOS/Linux: source venv/bin/activate
     ```
 
-3. Install dependencies (if any):
-
+3.  **Install Dependencies:**
     ```bash
-    # Currently no external dependencies required for the core calculator
+    pip install PySide6 requests matplotlib
     ```
+    *   `PySide6` is required for the Cosmic Scratchpad GUI.
+    *   `requests` is required for the AI Explainer feature.
+    *   `matplotlib` is required for visualization features (currently in `aop_visualizer.py`).
 
-4. (Optional) Create a simple alias or script named `ltrs` for easy access:
-    - **Linux/macOS** (in your `.bashrc` or `.zshrc`):
+4.  **Set up AI Explainer (Optional):**
+    The `/explain` command requires an AI backend. Configure one by setting an environment variable:
+    *   **For OpenRouter:** `OPENROUTER_API_KEY="sk-or-..."`
+    *   **For a local Ollama instance:** `OLLAMA_MODEL="mistral"` (or another model you have installed).
 
+5.  **Set up CLI Alias (Optional):**
+    For easy access to the command-line engine, create a `ltrs` alias.
+    *   **Linux/macOS** (add to your `.bashrc` or `.zshrc`):
         ```bash
         alias ltrs='python -m aopl_python_impl.aop_calculator_cli'
         ```
-
-    - **Windows** (using a `ltrs.bat` file in your PATH):
-
+    *   **Windows** (create a file named `ltrs.bat` in a folder that's in your system's PATH):
         ```batch
         @echo off
         python -m aopl_python_impl.aop_calculator_cli %*
         ```
 
-## Usage
+## Development & Future Ideas
 
-The calculator is run from the command line.
+The AoP suite is an evolving project. Potential future directions include:
+*   Integrating the `aop_visualizer` to allow graphing functions directly on the canvas.
+*   More advanced drawing tools (shapes, arrows, color pickers).
+*   User-defined functions within the AoP syntax.
+*   Enhanced numerical simplification rules (e.g., for sums like `a+a` -> `2a`).
+*   Exporting the scratchpad canvas to image/PDF formats.
 
-### Basic Syntax
+## Contributing
 
-```bash
-ltrs "expression" [options]
-```
-
-### Examples
-
-#### Simple Operations
-
-- **`c^2`** (c squared)
-
-    ```bash
-    $ ltrs "c^2"
-    f
-    ```
-
-    *Explanation: `c` is `10^3`. `(10^3)^2` is `10^6`, which is `f`.*
-
-- **`e/b`** (e divided by b)
-
-    ```bash
-    $ ltrs "e/b"
-    c
-    ```
-
-    *Explanation: `10^5 / 10^2` is `10^3`, which is `c`.*
-
-#### Symbolic Powers
-
-- **`d^a`** (d to the power of a)
-
-    ```bash
-    $ ltrs "d^a"
-    O
-    ```
-
-    *Explanation: The engine evaluates this numerically. `d` is `10^4`, `a` is `10`. The result is `(10^4)^10 = 10^40`, which is `O`.*
-
-- **`b^c`** (b to the power of c)
-
-    ```bash
-    $ ltrs "b^c"
-    a^2c
-    ```
-
-    *Explanation: `(10^2)^(10^3)` is `10^2000`. The formatter elegantly represents `2000` as `2*1000`, which is `2c`.*
-
-#### Hyper-powers and Symbolic Fallback
-
-- **`j^j`** (j to the power of j)
-
-    ```bash
-    $ ltrs "j^j"
-    a^k
-    ```
-
-    *Explanation: `(10^10)^(10^10)` is `10^(10 * 10^10) = 10^(10^11)`. The exponent is `10^11`, which is `k`. The result is `a^k`.*
-
-- **The Graham's Number Precursor**
-
-    ```bash
-    $ ltrs "3^3^3^3"
-    a^3638334640024
-    ```
-
-    *Explanation: `3^(3^27)` is too large for any standard number type. The engine correctly overflows and switches to a symbolic representation, calculating the final exponent `log10(3) * 3^27` and displaying it as a power of `a`.*
-
-#### Different Bases
-
-- **Coefficient Absorption in Base 2**
-
-    ```bash
-    $ ltrs --base 2 "2d"
-    e
-    ```
-
-    *Explanation: In base 2, `2` is `2^1` or `a`. `d` is `2^4`. The expression is `a * d = 2^1 * 2^4 = 2^5`, which is `e`.*
-
-- **Symbolic Powers in Base 2**
-
-    ```bash
-    $ ltrs --base 2 "b^c"
-    p
-    ```
-
-    *Explanation: In base 2, `b` is `2^2`, `c` is `2^3=8`. The expression is `(2^2)^8 = 2^16`, which is `p`.*
-
-### Command-Line Options
-
-| Flag          | Alias | Description                                        | Default |
-|---------------|-------|----------------------------------------------------|---------|
-| `--base`      | `-b`  | The numerical base for calculations.               | `10`    |
-| `--mode`      | `-m`  | Output format: `auto`, `aop`, `sci`, `num`.        | `auto`  |
-| `--precision` | `-p`  | Decimal precision for numerical output.            | `10`    |
-| `--debug`     | `-d`  | Enable debug logging to `aop_calculator_debug.log`.| `False` |
-|---------------|-------|----------------------------------------------------|---------|
+Contributions, bug reports, and feature suggestions are highly welcome! Please feel free to open an issue or submit a pull request.
