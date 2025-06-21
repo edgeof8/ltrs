@@ -4,8 +4,7 @@ from typing import List, Dict, Union
 from .definitions import OPERATORS, Token, AoPError, LETTER_TO_EXPONENT_MAP
 from .aop_value import AoPValue
 from .interfaces import TermGetter
-# FIX: Do not import aop_operations at the top level to avoid circular import issues.
-# from . import aop_operations as ops
+# Do not import aop_operations at the top level to avoid circular import issues.
 
 def _resolve_variable(operand: Union[AoPValue, Token], variables: Dict[str, AoPValue], get_term_value_func: TermGetter) -> AoPValue:
     """Helper to resolve a variable Token to its AoPValue."""
@@ -26,7 +25,6 @@ def _handle_op(stack: list[Union[AoPValue, Token]], variables: Dict[str, AoPValu
     op2 = _resolve_variable(op2_raw, variables, get_term_value_func)
     stack.append(op_func(op1, op2, base))
 
-# FIX: Import ops inside each handler function
 def _handle_add(stack, variables, get_term_value_func, base, token):
     from . import aop_operations as ops
     _handle_op(stack, variables, get_term_value_func, base, token, ops.add_values)
@@ -70,7 +68,6 @@ OPERATOR_HANDLERS = {
     '^': _handle_power, '**': _handle_power, '==': _handle_equals
 }
 
-# ... (rest of the file is unchanged)
 
 def insert_implicit_multiplication(tokens: List[Token]) -> List[Token]:
     """

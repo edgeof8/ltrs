@@ -135,3 +135,4 @@ cython_debug/
 # Editor-specific files
 *.swp
 *~
+research/my_papers/aop_euler_bridge.md

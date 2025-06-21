@@ -106,21 +106,18 @@ class AoPTerm:
                 dec_base = Decimal(str(base))
                 dec_exp_exponent = Decimal(str(exp_val_complex.real))
 
-                powered_base_dec = dec_base ** dec_exp_exponent # Can raise decimal.Overflow
-                result_dec = dec_coeff * powered_base_dec       # Can raise decimal.Overflow
+                powered_base_dec = dec_base ** dec_exp_exponent
+                result_dec = dec_coeff * powered_base_dec
 
-                # Now, convert to complex for the return type, but check for float overflow
-                if not result_dec.is_finite(): # e.g. Decimal('NaN'), Decimal('Inf')
+                if not result_dec.is_finite():
                     raise PracticalLimitError(f"Decimal calculation resulted in non-finite value: {result_dec}")
 
                 result_complex = complex(result_dec)
-                if not cmath.isfinite(result_complex) and result_dec.is_finite(): # Finite Decimal became non-finite float
-                    raise PracticalLimitError(f"Result {result_dec} (finite Decimal) became non-finite when converting to complex for float limits.")
                 return result_complex
             else: # Path for complex coefficients or complex exponents
                 powered_base = complex(base) ** exp_val_complex
                 result_complex = self.coeff * powered_base
-                if not cmath.isfinite(result_complex): raise OverflowError("Result is not finite.") # Caught below
+                if not cmath.isfinite(result_complex): raise OverflowError("Result is not finite.")
                 return result_complex
         except (decimal.Overflow, decimal.InvalidOperation, OverflowError) as e: raise PracticalLimitError(f"Numerical evaluation failed: {e}")
     def __repr__(self) -> str: return f"Term(c={self.coeff!r}, e={self.exponent!r})"
