@@ -1,26 +1,4 @@
-# Basic letter value tests
-a
-Y
-Z
-z
+# Verification of Base Explorer's Conjecture
+# Target: Sixth Perfect Number in Euclid-Euler Form
 
-# Word formation test
-ab
-
-# Basic arithmetic operations
-a + b
-c * d
-
-# Power operation
-b ^ c
-
-# Equality checks
-a * b == c
-c == ab
-
-# Variable assignment and usage
-$mytest = f / e
-$mytest
-
-# Predefined variable test
-$googol
+2^30 * (2^31-1)

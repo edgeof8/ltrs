@@ -1,0 +1,26 @@
+# Basic letter value tests
+a
+Y
+Z
+z
+
+# Word formation test
+ab
+
+# Basic arithmetic operations
+a + b
+c * d
+
+# Power operation
+b ^ c
+
+# Equality checks
+a * b == c
+c == ab
+
+# Variable assignment and usage
+$mytest = f / e
+$mytest
+
+# Predefined variable test
+$googol

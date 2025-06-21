@@ -61,37 +61,24 @@ class AoPTerm:
             if cmath.isclose(exponent.imag, 0):
                 # Convert to Decimal and normalize if it's an integer
                 d_exp = Decimal(str(exponent.real)) # Convert float to Decimal via string for precision
-                # Only quantize if it has a fractional part that is effectively zero (e.g. "3.000")
-                # and it's not an already plain integer (like Decimal('200') which has exponent 0)
-                # or a very large number where quantize might fail.
-                # A Decimal is an integer if its exponent is non-negative after normalization,
-                # or if it has a negative exponent but d_exp == d_exp.to_integral_value().
-                # Check if the Decimal has a fractional part by examining its exponent
-                exp_tuple = d_exp.as_tuple()
-                if isinstance(exp_tuple.exponent, int) and exp_tuple.exponent < 0: # Has digits after decimal point (e.g. 3.0, 3.5)
-                    if d_exp == d_exp.to_integral_value(rounding=decimal.ROUND_FLOOR): # e.g., 3.0
-                        try:
-                            normalized_exponent = d_exp.quantize(Decimal('1')) # Attempt to make it Decimal('3')
-                        except decimal.InvalidOperation:
-                            normalized_exponent = d_exp.to_integral_value(rounding=decimal.ROUND_FLOOR) # Fallback for huge numbers
-                    else: # e.g. 3.5
-                        normalized_exponent = d_exp
+                # Check if it has a zero fractional part without using quantize on huge numbers
+                if d_exp % 1 == 0: # This is a robust way to check for integer value
+                    # Store as integer Decimal by converting to int first, avoids quantize issues
+                    normalized_exponent = Decimal(int(d_exp))
                 else:
-                    normalized_exponent = d_exp # Already an integer (like Decimal('200')) or has non-zero fraction
+                    normalized_exponent = d_exp
             else:
                 normalized_exponent = exponent # Keep as complex if imag part is non-zero
         elif isinstance(exponent, (int, float, Decimal)):
             d_exp = Decimal(exponent) # Use direct conversion
-            # Check if the Decimal has a fractional part by examining its exponent
-            exp_tuple = d_exp.as_tuple()
-            if isinstance(exp_tuple.exponent, int) and exp_tuple.exponent < 0: # Has digits after decimal point
-                if d_exp == d_exp.to_integral_value(rounding=decimal.ROUND_FLOOR):
-                    try:
-                        normalized_exponent = d_exp.quantize(Decimal('1'))
-                    except decimal.InvalidOperation:
-                        normalized_exponent = d_exp.to_integral_value(rounding=decimal.ROUND_FLOOR)
-                else:
-                    normalized_exponent = d_exp
+            # Check if it has a zero fractional part
+            if d_exp % 1 == 0:
+                # For very large floats like 2E200, int() might fail. Use to_integral_value.
+                try:
+                    # This is the safest way to get the integer value without overflow
+                    normalized_exponent = d_exp.to_integral_value(rounding=decimal.ROUND_FLOOR)
+                except decimal.InvalidOperation: # Can happen for very large numbers
+                    normalized_exponent = d_exp # Keep as is if conversion fails
             else:
                 normalized_exponent = d_exp
         else: # Should not be reached if type hints are followed, but as a fallback

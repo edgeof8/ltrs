@@ -1,0 +1,7 @@
+--- FGH Exploration for f_3(3) ---
+# Step 1: Calculate the innermost value, f_2(3) = 3^3^3
+Input: $val1 = 3^3^3 | Result: 7625597484987
+# Step 2: Calculate f_2(f_2(3)) = f_2($val1).
+# This would be a tower of $val1 of height $val1. This is impossible to express.
+# Let's test the largest expressible component: the base raised to itself.
+Input: $result = $val1 ^ $val1 | Result: a^326329723601044.75

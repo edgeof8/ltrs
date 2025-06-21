@@ -1,61 +1,74 @@
 # aopl_python_impl/aop_parser.py
 import re, logging
-from typing import List, Dict
+from typing import List, Dict, Union
 from .definitions import OPERATORS, Token, AoPError, LETTER_TO_EXPONENT_MAP
 from .aop_value import AoPValue
 from .interfaces import TermGetter
 # FIX: Do not import aop_operations at the top level to avoid circular import issues.
 # from . import aop_operations as ops
 
-def _handle_op(stack: list[AoPValue], base: int, token: Token, op_func):
+def _resolve_variable(operand: Union[AoPValue, Token], variables: Dict[str, AoPValue], get_term_value_func: TermGetter) -> AoPValue:
+    """Helper to resolve a variable Token to its AoPValue."""
+    if isinstance(operand, Token) and operand.kind == 'VARIABLE':
+        # This is where we look up the variable's value
+        return get_term_value_func(operand.value, variables, operand.kind)
+    elif isinstance(operand, AoPValue):
+        return operand
+    # Should not happen if stack contains only AoPValues or VARIABLE Tokens
+    raise AoPError(f"Unexpected item on stack for operation: {operand!r}")
+
+def _handle_op(stack: list[Union[AoPValue, Token]], variables: Dict[str, AoPValue], get_term_value_func: TermGetter, base: int, token: Token, op_func):
+    """Generalized handler for binary operators that resolves variables."""
     if len(stack) < 2: raise AoPError(f"Insufficient operands for {token.value}", token)
-    op2, op1 = stack.pop(), stack.pop()
+    op2_raw, op1_raw = stack.pop(), stack.pop()
+    # Resolve operands to AoPValues before performing the operation
+    op1 = _resolve_variable(op1_raw, variables, get_term_value_func)
+    op2 = _resolve_variable(op2_raw, variables, get_term_value_func)
     stack.append(op_func(op1, op2, base))
 
 # FIX: Import ops inside each handler function
-def _handle_add(stack: list[AoPValue], base: int, token: Token):
+def _handle_add(stack, variables, get_term_value_func, base, token):
     from . import aop_operations as ops
-    _handle_op(stack, base, token, ops.add_values)
-def _handle_subtract(stack: list[AoPValue], base: int, token: Token):
+    _handle_op(stack, variables, get_term_value_func, base, token, ops.add_values)
+def _handle_subtract(stack, variables, get_term_value_func, base, token):
     from . import aop_operations as ops
-    _handle_op(stack, base, token, ops.subtract_values)
-def _handle_multiply(stack: list[AoPValue], base: int, token: Token):
+    _handle_op(stack, variables, get_term_value_func, base, token, ops.subtract_values)
+def _handle_multiply(stack, variables, get_term_value_func, base, token):
     from . import aop_operations as ops
-    _handle_op(stack, base, token, ops.multiply_values)
-def _handle_divide(stack: list[AoPValue], base: int, token: Token):
+    _handle_op(stack, variables, get_term_value_func, base, token, ops.multiply_values)
+def _handle_divide(stack, variables, get_term_value_func, base, token):
     from . import aop_operations as ops
-    _handle_op(stack, base, token, ops.divide_values)
-def _handle_power(stack: list[AoPValue], base: int, token: Token):
+    _handle_op(stack, variables, get_term_value_func, base, token, ops.divide_values)
+def _handle_power(stack, variables, get_term_value_func, base, token):
     from . import aop_operations as ops
-    _handle_op(stack, base, token, ops.power_value)
+    _handle_op(stack, variables, get_term_value_func, base, token, ops.power_value)
 
-def _handle_assignment(stack: list[AoPValue], variables: Dict[str, AoPValue], token: Token):
-    # For RPN: $var, value, =
-    # Stack has [..., var_name_token, value_obj]
+def _handle_assignment(stack: list[Union[AoPValue, Token]], variables: Dict[str, AoPValue], get_term_value_func: TermGetter, token: Token):
     if len(stack) < 2: raise AoPError("Insufficient operands for assignment", token)
-    value_to_assign = stack.pop() # This is an AoPValue
-    var_token = stack.pop()       # This should be the VARIABLE Token itself, or just its name string
+    value_to_assign_raw = stack.pop()
+    var_token = stack.pop()
     if not isinstance(var_token, Token) or var_token.kind != 'VARIABLE':
         raise AoPError(f"Invalid L-value for assignment: {var_token!r}", token)
-    variables[var_token.value] = value_to_assign # Store in the shared variables dict
-    stack.append(value_to_assign) # Assignment expression evaluates to the assigned value
+    # The RHS of an assignment can also be a variable, so it must be resolved
+    value_to_assign = _resolve_variable(value_to_assign_raw, variables, get_term_value_func) if isinstance(value_to_assign_raw, Token) else value_to_assign_raw
+    variables[var_token.value] = value_to_assign
+    stack.append(value_to_assign)
 
-# Note: _handle_assignment itself is not directly in OPERATOR_HANDLERS
-# because it needs the 'variables' dict, which is only available in evaluate_rpn.
-
-def _handle_equals(stack: list[AoPValue], base: int, token: Token): # New handler
+def _handle_equals(stack, variables, get_term_value_func, base, token):
     from . import aop_operations as ops
-    _handle_op(stack, base, token, ops.equals_values)
+    _handle_op(stack, variables, get_term_value_func, base, token, ops.equals_values)
 
-def _handle_unary_minus_op(stack: list[AoPValue], base: int, token: Token): # New handler
-    from . import aop_operations as ops # Import ops locally
+def _handle_unary_minus_op(stack: list[Union[AoPValue, Token]], variables: Dict[str, AoPValue], get_term_value_func: TermGetter, base: int, token: Token):
     if not stack: raise AoPError("Insufficient operand for unary minus", token)
-    # For AoP, unary minus is multiplying by -1.
-    stack.append(ops.scalar_multiply(complex(-1.0), stack.pop(), base))
+    operand_raw = stack.pop()
+    resolved_operand = _resolve_variable(operand_raw, variables, get_term_value_func)
+    from . import aop_operations as ops
+    stack.append(ops.scalar_multiply(complex(-1.0), resolved_operand, base))
 
-OPERATOR_HANDLERS = {'+': _handle_add, '-': _handle_subtract, '*': _handle_multiply, '/': _handle_divide, '^': _handle_power, '**': _handle_power}
-OPERATOR_HANDLERS['=='] = _handle_equals
-# OPERATOR_HANDLERS['='] will be handled specially in evaluate_rpn
+OPERATOR_HANDLERS = {
+    '+': _handle_add, '-': _handle_subtract, '*': _handle_multiply, '/': _handle_divide,
+    '^': _handle_power, '**': _handle_power, '==': _handle_equals
+}
 
 # ... (rest of the file is unchanged)
 
@@ -170,26 +183,38 @@ def infix_to_rpn(tokens: List[Token], operators_map: Dict[str, Dict]) -> List[To
     return output_queue
 
 def evaluate_rpn(rpn_tokens: List[Token], variables: Dict[str, AoPValue], get_term_value_func: TermGetter, base: int) -> AoPValue:
-    stack: list[AoPValue] = []
+    stack: list[Union[AoPValue, Token]] = [] # Stack can hold values or variable tokens
     UMINUS_INTERNAL_OP_NAME = '_UMINUS_'
-    current_op_handlers = OPERATOR_HANDLERS.copy()
-    current_op_handlers[UMINUS_INTERNAL_OP_NAME] = _handle_unary_minus_op
 
     for token in rpn_tokens:
-        if token.kind in ('NUMBER', 'IDENTIFIER', 'VARIABLE', 'COEFF_WORD', 'CONSTANT_LITERAL'):
+        if token.kind in ('NUMBER', 'IDENTIFIER', 'COEFF_WORD', 'CONSTANT_LITERAL'):
             stack.append(get_term_value_func(token.value, variables, token.kind))
             logging.debug(f"Pushed to stack: {stack[-1]!r}")
-        elif token.kind == 'OPERATOR' or token.kind == 'IMPLICIT_OPERATOR' or token.value == UMINUS_INTERNAL_OP_NAME : # Added UMINUS check
-            if token.value == '=': # Special direct handling for assignment
-                # _handle_assignment needs the 'variables' dict from this scope
-                _handle_assignment(stack, variables, token) # Pass variables dict directly
-            else:
-                # For other operators that are in current_op_handlers
-                if token.value in current_op_handlers:
-                    current_op_handlers[token.value](stack, base, token)
-                else:
-                    raise AoPError(f"Unsupported operator: {token.value}", token)
-    if len(stack) != 1:
-        raise AoPError("Invalid expression: check operators and operands.", rpn_tokens[-1] if rpn_tokens else None)
+        elif token.kind == 'VARIABLE':
+            # For variables, push the token itself. It will be resolved by operators that use it.
+            stack.append(token)
+            logging.debug(f"Pushed to stack (as L-value): {stack[-1]!r}")
+        elif token.value == '=':
+            # Assignment is special: LHS is a token, RHS must be resolved.
+            _handle_assignment(stack, variables, get_term_value_func, token)
+        elif token.value == UMINUS_INTERNAL_OP_NAME:
+            # Unary minus is special: operates on one operand which might be a token.
+            _handle_unary_minus_op(stack, variables, get_term_value_func, base, token)
+        elif token.value in OPERATOR_HANDLERS:
+            # Other binary operators use the generalized handler.
+            OPERATOR_HANDLERS[token.value](stack, variables, get_term_value_func, base, token)
+        else:
+            raise AoPError(f"Unsupported operator or logic error: {token.value}", token)
+
+    # After the loop, the stack should have one final AoPValue
+    if len(stack) != 1 or not isinstance(stack[0], AoPValue):
+        # If final item is a token, it was likely an unresolved variable
+        final_result = stack[0]
+        if isinstance(final_result, Token) and final_result.kind == 'VARIABLE':
+            final_result = _resolve_variable(final_result, variables, get_term_value_func)
+            stack[0] = final_result
+        else: # Some other invalid final stack state
+            raise AoPError("Invalid expression: check operators and operands.", rpn_tokens[-1] if rpn_tokens else None)
+
     logging.debug(f"Final RPN result: {stack[0]!r}")
     return stack[0]

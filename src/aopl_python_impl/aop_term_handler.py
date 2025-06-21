@@ -24,12 +24,13 @@ def get_term_value(term_str: str, variables: dict[str, AoPValue], kind: str) -> 
         if not match: raise ValueError(f"Invalid coeff-word: {term_str}")
         coeff = complex(Decimal(match.group(1)))
         exponent = Decimal(calculate_word_exponent(match.group(2)))
-        return AoPValue.from_term(AoPTerm(coeff, exponent))
+        return AoPValue([AoPTerm(coeff, exponent)]) # Use list constructor for consistency
     if kind == 'VARIABLE':
-        if term_str in variables: return variables[term_str]
-        raise ValueError(f"Unknown identifier or variable: {term_str}")
+        if term_str not in variables:
+            raise ValueError(f"Undefined variable: {term_str}")
+        return variables[term_str] # Return the stored AoPValue
     if kind == 'IDENTIFIER':
-        if term_str in variables: return variables[term_str]
+        # This should NOT look up variables. Only VARIABLE tokens are variables.
         # An identifier like "a" becomes a term with coeff 1 and its letter-value as the exponent.
         exponent = Decimal(calculate_word_exponent(term_str))
         return AoPValue.from_term(AoPTerm(complex(1.0), exponent))
