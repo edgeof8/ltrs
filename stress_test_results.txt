@@ -1,0 +1,202 @@
+Skipped line 1: # Alphabet of Powers - Stress Test Script
+Skipped line 2: # This script tests complex operator precedence, associativity,
+Skipped line 3: # symbolic manipulation, numerical stability, and edge cases.
+Skipped line 4: 
+Skipped line 5: # --- 1. Precedence and Associativity ---
+Skipped line 6: # Expected: (2*3) + 4 = 10
+Input: 2*3+4
+Output: a
+---
+Skipped line 8: # Expected: 2 + (3*4) = 14
+Input: 2+3*4
+Output: 14
+---
+Skipped line 10: # Expected: (2*a) + b = 20 + 100 = 120
+Input: 2a+b
+Output: 120
+---
+Skipped line 12: # Expected: 2 + (a*b) = 2 + 10*100 = 1002
+Input: 2+ab
+Output: 1002
+---
+Skipped line 14: # Expected: 2 * (a^3) * b = 2 * 1000 * 100 = 200000
+Input: 2a^3*b
+Output: 2e
+---
+Skipped line 16: # Expected: (2*a)^(3*b) -> (20)^(300) -> Huge number, symbolic fallback
+Input: (2a)^(3b)
+Output: 2037035976334486086268445688409378161051468393665936250636140449354381299763336706183397376*a^3b
+---
+Skipped line 18: # Right associativity of power: 2^(3^2) = 2^9 = 512
+Input: 2^3^2
+Output: 512
+---
+Skipped line 20: # Left associativity override: (2^3)^2 = 8^2 = 64
+Input: (2^3)^2
+Output: 64
+---
+Skipped line 22: 
+Skipped line 23: # --- 2. Unary, Implicit, and Explicit Operator Mixing ---
+Skipped line 24: # Expected: -(a^b) = -(10^100) = -Z
+Input: -a^b
+Output: -1Z
+---
+Skipped line 26: # Expected: (-a)^b = (-10)^100 = 10^100 = Z (since power is even)
+Input: (-a)^b
+Output: Z
+---
+Skipped line 28: # Expected: a^(-b) = 10^(-100)
+Input: a^-b
+Output: Error: Insufficient operands for ^
+---
+Skipped line 30: # Expected: -2-3 = -5
+Input: -2-3
+Output: -5
+---
+Skipped line 32: # Expected: -2*-3 = 6
+Input: -2*-3
+Output: 6
+---
+Skipped line 34: # Expected: 2*-a = 2 * (-10) = -20
+Input: 2*-a
+Output: -20
+---
+Skipped line 36: # Expected: 2(-a) = 2 * (-10) = -20
+Input: 2(-a)
+Output: -20
+---
+Skipped line 38: # Expected: -2a = -(2*a) = -20
+Input: -2a
+Output: -20
+---
+Skipped line 40: 
+Skipped line 41: # --- 3. Symbolic Exponents (Towers of Powers) ---
+Skipped line 42: # Expected: a^(b^c) -> 10^(100^1000) -> Symbolic result a^(a^Z)
+Input: a^b^c
+Output: a^(a^2c)
+---
+Skipped line 44: # Expected: (a^b)^c -> 10^(100*1000) = 10^100000 -> Symbolic result a^(de)
+Input: (a^b)^c
+Output: a^e
+---
+Skipped line 46: # Expected: a^(b+c) = 10^(100+1000) = 10^1100 -> Symbolic result a^(ac)
+Input: a^(b+c)
+Output: a^11b
+---
+Skipped line 48: # Expected: a^b * a^c = a^(b+c) = 10^1100 -> Symbolic result a^(ac)
+Input: a^b * a^c
+Output: a^11b
+---
+Skipped line 50: # Expected: 2^(a^b) + 3 -> Symbolic result
+Input: 2^(a^b)+3
+Output: a^3010299956639812IY + 3
+---
+Skipped line 52: 
+Skipped line 53: # --- 4. Numerical Stability and High Precision ---
+Skipped line 54: # Expected: 1/3 + 1/3 + 1/3 = 1
+Input: 1/3+1/3+1/3
+Output: 0.9999999999999999
+---
+Skipped line 56: # Expected: #e^#j*#pi -> Euler's Identity: cos(pi) + i*sin(pi) = -1
+Skipped line 57: #e^(#j*#pi)
+Skipped line 58: # Expected: 0.1 + 0.2 == 0.3 -> 1 (True) due to Decimal precision
+Input: 0.1 + 0.2 == 0.3
+Output: 1
+---
+Skipped line 60: # Expected: a very large number that should not overflow but be symbolic
+Input: Z^Z
+Output: a^bZ
+---
+Skipped line 62: # Division by zero
+Input: 1/0
+Output: Error: 0.0 to a negative or complex power
+---
+Skipped line 64: # Large coefficient absorption test
+Input: 1000c
+Output: f
+---
+Skipped line 66: # Large coefficient that is NOT a power of the base
+Input: 1001c
+Output: 1001c
+---
+Skipped line 68: 
+Skipped line 69: # --- 5. Complex Parenthetical Expressions ---
+Skipped line 70: # Expected: 2 * (a + b*(c-d) - e/f) -> 2 * (10 + 100*(1k-10k) - 100k/1m) = 2*(10+100*(-9k)-0.1) = 2*(10-900k-0.1) = 2*(-899990.1) = -1799980.2
+Input: 2(a+b(c-d)-e/f)
+Output: -1799980.2
+---
+Skipped line 72: # Expected: ((a+b)^2 - (c-d)^2) / (a+b-(c-d)) -> (a+b+c-d) -> 10+100+1k-10k = -8890
+Input: ((a+b)^2-(c-d)^2)/(a+b-(c-d))
+Output: -8890
+---
+Skipped line 74: 
+Skipped line 75: # --- 6. Variable Assignment and Usage ---
+Skipped line 76: # Assign a variable
+Input: $x = a+b
+Output: 110
+---
+Skipped line 78: # Use the variable
+Input: $x * c
+Output: 11d
+---
+Skipped line 80: # Reassign the variable
+Input: $x = Z
+Output: Z
+---
+Skipped line 82: # Use it again
+Input: $x / b
+Output: WY
+---
+Skipped line 84: # Chained assignment
+Input: $y = $z = #pi
+Output: 3.141592653589793
+---
+Skipped line 86: # Use chained variables
+Input: $y + $z - 2#pi
+Output: 0
+---
+Skipped line 88: # Assign result of complex expression to var
+Input: $res = (a^b^c)/(a^b*a^c)
+Output: 0
+---
+Skipped line 90: # Use the result (should be a^(b^c - (b+c)))
+Input: $res
+Output: 0
+---
+Skipped line 92: 
+Skipped line 93: # --- 7. Edge Cases and Constants ---
+Skipped line 94: # Operations with zero
+Input: a*0
+Output: 0
+---
+Input: a+0
+Output: a
+---
+Input: a^0
+Output: 1
+---
+Input: 0/a
+Output: 0
+---
+Skipped line 99: # Operations with one
+Input: a*1
+Output: a
+---
+Input: a/1
+Output: a
+---
+Input: a^1
+Output: a
+---
+Input: 1^a
+Output: 1
+---
+Skipped line 104: # Word calculation and comparison
+Input: cat == x
+Output: 1
+---
+Input: dog == l
+Output: 0
+---
+Skipped line 107: # Test all constants
+Skipped line 108: #pi + #e + #phi + #tau + #sqrt2 + #j + #sqrt3 + #ln2

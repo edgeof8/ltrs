@@ -43,7 +43,10 @@ TOKEN_SPECIFICATION: List[Tuple[str, str]] = [
     # Added '=='
     ('OPERATOR', r"\*\*|==|[\+\-\*\/\^=]"), # Could also add !=, <=, >=, <, > later
     ('VARIABLE', _variable_name),
-    ('COEFF_WORD', f"{_number_signed}{_word_simple}"),
+    # --- FIX: Removed the greedy COEFF_WORD token. This is the core fix. ---
+    # Now, '2a' will be tokenized as a NUMBER '2' followed by an IDENTIFIER 'a',
+    # allowing implicit multiplication to be handled correctly.
+    # ('COEFF_WORD', f"{_number_signed}{_word_simple}"),
     ('CONSTANT_LITERAL', _constants),
     ('NUMBER', _number_signed),
     ('IDENTIFIER', _word_simple),

@@ -5,7 +5,8 @@ from decimal import Decimal
 from .aop_value import AoPValue, AoPTerm
 from .definitions import LETTER_TO_EXPONENT_MAP
 
-COEFF_WORD_PARSER = re.compile(r"([+-]?\d*\.?\d+(?:[eE][+-]?\d+)?)([a-yA-YzZ]+)")
+# --- FIX: This parser is no longer needed as COEFF_WORD is not a token type. ---
+# COEFF_WORD_PARSER = re.compile(r"([+-]?\d*\.?\d+(?:[eE][+-]?\d+)?)([a-yA-YzZ]+)")
 
 def calculate_word_exponent(word: str) -> int:
     exp_sum = 0
@@ -19,12 +20,7 @@ def get_term_value(term_str: str, variables: dict[str, AoPValue], kind: str) -> 
     if kind == 'NUMBER':
         # A number like "110" becomes a term with exponent 0.
         return AoPValue.from_number(Decimal(term_str))
-    if kind == 'COEFF_WORD':
-        match = COEFF_WORD_PARSER.match(term_str)
-        if not match: raise ValueError(f"Invalid coeff-word: {term_str}")
-        coeff = complex(Decimal(match.group(1)))
-        exponent = Decimal(calculate_word_exponent(match.group(2)))
-        return AoPValue([AoPTerm(coeff, exponent)]) # Use list constructor for consistency
+    # --- FIX: Removed the 'COEFF_WORD' handler block as it's now unreachable. ---
     if kind == 'VARIABLE':
         if term_str not in variables:
             raise ValueError(f"Undefined variable: {term_str}")
