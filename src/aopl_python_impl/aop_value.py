@@ -4,10 +4,6 @@ import cmath, decimal, logging
 from typing import List, Union, Optional, Callable
 from decimal import Decimal
 from .definitions import OutputFormatMode, PracticalLimitError
-# --- THIS IS THE FIX ---
-# Remove the broken import. The to_str method was also moved.
-# from .aop_formatter import _complex_to_str as fmt_complex, _format_numeric_exponent
-# --- END OF FIX ---
 
 decimal.getcontext().prec = 200
 

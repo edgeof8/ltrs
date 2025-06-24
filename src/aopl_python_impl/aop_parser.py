@@ -82,9 +82,9 @@ def insert_implicit_multiplication(tokens: List[Token]) -> List[Token]:
         if i + 1 < len(tokens):
             next_token = tokens[i+1]
             # A value-like token is anything that's not an operator or right parenthesis.
-            is_val_like = token.kind in ('NUMBER', 'IDENTIFIER', 'COEFF_WORD', 'CONSTANT_LITERAL', 'RPAREN')
+            is_val_like = token.kind in ('NUMBER', 'IDENTIFIER', 'COEFF_WORD', 'CONSTANT_LITERAL', 'RPAREN', 'VARIABLE')
             # The next token can be a value or the start of a parenthetical group.
-            is_next_val_like = next_token.kind in ('NUMBER', 'IDENTIFIER', 'COEFF_WORD', 'CONSTANT_LITERAL', 'LPAREN')
+            is_next_val_like = next_token.kind in ('NUMBER', 'IDENTIFIER', 'COEFF_WORD', 'CONSTANT_LITERAL', 'LPAREN', 'VARIABLE')
 
             if is_val_like and is_next_val_like:
                 result.append(Token('IMPLICIT_OPERATOR', '*', -1, -1))

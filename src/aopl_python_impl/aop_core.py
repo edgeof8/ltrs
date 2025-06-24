@@ -5,12 +5,11 @@
 # import and use AoP_Calculator directly from aop_calculator.py.
 
 from .aop_calculator import AoP_Calculator
-from .definitions import ValueTuple # Often useful for type hinting if users interact with raw values
-from .interfaces import CalculatorInterface # Import the protocol
+# FIX: Removed unused imports for ValueTuple and a non-existent CalculatorInterface.
+from .definitions import OutputFormatMode
 
 # Create a single, module-level instance to be reused.
-# Type hint it with the protocol for better type safety and clarity.
-_shared_aop_calculator: CalculatorInterface = AoP_Calculator()
+_shared_aop_calculator: AoP_Calculator = AoP_Calculator()
 
 def evaluate_expression(expression_str: str) -> str:
     """
@@ -27,21 +26,18 @@ def evaluate_expression(expression_str: str) -> str:
     """
     # Clear any variables from previous calls to ensure stateless behavior for this API
     _shared_aop_calculator.variables.clear()
-    return _shared_aop_calculator.evaluate_expression(expression_str)
+
+    # FIX: The call to evaluate_expression was missing required arguments.
+    # This now provides default values for mode and precision, making the
+    # simple API functional again.
+    return _shared_aop_calculator.evaluate_expression(
+        expression=expression_str,
+        mode=OutputFormatMode.AUTO,
+        precision=10
+    )
 
 # evaluate_simple_word function was removed as it's redundant.
 # evaluate_expression can handle simple words.
-
-# Add other simple pass-through functions if desired, for example:
-# def get_term_value_simple(term: str) -> ValueTuple:
-#     # Ensure statelessness if using the shared calculator
-#     _shared_aop_calculator.variables.clear()
-#     # Note: get_term_value in AoP_Calculator might not exist anymore or its signature changed.
-#     # This example assumes it would be adapted or AoP_Calculator would provide a suitable method.
-#     # For now, direct use of aop_term_handler.get_term_value with an empty var dict is better for statelessness.
-#     from .aop_term_handler import get_term_value
-#     return get_term_value(term, {})
-
 
 # Note: For any functions that might rely on or modify calculator state (like variables),
 # it's generally better to require the user to instantiate and use AoP_Calculator directly.

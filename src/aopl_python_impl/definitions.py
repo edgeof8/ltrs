@@ -15,6 +15,9 @@ class PracticalLimitError(OverflowError): # Specific error for numerical limits
     """Indicates a practical limit was exceeded during numerical evaluation."""
     pass
 
+# FIX: Removed unused ValueTuple, which was a remnant from an older design.
+# This cleans up the definitions and removes obsolete code.
+
 LOWERCASE_AOP_LETTERS = string.ascii_lowercase[:25] # a-y
 UPPERCASE_AOP_LETTERS_STD = string.ascii_uppercase[:25] # A-Y (exponents 26-50)
 
