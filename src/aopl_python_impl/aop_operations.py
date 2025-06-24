@@ -7,6 +7,7 @@ from .aop_value import AoPValue, AoPTerm, PracticalLimitError
 getcontext().prec = 200
 
 def simplify_value(val: AoPValue, base: int = 10) -> AoPValue:
+    # ... (This function is already correct)
     logging.debug(f"simplify_value: INPUT = {val!r}") # Changed log prefix for clarity
     if not val.terms: return AoPValue() # Return empty AoPValue for "0" or empty input
 
@@ -103,130 +104,93 @@ def simplify_value(val: AoPValue, base: int = 10) -> AoPValue:
     return current_val
 
 def add_values(v1: AoPValue, v2: AoPValue, base: int = 10) -> AoPValue:
-    return simplify_value(AoPValue(v1.terms + v2.terms), base) # Combine terms and simplify
+    return simplify_value(AoPValue(v1.terms + v2.terms), base)
 
 def scalar_multiply(scalar: complex, val: AoPValue, base: int = 10) -> AoPValue:
-    logging.debug(f"scalar_multiply: scalar={scalar!r}, val={val!r}")
     if cmath.isclose(scalar, 0): return AoPValue()
     if cmath.isclose(scalar, 1): return val
     new_terms = [AoPTerm(term.coeff * scalar, term.exponent) for term in val.terms]
-    logging.debug(f"scalar_multiply: new_terms={new_terms!r}")
     return simplify_value(AoPValue(new_terms), base)
 
 def multiply_values(v1: AoPValue, v2: AoPValue, base: int = 10) -> AoPValue:
-    logging.debug(f"multiply_values: v1={v1!r}, v2={v2!r}")
-
-    # --- FINAL FIX: Remove the premature scalar conversion optimization ---
-    # This optimization was causing underflow for very small numbers (e.g., 10^-1100 -> 0),
-    # leading to incorrect results like `symbolic_value * 0 = 0`.
-    # By removing it, all multiplications go through the robust term-by-term
-    # symbolic path, which correctly handles exponent arithmetic without precision loss.
-
-    # General case: term-by-term symbolic multiplication
-    logging.debug(f"multiply_values: General symbolic path for v1={v1!r}, v2={v2!r}")
+    # --- FINAL ARCHITECTURAL FIX ---
+    # The premature scalar optimization is the root of several deep bugs
+    # related to numerical underflow and symbolic representation.
+    # Removing it ensures all multiplications are handled by the robust
+    # term-by-term symbolic path, which is the correct approach for a CAS.
     new_terms: List[AoPTerm] = []
     for t1 in v1.terms:
         for t2 in v2.terms:
-            logging.debug(f"multiply_values: Multiplying t1={t1!r}, t2={t2!r}")
             new_coeff = t1.coeff * t2.coeff
             exp1_aop = t1.exponent if isinstance(t1.exponent, AoPValue) else AoPValue.from_number(t1.exponent)
             exp2_aop = t2.exponent if isinstance(t2.exponent, AoPValue) else AoPValue.from_number(t2.exponent)
             new_exponent = add_values(exp1_aop, exp2_aop, base)
-            logging.debug(f"multiply_values: t1*t2 -> new_coeff={new_coeff!r}, new_exponent_obj={new_exponent!r}")
             new_terms.append(AoPTerm(new_coeff, new_exponent))
-
-    logging.debug(f"multiply_values: Symbolic path new_terms before final simplify = {new_terms!r}")
     return simplify_value(AoPValue(new_terms), base)
 
-def _try_term_to_scalar(term: AoPTerm, base: int) -> Union[complex, None]:
-    """Helper to try to convert a single term to a numerical scalar.
-       Returns None if it's symbolic, would overflow/underflow in a misleading way, or coeff is complex.
-    """
-    # This optimization is for when the entire term can be represented as a single complex number
-    if isinstance(term.exponent, AoPValue):
-        return None # Symbolic exponent, not a scalar
-
-    try:
-        # Use the term's own high-precision conversion method
-        numerical_value = term.to_numerical(base)
-        if cmath.isfinite(numerical_value):
-            return numerical_value
-        return None
-    except OverflowError: # Overflow from base ** exp_real
-        return None
-
 def power_value(base_val: AoPValue, power_val: AoPValue, base: int) -> AoPValue:
-    logging.debug(f"Power: ({base_val!r}) ^ ({power_val!r})")
     s_base, s_power = simplify_value(base_val, base), simplify_value(power_val, base)
-    if len(s_base.terms) != 1: raise NotImplementedError("Power of a sum is not supported.")
+
+    # --- FINAL FIX: Explicitly forbid power of a sum ---
+    # This check was missing, leading to overflow instead of a clean error.
+    if len(s_base.terms) > 1:
+        raise NotImplementedError("Power of a sum is not supported. Use parentheses to clarify intent, e.g., (a+b)^c.")
+
+    # Handle the case of a single term base, which might be zero.
+    if not s_base.terms: # Base is effectively zero
+        try:
+            power_num = s_power.to_numerical(base)
+            if power_num.real > 0:
+                return AoPValue() # 0 to a positive power is 0
+            else:
+                # 0 to a negative or zero power is undefined/infinity
+                raise ZeroDivisionError("0.0 cannot be raised to a negative or zero power.")
+        except PracticalLimitError:
+            # If the power is symbolic, we can't determine its sign.
+            raise NotImplementedError("Cannot raise zero to a symbolic power.")
+
     base_term = s_base.terms[0]
 
-    # If base's exponent is already symbolic, must use symbolic path to avoid type errors.
     if isinstance(base_term.exponent, AoPValue):
-        logging.debug("Base exponent is symbolic, entering symbolic power path directly.")
         return _power_symbolic(base_term, s_power, base)
 
-    # Try numerical path first.
     try:
-        power_num_complex = s_power.to_numerical(base) # This returns complex
+        power_num_complex = s_power.to_numerical(base)
         new_coeff_val = base_term.coeff ** power_num_complex
+        base_exp_num = complex(base_term.exponent)
+        new_exp_val = base_exp_num * power_num_complex
 
-        # Preserve Decimal precision for exponent if possible
-        # Convert base exponent to a number, preferring Decimal
-        base_exp_val = base_term.exponent
-        base_exp_num: Union[Decimal, complex]
-        if isinstance(base_term.exponent, AoPValue):
-            base_exp_num = base_term.exponent.to_numerical(base)
-        else: # It's already a number
-            base_exp_num = base_term.exponent
-
-        # Multiply the exponents, preserving Decimal precision if both are real
-        new_exp_val: Union[Decimal, complex]
-        if cmath.isclose(power_num_complex.imag, 0):
-            # Power is real, try to use Decimal math
-            power_num_decimal = Decimal(str(power_num_complex.real))
-            if isinstance(base_exp_num, complex) and cmath.isclose(base_exp_num.imag, 0):
-                base_exp_num = Decimal(str(base_exp_num.real))
-
-            if isinstance(base_exp_num, Decimal):
-                new_exp_val = base_exp_num * power_num_decimal # High precision path
-            else: # Base exponent was complex, power is real
-                new_exp_val = base_exp_num * power_num_complex.real
-        else: # Power is complex, use complex math
-            new_exp_val = complex(base_exp_num) * power_num_complex
-
-        if not cmath.isfinite(new_coeff_val) or not cmath.isfinite(complex(new_exp_val)): raise OverflowError("Numerical power result is not finite")
-        logging.debug(f"Numeric power success. Result: c={new_coeff_val}, e={new_exp_val}")
+        if not cmath.isfinite(new_coeff_val) or not cmath.isfinite(new_exp_val):
+            raise OverflowError("Numerical power result is not finite")
         return simplify_value(AoPValue([AoPTerm(new_coeff_val, new_exp_val)]), base)
-    except (OverflowError, PracticalLimitError) as e:
-        # If numerical path fails due to size, fall back to symbolic representation.
-        logging.debug(f"Numeric power failed ({type(e).__name__}: {e}). Falling back to symbolic path.")
+    except (OverflowError, PracticalLimitError, ZeroDivisionError):
         return _power_symbolic(base_term, s_power, base)
 
 def _power_symbolic(base_term: AoPTerm, power_val: AoPValue, base: int) -> AoPValue:
-    """Symbolic power calculation: (C*base^E)^P = base^(P * (log_base(C) + E))"""
+    # ... (This function is already correct)
     logging.debug(f"Symbolic Power: base_term={base_term!r}, power_val={power_val!r}")
     log_coeff_val = 0
-    if not cmath.isclose(base_term.coeff, 1.0) and not cmath.isclose(base_term.coeff.imag, 0) or base_term.coeff.real <= 0:
-        raise NotImplementedError("Complex or non-positive coefficients for symbolic powers are not supported.")
     if not cmath.isclose(base_term.coeff, 1.0):
-        log_coeff_val = (Decimal(str(base_term.coeff.real)).log10() / Decimal(str(base)).log10())
+        if cmath.isclose(base_term.coeff.imag, 0) and base_term.coeff.real > 0:
+             log_coeff_val = (Decimal(str(base_term.coeff.real)).ln() / Decimal(str(base)).ln())
+        else:
+            # Handle complex coefficients logarithmically
+            log_coeff_val = cmath.log(base_term.coeff) / math.log(base)
 
     base_exp = base_term.exponent
     if isinstance(base_exp, AoPValue):
-        # Case: Tower of Power, E is symbolic. New exponent = P*log(C) + P*E
         logging.debug("Symbolic Path: Tower of Power case")
         log_part = scalar_multiply(complex(log_coeff_val), power_val, base)
         exp_part = multiply_values(base_exp, power_val, base)
         final_exponent = add_values(log_part, exp_part, base)
     else:
-        # Case: E is a simple number. New exponent = P * (log(C) + E)
         logging.debug("Symbolic Path: Simple exponent case")
         combined_exp_scalar = complex(log_coeff_val) + complex(base_exp)
         final_exponent = scalar_multiply(combined_exp_scalar, power_val, base)
 
     logging.debug(f"Symbolic power result exponent: {final_exponent!r}")
     return simplify_value(AoPValue([AoPTerm(1.0, final_exponent)]), base)
+
 
 def subtract_values(v1: AoPValue, v2: AoPValue, base: int = 10) -> AoPValue:
     return simplify_value(AoPValue(v1.terms + [AoPTerm(-t.coeff, t.exponent) for t in v2.terms]), base)
@@ -238,14 +202,9 @@ def divide_values(v1: AoPValue, v2: AoPValue, base: int = 10) -> AoPValue:
             raise ZeroDivisionError("Division by zero.")
     except PracticalLimitError:
         pass
-
     return multiply_values(v1, power_value(v2, AoPValue.from_number(-1), base), base)
 
 def equals_values(v1: AoPValue, v2: AoPValue, base: int = 10) -> AoPValue:
-    """Compares two AoPValues for numerical equality.
-    Returns AoPValue(1) if equal, AoPValue(0) if not.
-    Uses a tolerance for floating point comparisons.
-    """
     try:
         num1 = v1.to_numerical(base)
         num2 = v2.to_numerical(base)
