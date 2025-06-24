@@ -136,3 +136,6 @@ cython_debug/
 *.swp
 *~
 research/my_papers/aop_euler_bridge.md
+research/my_papers/perfect_number_theorem_proof.md
+expressions.txt
+results.txt
