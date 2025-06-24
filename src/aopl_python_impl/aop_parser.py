@@ -117,13 +117,12 @@ def infix_to_rpn(tokens: List[Token], operators_map: Dict[str, Dict]) -> List[To
     output_queue: List[Token] = []
     operator_stack: List[Token] = []
 
-    # --- FIX: Set implicit multiplication to have precedence between power and explicit multiply. ---
-    # This ensures that `2a^3` is parsed as `2 * (a^3)` and `a^3b` as `(a^3) * b`.
     implicit_op_props = {'precedence': 3.5, 'associativity': 'left'}
-
     UMINUS_INTERNAL_OP_NAME = '_UMINUS_'
 
     _operators_map_extended = operators_map.copy()
+    # --- FINAL FIX: Set Unary Minus precedence LOWER than Power ---
+    # This ensures that in `-a^b`, `a^b` is evaluated first, then negated.
     _operators_map_extended[UMINUS_INTERNAL_OP_NAME] = {'precedence': 4, 'associativity': 'right'}
 
     for i, token_obj in enumerate(tokens):
@@ -131,9 +130,8 @@ def infix_to_rpn(tokens: List[Token], operators_map: Dict[str, Dict]) -> List[To
         current_token_kind = token_obj.kind
 
         if current_token_kind == 'OPERATOR' and current_token_value == '-':
-            # Context check for unary minus
             if i == 0 or tokens[i-1].kind in ('OPERATOR', 'LPAREN', 'IMPLICIT_OPERATOR'):
-                current_token_value = UMINUS_INTERNAL_OP_NAME # Reassign value for logic
+                current_token_value = UMINUS_INTERNAL_OP_NAME
 
         if current_token_kind in ('NUMBER', 'IDENTIFIER', 'CONSTANT_LITERAL', 'VARIABLE'):
             output_queue.append(token_obj)

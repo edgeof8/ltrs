@@ -109,7 +109,7 @@ Output: a^bZ
 ---
 Skipped line 62: # Division by zero
 Input: 1/0
-Output: Error: 0.0 to a negative or complex power
+Output: Error: Division by zero.
 ---
 Skipped line 64: # Large coefficient absorption test
 Input: 1000c

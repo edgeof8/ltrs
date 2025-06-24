@@ -243,6 +243,16 @@ def subtract_values(v1: AoPValue, v2: AoPValue, base: int = 10) -> AoPValue:
     return simplify_value(AoPValue(v1.terms + [AoPTerm(-t.coeff, t.exponent) for t in v2.terms]), base)
 
 def divide_values(v1: AoPValue, v2: AoPValue, base: int = 10) -> AoPValue:
+    # --- FIX: Add explicit check for division by zero ---
+    # This prevents the `0.0 to a negative power` error when calculating the inverse.
+    try:
+        v2_num = v2.to_numerical(base)
+        if cmath.isclose(v2_num, 0):
+            raise ZeroDivisionError("Division by zero.")
+    except PracticalLimitError:
+        # If v2 is symbolic and cannot be converted to a number, it's not zero.
+        pass
+
     return multiply_values(v1, power_value(v2, AoPValue.from_number(-1), base), base)
 
 def equals_values(v1: AoPValue, v2: AoPValue, base: int = 10) -> AoPValue:
