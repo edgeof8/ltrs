@@ -1,0 +1,78 @@
+# Alphabet of Powers - Diabolical Stress Test
+# This script is designed to be malicious and probe for deep, subtle bugs.
+
+# --- Phase 1: Parser and Precedence Torture ---
+# Unary, implicit, explicit, and power operator soup. Expected: (-(2*a))^(-(3*b))
+-2a^-3b
+# Juxtaposition next to parentheses. Expected: a * (b+c) * d
+a(b+c)d
+# Mismatched parentheses. Expected: Error
+(a+b)*c)
+# Operator with no RHS. Expected: Error
+a+b*
+# Multiple assignments and operators. Expected: Error (Assignment has low precedence)
+$v=a+b*c
+# Chained equality. Expected: (1==1) == 1 -> 1 == 1 -> 1
+1==1==1
+# Negative number juxtaposition. Expected: 2 * (-3) = -6
+2(-3)
+# Constant juxtaposition. Expected: #pi * #e
+#pi#e
+
+# --- Phase 2: Symbolic Nightmare ---
+# Self-referential symbolic exponent. Expected: a^(a)
+a^a
+# Division within a power tower. Expected: a^(b/(c^d))
+a^(b/c^d)
+# Symbolic exponent operating on a complex base. Expected: (#j)^a
+#j^a
+# Power of a symbolic sum. Expected: Error (Power of a sum is not supported)
+(a+b)^c
+# Symbolic subtraction leading to zero exponent. Expected: a^(b-b) -> a^0 -> 1
+a^(b-b)
+# Extremely complex symbolic exponent. Expected: a^((b-c)/(d+e) - f)
+a^((b-c)/(d+e)-f)
+
+# --- Phase 3: Type System and Numerical Torture ---
+# Catastrophic cancellation. Expected: 1 - (1-1e-100) -> 1e-100 (Symbolic or high-precision)
+1-(1-a^-Z)
+# Mixing complex numbers and symbolic values. Expected: (2+#j*3) * a^b
+(2+#j*3)a^b
+# Equality check between a numerical value and its symbolic letter. Expected: 1
+Z == a^b
+# Equality check between two different symbolic towers. Expected: 0
+a^b^c == a^(b*c)
+# Division of two massive, nearly-equal symbolic towers. Expected: Symbolic result near 1
+(a^b^c) / (a^b^(c-a^-Z))
+
+# --- Phase 4: Recursive and Redefined Variables ---
+# Simple redefinition
+$k=a
+$k=b
+$k*c
+# Recursive-style definition.
+$v1 = c
+$v2 = a^$v1
+$v3 = a^$v2
+$v3
+# Redefining a variable used in another's definition
+$m = a+b
+$n = $m*c
+# Now, redefine $m. $n should NOT change.
+$m = d
+# Check $n's original value. Expected: (10+100)*1000 = 110000
+$n
+# Check new $m. Expected: 10000
+$m
+
+# --- Phase 5: Formatter Pathos ---
+# A result that is a sum of two very different symbolic towers.
+a^b + a^c
+# A result with a complex coefficient on a symbolic term.
+(1+#j)a^Z
+# A result that is a tiny fraction.
+1/Z
+# A result that is a fraction of symbolic terms.
+a^b / c^d
+# An exponent that is itself a complex sum.
+a^(b + #j*c)

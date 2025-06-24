@@ -118,14 +118,11 @@ def infix_to_rpn(tokens: List[Token], operators_map: Dict[str, Dict]) -> List[To
     operator_stack: List[Token] = []
 
     implicit_op_props = {'precedence': 3.5, 'associativity': 'left'}
-    # --- FIX: Define two distinct internal unary minus operators ---
-    UMINUS_PREFIX = '_UMINUS_PREFIX_' # For -a^b -> -(a^b)
-    UMINUS_INFIX = '_UMINUS_INFIX_'   # For a^-b -> a^(-b)
+    UMINUS_PREFIX = '_UMINUS_PREFIX_'
+    UMINUS_INFIX = '_UMINUS_INFIX_'
 
     _operators_map_extended = operators_map.copy()
-    # Prefix Unary Minus has LOWER precedence than Power
     _operators_map_extended[UMINUS_PREFIX] = {'precedence': 4, 'associativity': 'right'}
-    # Infix Unary Minus has HIGHER precedence than Power
     _operators_map_extended[UMINUS_INFIX] = {'precedence': 5.5, 'associativity': 'right'}
 
     for i, token_obj in enumerate(tokens):
@@ -133,11 +130,15 @@ def infix_to_rpn(tokens: List[Token], operators_map: Dict[str, Dict]) -> List[To
         current_token_kind = token_obj.kind
 
         if current_token_kind == 'OPERATOR' and current_token_value == '-':
-            # Distinguish unary minus based on preceding token
-            if i == 0 or tokens[i-1].kind in ('LPAREN',):
+            # --- FINAL FIX: Comprehensive unary minus detection ---
+            is_prefix = (i == 0) or (tokens[i-1].kind in ('LPAREN',))
+            is_infix = tokens[i-1].kind in ('OPERATOR', 'IMPLICIT_OPERATOR') if i > 0 else False
+
+            if is_prefix:
                 current_token_value = UMINUS_PREFIX
-            elif tokens[i-1].kind in ('OPERATOR', 'IMPLICIT_OPERATOR'):
+            elif is_infix:
                 current_token_value = UMINUS_INFIX
+            # Otherwise, it's a binary subtraction, and current_token_value remains '-'
 
         if current_token_kind in ('NUMBER', 'IDENTIFIER', 'CONSTANT_LITERAL', 'VARIABLE'):
             output_queue.append(token_obj)
@@ -175,7 +176,6 @@ def infix_to_rpn(tokens: List[Token], operators_map: Dict[str, Dict]) -> List[To
 
 def evaluate_rpn(rpn_tokens: List[Token], variables: Dict[str, AoPValue], get_term_value_func: TermGetter, base: int) -> AoPValue:
     stack: list[Union[AoPValue, Token]] = []
-    # --- FIX: Check for both types of unary minus ---
     UMINUS_PREFIX = '_UMINUS_PREFIX_'
     UMINUS_INFIX = '_UMINUS_INFIX_'
 

@@ -25,7 +25,7 @@ Output: 2e
 ---
 Skipped line 16: # Expected: (2*a)^(3*b) -> (20)^(300) -> Huge number, symbolic fallback
 Input: (2a)^(3b)
-Output: 2037035976334486086268445688409378161051468393665936250636140449354381299763336706183397376*a^3b
+Output: Infinity
 ---
 Skipped line 18: # Right associativity of power: 2^(3^2) = 2^9 = 512
 Input: 2^3^2
@@ -85,7 +85,7 @@ Output: a^11b
 ---
 Skipped line 48: # Expected: a^b * a^c = a^(b+c) = 10^1100 -> Symbolic result a^(ac)
 Input: a^b * a^c
-Output: a^11b
+Output: Infinity
 ---
 Skipped line 50: # Expected: 2^(a^b) + 3 -> Symbolic result
 Input: 2^(a^b)+3
@@ -157,11 +157,11 @@ Output: 0
 ---
 Skipped line 88: # Assign result of complex expression to var
 Input: $res = (a^b^c)/(a^b*a^c)
-Output: 0
+Output: a^(a^2c - 11b)
 ---
 Skipped line 90: # Use the result (should be a^(b^c - (b+c)))
 Input: $res
-Output: 0
+Output: a^(a^2c - 11b)
 ---
 Skipped line 92: 
 Skipped line 93: # --- 7. Edge Cases and Constants ---

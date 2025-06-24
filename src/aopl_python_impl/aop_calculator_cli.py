@@ -6,8 +6,14 @@ from .aop_calculator import AoP_Calculator
 from .definitions import OutputFormatMode
 
 def main():
-    parser = argparse.ArgumentParser(description="Alphabet of Powers Calculator")
-    parser.add_argument("expression", type=str, help="The expression to evaluate")
+    # --- FINAL FIX: Improved help text to guide the user on shell quoting ---
+    parser = argparse.ArgumentParser(
+        description="Alphabet of Powers Calculator",
+        epilog="NOTE: When using expressions with spaces, variables ($), or other special characters, "
+               "enclose the entire expression in SINGLE QUOTES ('') to prevent the shell from "
+               "interpreting them. Example: ltrs '$x = a+b'"
+    )
+    parser.add_argument("expression", type=str, help="The expression to evaluate.")
     parser.add_argument("--base", type=int, default=10, help="Numerical base for calculations (default: 10)")
     parser.add_argument("--mode", type=str, choices=["auto", "aop", "sci", "num"], default="auto", help="Output format mode (default: auto)")
     parser.add_argument("--precision", type=int, default=10, help="Precision for numerical output (default: 10)")
@@ -15,9 +21,12 @@ def main():
     args = parser.parse_args()
 
     if args.debug:
-        logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s', filename='aop_calculator_debug.log')
+        logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s', filename='aop_calculator_debug.log', filemode='w')
         logging.debug("Debug mode enabled")
     else:
+        # Clear the log file if not in debug mode to avoid confusion
+        # with old errors.
+        open('aop_calculator_debug.log', 'w').close()
         logging.basicConfig(level=logging.ERROR)
 
     mode_map = {
@@ -27,11 +36,9 @@ def main():
         "num": OutputFormatMode.NUMERICAL
     }
 
-    # FIX: Initialize calculator with only the base
     calculator = AoP_Calculator(base=args.base)
 
     try:
-        # FIX: Pass mode and precision to the evaluation function
         result = calculator.evaluate_expression(
             expression=args.expression,
             mode=mode_map[args.mode],

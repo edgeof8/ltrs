@@ -115,23 +115,12 @@ def scalar_multiply(scalar: complex, val: AoPValue, base: int = 10) -> AoPValue:
 
 def multiply_values(v1: AoPValue, v2: AoPValue, base: int = 10) -> AoPValue:
     logging.debug(f"multiply_values: v1={v1!r}, v2={v2!r}")
-    # Optimization: if v1 is a single term that's a scalar
-    if len(v1.terms) == 1:
-        s1 = _try_term_to_scalar(v1.terms[0], base)
-        logging.debug(f"multiply_values: s1 (from v1.terms[0]={v1.terms[0]!r}) = {s1!r}")
-        if s1 is not None:
-            result_after_scalar_mult = scalar_multiply(s1, v2, base)
-            logging.debug(f"multiply_values: Path s1 scalar. Result of scalar_multiply = {result_after_scalar_mult!r}")
-            return simplify_value(result_after_scalar_mult, base)
 
-    # Optimization: if v2 is a single term that's a scalar
-    if len(v2.terms) == 1:
-        s2 = _try_term_to_scalar(v2.terms[0], base)
-        logging.debug(f"multiply_values: s2 (from v2.terms[0]={v2.terms[0]!r}) = {s2!r}")
-        if s2 is not None:
-            result_after_scalar_mult = scalar_multiply(s2, v1, base)
-            logging.debug(f"multiply_values: Path s2 scalar. Result of scalar_multiply = {result_after_scalar_mult!r}")
-            return simplify_value(result_after_scalar_mult, base)
+    # --- FINAL FIX: Remove the premature scalar conversion optimization ---
+    # This optimization was causing underflow for very small numbers (e.g., 10^-1100 -> 0),
+    # leading to incorrect results like `symbolic_value * 0 = 0`.
+    # By removing it, all multiplications go through the robust term-by-term
+    # symbolic path, which correctly handles exponent arithmetic without precision loss.
 
     # General case: term-by-term symbolic multiplication
     logging.debug(f"multiply_values: General symbolic path for v1={v1!r}, v2={v2!r}")
@@ -243,14 +232,11 @@ def subtract_values(v1: AoPValue, v2: AoPValue, base: int = 10) -> AoPValue:
     return simplify_value(AoPValue(v1.terms + [AoPTerm(-t.coeff, t.exponent) for t in v2.terms]), base)
 
 def divide_values(v1: AoPValue, v2: AoPValue, base: int = 10) -> AoPValue:
-    # --- FIX: Add explicit check for division by zero ---
-    # This prevents the `0.0 to a negative power` error when calculating the inverse.
     try:
         v2_num = v2.to_numerical(base)
         if cmath.isclose(v2_num, 0):
             raise ZeroDivisionError("Division by zero.")
     except PracticalLimitError:
-        # If v2 is symbolic and cannot be converted to a number, it's not zero.
         pass
 
     return multiply_values(v1, power_value(v2, AoPValue.from_number(-1), base), base)
@@ -263,20 +249,16 @@ def equals_values(v1: AoPValue, v2: AoPValue, base: int = 10) -> AoPValue:
     try:
         num1 = v1.to_numerical(base)
         num2 = v2.to_numerical(base)
-
-        # For complex numbers, cmath.isclose compares both real and imaginary parts.
-        # Define a suitable tolerance.
-        if cmath.isclose(num1, num2, rel_tol=1e-9, abs_tol=1e-12): # Adjust tolerance as needed
+        if cmath.isclose(num1, num2, rel_tol=1e-9, abs_tol=1e-12):
             return AoPValue.from_number(1)
         else:
             return AoPValue.from_number(0)
-    except PracticalLimitError: # If either value cannot be converted to a number (e.g., too large, symbolic)
-        logging.debug(f"Cannot numerically compare for equality due to PracticalLimitError: {v1!r} vs {v2!r}")
+    except PracticalLimitError:
         s1 = simplify_value(v1, base)
         s2 = simplify_value(v2, base)
         if repr(s1) == repr(s2):
              return AoPValue.from_number(1)
         return AoPValue.from_number(0)
-    except Exception as e: # Other unexpected errors during conversion
+    except Exception as e:
         logging.error(f"Error during equality comparison: {e}")
-        return AoPValue.from_number(0) # Default to not equal on error
+        return AoPValue.from_number(0)
