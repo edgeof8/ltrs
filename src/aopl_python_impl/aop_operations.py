@@ -272,7 +272,11 @@ def equals_values(v1: AoPValue, v2: AoPValue, base: int = 10) -> AoPValue:
             return AoPValue.from_number(0)
     except PracticalLimitError: # If either value cannot be converted to a number (e.g., too large, symbolic)
         logging.debug(f"Cannot numerically compare for equality due to PracticalLimitError: {v1!r} vs {v2!r}")
-        return AoPValue.from_number(0) # Or raise an error, or return a special "undefined" AoPValue
+        s1 = simplify_value(v1, base)
+        s2 = simplify_value(v2, base)
+        if repr(s1) == repr(s2):
+             return AoPValue.from_number(1)
+        return AoPValue.from_number(0)
     except Exception as e: # Other unexpected errors during conversion
         logging.error(f"Error during equality comparison: {e}")
         return AoPValue.from_number(0) # Default to not equal on error

@@ -118,20 +118,26 @@ def infix_to_rpn(tokens: List[Token], operators_map: Dict[str, Dict]) -> List[To
     operator_stack: List[Token] = []
 
     implicit_op_props = {'precedence': 3.5, 'associativity': 'left'}
-    UMINUS_INTERNAL_OP_NAME = '_UMINUS_'
+    # --- FIX: Define two distinct internal unary minus operators ---
+    UMINUS_PREFIX = '_UMINUS_PREFIX_' # For -a^b -> -(a^b)
+    UMINUS_INFIX = '_UMINUS_INFIX_'   # For a^-b -> a^(-b)
 
     _operators_map_extended = operators_map.copy()
-    # --- FINAL FIX: Set Unary Minus precedence LOWER than Power ---
-    # This ensures that in `-a^b`, `a^b` is evaluated first, then negated.
-    _operators_map_extended[UMINUS_INTERNAL_OP_NAME] = {'precedence': 4, 'associativity': 'right'}
+    # Prefix Unary Minus has LOWER precedence than Power
+    _operators_map_extended[UMINUS_PREFIX] = {'precedence': 4, 'associativity': 'right'}
+    # Infix Unary Minus has HIGHER precedence than Power
+    _operators_map_extended[UMINUS_INFIX] = {'precedence': 5.5, 'associativity': 'right'}
 
     for i, token_obj in enumerate(tokens):
         current_token_value = token_obj.value
         current_token_kind = token_obj.kind
 
         if current_token_kind == 'OPERATOR' and current_token_value == '-':
-            if i == 0 or tokens[i-1].kind in ('OPERATOR', 'LPAREN', 'IMPLICIT_OPERATOR'):
-                current_token_value = UMINUS_INTERNAL_OP_NAME
+            # Distinguish unary minus based on preceding token
+            if i == 0 or tokens[i-1].kind in ('LPAREN',):
+                current_token_value = UMINUS_PREFIX
+            elif tokens[i-1].kind in ('OPERATOR', 'IMPLICIT_OPERATOR'):
+                current_token_value = UMINUS_INFIX
 
         if current_token_kind in ('NUMBER', 'IDENTIFIER', 'CONSTANT_LITERAL', 'VARIABLE'):
             output_queue.append(token_obj)
@@ -169,7 +175,9 @@ def infix_to_rpn(tokens: List[Token], operators_map: Dict[str, Dict]) -> List[To
 
 def evaluate_rpn(rpn_tokens: List[Token], variables: Dict[str, AoPValue], get_term_value_func: TermGetter, base: int) -> AoPValue:
     stack: list[Union[AoPValue, Token]] = []
-    UMINUS_INTERNAL_OP_NAME = '_UMINUS_'
+    # --- FIX: Check for both types of unary minus ---
+    UMINUS_PREFIX = '_UMINUS_PREFIX_'
+    UMINUS_INFIX = '_UMINUS_INFIX_'
 
     for token in rpn_tokens:
         if token.kind in ('NUMBER', 'IDENTIFIER', 'CONSTANT_LITERAL'):
@@ -180,7 +188,7 @@ def evaluate_rpn(rpn_tokens: List[Token], variables: Dict[str, AoPValue], get_te
             logging.debug(f"Pushed to stack (as L-value): {stack[-1]!r}")
         elif token.value == '=':
             _handle_assignment(stack, variables, get_term_value_func, token)
-        elif token.value == UMINUS_INTERNAL_OP_NAME:
+        elif token.value in (UMINUS_PREFIX, UMINUS_INFIX):
             _handle_unary_minus_op(stack, variables, get_term_value_func, base, token)
         elif token.value in OPERATOR_HANDLERS:
             OPERATOR_HANDLERS[token.value](stack, variables, get_term_value_func, base, token)

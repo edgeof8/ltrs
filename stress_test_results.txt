@@ -47,7 +47,7 @@ Output: Z
 ---
 Skipped line 28: # Expected: a^(-b) = 10^(-100)
 Input: a^-b
-Output: Error: Insufficient operands for ^
+Output: a^(-1b)
 ---
 Skipped line 30: # Expected: -2-3 = -5
 Input: -2-3
