@@ -135,7 +135,6 @@ cython_debug/
 # Editor-specific files
 *.swp
 *~
-research/my_papers/aop_euler_bridge.md
-research/my_papers/perfect_number_theorem_proof.md
+research/s
 expressions.txt
 results.txt
