@@ -2,6 +2,8 @@
 from __future__ import annotations
 from typing import Dict, Optional
 import math
+import logging
+from .aop_logger import log_pow
 
 class AoPValue:
     def __init__(self, poly: Optional[Dict[int, int]] = None, base: int = 10, is_negative: bool = False):
@@ -67,6 +69,26 @@ class AoPValue:
         result = "".join(map(str, reversed(digits)))
         return "-" + result if self.is_negative else result
 
+    # --- NEW STATIC METHOD ---
+    @staticmethod
+    def from_number(n: int, base: int = 10) -> 'AoPValue':
+        """Creates an AoPValue instance from a standard numerical integer."""
+        if n == 0:
+            return AoPValue({}, base=base)
+
+        is_negative = n < 0
+        if is_negative:
+            n = -n
+
+        poly = {}
+        exp = 0
+        while n > 0:
+            n, remainder = divmod(n, base)
+            if remainder != 0:
+                poly[exp] = remainder
+            exp += 1
+
+        return AoPValue(poly, base=base, is_negative=is_negative)
 
     def __add__(self, other: 'AoPValue') -> 'AoPValue':
         if self.is_negative == other.is_negative:
@@ -242,11 +264,11 @@ class AoPValue:
     def __pow__(self, other: 'AoPValue') -> 'AoPValue':
         try:
             n = other.to_numerical()
-            if n < 0 or n != int(n): raise ValueError
-        except Exception:
+            if n < 0 or n != int(n): raise ValueError("Exponent must be a non-negative integer.")
+        except (ValueError, TypeError):
             raise ValueError("Exponent must be a non-negative integer.")
-
         n_int = int(n)
+        log_pow(f"Calculating ({self!r}) ^ {n_int}")
         if n_int == 0: return AoPValue({0: 1}, self.base)
         if n_int == 1: return self
 
@@ -261,13 +283,14 @@ class AoPValue:
             # Square the base in-place to reduce copying
             base = base * base
             n_int //= 2
+
         result.is_negative = is_negative
         return result
 
     def __repr__(self) -> str:
-        # A more debug-friendly representation
-        poly_str = ", ".join(f"{c}*B^{e}" for e, c in sorted(self.poly.items(), reverse=True))
+        # --- MODIFIED: Remove redundant base display ---
+        poly_str = ", ".join(f"@{e}:{c}" for e, c in sorted(self.poly.items(), reverse=True))
         if not poly_str:
             poly_str = "0"
         sign = "-" if self.is_negative else ""
-        return f"AoPValue(poly={sign}{{{poly_str}}}, base={self.base})"
+        return f"AoP({sign}{{{poly_str}}})"

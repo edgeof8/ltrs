@@ -1,0 +1,76 @@
+         407 function calls (404 primitive calls) in 0.002 seconds
+
+   Ordered by: cumulative time
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    0.002    0.002 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_calculator.py:26(evaluate_expression)
+        3    0.000    0.000    0.001    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_logger.py:33(print_header)
+        3    0.000    0.000    0.001    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_logger.py:30(get_term_width)
+        3    0.000    0.000    0.001    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\shutil.py:1422(get_terminal_size)
+        3    0.001    0.000    0.001    0.000 {built-in method nt.get_terminal_size}
+        1    0.000    0.000    0.001    0.001 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_formatter.py:30(format_as_aop)
+        1    0.000    0.000    0.001    0.001 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_logger.py:84(log_format_report_start)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_logger.py:57(print_legend)
+      3/1    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_operations.py:13(evaluate_ast)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_logger.py:69(log_eval_report_start)
+       35    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py:2218(debug)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_parser.py:7(tokenize_expression)
+       20    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_logger.py:53(log_line)
+        8    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_value.py:290(__repr__)
+        4    0.000    0.000    0.000    0.000 {built-in method _pickle.dumps}
+        6    0.000    0.000    0.000    0.000 <frozen os>:709(__getitem__)
+        7    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_logger.py:76(log_eval)
+       10    0.000    0.000    0.000    0.000 {method 'join' of 'str' objects}
+       35    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py:1517(debug)
+        6    0.000    0.000    0.000    0.000 <frozen os>:783(encodekey)
+        1    0.000    0.000    0.000    0.000 {method 'disable' of '_lsprof.Profiler' objects}
+      2/1    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_parser.py:42(parse)
+        3    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_value.py:9(__init__)
+        4    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\base64.py:51(b64encode)
+        2    0.000    0.000    0.000    0.000 {built-in method builtins.repr}
+       49    0.000    0.000    0.000    0.000 {built-in method builtins.len}
+        9    0.000    0.000    0.000    0.000 {built-in method builtins.sorted}
+       16    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_value.py:292(<genexpr>)
+       35    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py:1790(isEnabledFor)
+        6    0.000    0.000    0.000    0.000 <frozen os>:777(check_str)
+        3    0.000    0.000    0.000    0.000 <string>:1(<lambda>)
+        2    0.000    0.000    0.000    0.000 {built-in method builtins.sum}
+        4    0.000    0.000    0.000    0.000 {built-in method binascii.b2a_base64}
+       17    0.000    0.000    0.000    0.000 {built-in method builtins.isinstance}
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\copyreg.py:107(_slotnames)
+       10    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_parser.py:9(<genexpr>)
+        2    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_parser.py:66(atom)
+        2    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_ast.py:23(to_str)
+       14    0.000    0.000    0.000    0.000 {method 'items' of 'dict' objects}
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\__init__.py:226(compile)
+        3    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\collections\__init__.py:466(__repr__)
+        4    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_operations.py:40(<genexpr>)
+        2    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_value.py:44(to_numerical)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_ast.py:22(__repr__)
+        1    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:645(parent)
+        4    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_parser.py:31(advance)
+        4    0.000    0.000    0.000    0.000 {method 'decode' of 'bytes' objects}
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_parser.py:27(__init__)
+        3    0.000    0.000    0.000    0.000 {method 'fileno' of '_io.TextIOWrapper' objects}
+        6    0.000    0.000    0.000    0.000 {method 'upper' of 'str' objects}
+        7    0.000    0.000    0.000    0.000 {method 'append' of 'list' objects}
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\__init__.py:280(_compile)
+        3    0.000    0.000    0.000    0.000 {built-in method __new__ of type object at 0x00007FFB6A8698F0}
+        3    0.000    0.000    0.000    0.000 {method 'group' of 're.Match' objects}
+        1    0.000    0.000    0.000    0.000 {method 'finditer' of 're.Pattern' objects}
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_formatter.py:10(_format_number_in_base)
+        6    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_ast.py:17(to_str)
+        3    0.000    0.000    0.000    0.000 {method 'start' of 're.Match' objects}
+        2    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_ast.py:16(__repr__)
+        3    0.000    0.000    0.000    0.000 {method 'get' of 'dict' objects}
+        2    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_parser.py:35(get_precedence)
+        3    0.000    0.000    0.000    0.000 {method 'end' of 're.Match' objects}
+        1    0.000    0.000    0.000    0.000 {method 'get' of 'mappingproxy' objects}
+        1    0.000    0.000    0.000    0.000 {method 'rpartition' of 'str' objects}
+        1    0.000    0.000    0.000    0.000 {method 'replace' of 'str' objects}
+        1    0.000    0.000    0.000    0.000 {built-in method builtins.hasattr}
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_ast.py:20(__init__)
+        1    0.000    0.000    0.000    0.000 {built-in method builtins.abs}
+        2    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_ast.py:15(__init__)
+
+

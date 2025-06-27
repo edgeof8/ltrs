@@ -1,0 +1,241 @@
+         15299 function calls (15158 primitive calls) in 0.020 seconds
+
+   Ordered by: cumulative time
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    0.020    0.020 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_calculator.py:15(evaluate_expression)
+        1    0.000    0.000    0.011    0.011 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_calculator.py:50(_load_cache)
+      5/1    0.000    0.000    0.011    0.011 <frozen importlib._bootstrap>:1349(_find_and_load)
+      5/1    0.000    0.000    0.011    0.011 <frozen importlib._bootstrap>:1304(_find_and_load_unlocked)
+      5/1    0.000    0.000    0.010    0.010 <frozen importlib._bootstrap>:911(_load_unlocked)
+      4/1    0.000    0.000    0.009    0.009 <frozen importlib._bootstrap_external>:993(exec_module)
+     11/2    0.000    0.000    0.009    0.004 <frozen importlib._bootstrap>:480(_call_with_frames_removed)
+      4/1    0.000    0.000    0.009    0.009 {built-in method builtins.exec}
+        1    0.000    0.000    0.009    0.009 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\json\__init__.py:1(<module>)
+     11/1    0.000    0.000    0.009    0.009 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_operations.py:7(evaluate_ast)
+        2    0.000    0.000    0.008    0.004 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_value.py:71(__add__)
+        2    0.005    0.002    0.008    0.004 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_value.py:13(_simplify)
+        5    0.000    0.000    0.004    0.001 <frozen importlib._bootstrap>:1240(_find_spec)
+        4    0.000    0.000    0.004    0.001 <frozen importlib._bootstrap_external>:1524(find_spec)
+        4    0.000    0.000    0.004    0.001 <frozen importlib._bootstrap_external>:1495(_get_spec)
+        1    0.000    0.000    0.004    0.004 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\json\decoder.py:1(<module>)
+    11073    0.003    0.000    0.003    0.000 {method 'get' of 'dict' objects}
+       18    0.000    0.000    0.003    0.000 <frozen importlib._bootstrap_external>:140(_path_stat)
+       18    0.003    0.000    0.003    0.000 {built-in method nt.stat}
+        8    0.000    0.000    0.003    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\__init__.py:226(compile)
+        8    0.000    0.000    0.003    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\__init__.py:280(_compile)
+        6    0.000    0.000    0.003    0.000 <frozen importlib._bootstrap_external>:1597(find_spec)
+        7    0.000    0.000    0.003    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\_compiler.py:745(compile)
+        3    0.000    0.000    0.003    0.001 <frozen importlib._bootstrap>:1390(_handle_fromlist)
+        1    0.000    0.000    0.002    0.002 {built-in method builtins.__import__}
+        4    0.000    0.000    0.002    0.001 <frozen importlib._bootstrap_external>:1066(get_code)
+        1    0.000    0.000    0.002    0.002 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\json\scanner.py:1(<module>)
+        7    0.000    0.000    0.001    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\_parser.py:969(parse)
+     14/7    0.000    0.000    0.001    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\_parser.py:452(_parse_sub)
+     16/7    0.000    0.000    0.001    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\_parser.py:512(_parse)
+        1    0.000    0.000    0.001    0.001 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\json\encoder.py:1(<module>)
+        7    0.000    0.000    0.001    0.000 <frozen importlib._bootstrap_external>:1473(_path_importer_cache)
+        1    0.000    0.000    0.001    0.001 <frozen importlib._bootstrap_external>:1460(_path_hooks)
+        4    0.000    0.000    0.001    0.000 <frozen importlib._bootstrap_external>:1187(get_data)
+        7    0.000    0.000    0.001    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\_compiler.py:578(_code)
+        1    0.000    0.000    0.001    0.001 <frozen zipimport>:64(__init__)
+     27/7    0.000    0.000    0.001    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\_compiler.py:37(_compile)
+       31    0.000    0.000    0.001    0.000 <frozen importlib._bootstrap_external>:96(_path_join)
+        7    0.000    0.000    0.001    0.000 <frozen importlib._bootstrap_external>:150(_path_is_mode_type)
+        4    0.001    0.000    0.001    0.000 {built-in method _io.open_code}
+        6    0.000    0.000    0.001    0.000 <frozen importlib._bootstrap_external>:159(_path_isfile)
+        4    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:755(_compile_bytecode)
+        8    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:486(cache_from_source)
+        4    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:1206(path_stats)
+        4    0.000    0.000    0.000    0.000 {built-in method marshal.loads}
+        5    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:416(__enter__)
+        5    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:806(module_from_spec)
+       15    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\_compiler.py:243(_optimize_charset)
+        4    0.000    0.000    0.000    0.000 {method 'read' of '_io.BufferedReader' objects}
+        7    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:304(acquire)
+        5    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:733(_init_module_attrs)
+        7    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\_compiler.py:516(_compile_info)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_parser.py:7(tokenize_expression)
+        8    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:632(cached)
+        4    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:615(_get_cached)
+       94    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\_parser.py:256(match)
+        1    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:1689(path_hook_for_FileFinder)
+  497/467    0.000    0.000    0.000    0.000 {built-in method builtins.len}
+       14    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\enum.py:1561(__and__)
+      430    0.000    0.000    0.000    0.000 {method 'append' of 'list' objects}
+        1    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:1648(_fill_cache)
+      131    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\_parser.py:168(__getitem__)
+        1    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:164(_path_isdir)
+       17    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_value.py:267(__repr__)
+        4    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\enum.py:1550(__or__)
+       18    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\enum.py:720(__call__)
+        7    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:162(__enter__)
+      332    0.000    0.000    0.000    0.000 {built-in method builtins.isinstance}
+    33/13    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\_parser.py:178(getwidth)
+        4    0.000    0.000    0.000    0.000 {method '__exit__' of '_io._IOBase' objects}
+       18    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\enum.py:1128(__new__)
+        1    0.000    0.000    0.000    0.000 {built-in method nt.listdir}
+       90    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\_parser.py:261(get)
+        7    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:426(_get_module_lock)
+       60    0.000    0.000    0.000    0.000 {method 'join' of 'str' objects}
+        4    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:1592(_get_spec)
+        3    0.000    0.000    0.000    0.000 {built-in method builtins.__build_class__}
+       54    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\enum.py:1543(_get_value)
+        7    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:124(setdefault)
+        2    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\enum.py:1413(_missing_)
+        8    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:132(_path_split)
+        2    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:463(_lock_unlock_module)
+      129    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\_parser.py:240(__next)
+        6    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\_parser.py:98(closegroup)
+        4    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:806(spec_from_file_location)
+       16    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py:2218(debug)
+       16    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\_parser.py:312(_class_escape)
+       80    0.000    0.000    0.000    0.000 {method 'startswith' of 'str' objects}
+      118    0.000    0.000    0.000    0.000 {method 'endswith' of 'str' objects}
+        1    0.000    0.000    0.000    0.000 {built-in method nt._path_exists}
+       15    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\_compiler.py:216(_compile_charset)
+        5    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\_compiler.py:391(_mk_bitmap)
+       22    0.000    0.000    0.000    0.000 {built-in method builtins.sorted}
+       14    0.000    0.000    0.000    0.000 {built-in method builtins.max}
+      6/1    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_parser.py:42(parse)
+        5    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:185(_path_abspath)
+        5    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:232(__init__)
+       13    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\_parser.py:449(_uniq)
+      101    0.000    0.000    0.000    0.000 {method 'rstrip' of 'str' objects}
+       34    0.000    0.000    0.000    0.000 {method 'format' of 'str' objects}
+        7    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:372(release)
+        5    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:172(_path_isabs)
+        5    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:420(__exit__)
+       58    0.000    0.000    0.000    0.000 {built-in method builtins.min}
+        7    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\enum.py:1403(_iter_member_by_def_)
+       44    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\_parser.py:293(tell)
+       59    0.000    0.000    0.000    0.000 {method 'find' of 'bytearray' objects}
+       56    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\_parser.py:164(__len__)
+       32    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:491(_verbose_message)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\json\encoder.py:105(__init__)
+        1    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:997(exec_module)
+       10    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\_compiler.py:403(_simple)
+        5    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\site-packages\_distutils_hack\__init__.py:101(find_spec)
+      9/6    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\_compiler.py:441(_get_literal_prefix)
+        1    0.000    0.000    0.000    0.000 {method 'disable' of '_lsprof.Profiler' objects}
+        1    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:1571(__init__)
+       24    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:134(<genexpr>)
+       12    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:84(_unpack_uint32)
+        1    0.000    0.000    0.000    0.000 {built-in method _imp.exec_builtin}
+        5    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:982(find_spec)
+       27    0.000    0.000    0.000    0.000 {method 'rpartition' of 'str' objects}
+        4    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:670(_classify_pyc)
+       26    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\_parser.py:176(append)
+       11    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_value.py:7(__init__)
+        4    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:703(_validate_timestamp_pyc)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_formatter.py:4(format_as_aop)
+        7    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:74(__new__)
+        1    0.000    0.000    0.000    0.000 <frozen ntpath>:107(join)
+       37    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_value.py:269(<genexpr>)
+        6    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\_parser.py:86(opengroup)
+       16    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py:1517(debug)
+        5    0.000    0.000    0.000    0.000 {built-in method _thread.allocate_lock}
+       13    0.000    0.000    0.000    0.000 {built-in method fromkeys}
+       26    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\_parser.py:83(groups)
+        8    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:645(parent)
+        6    0.000    0.000    0.000    0.000 {built-in method builtins.sum}
+        7    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\_parser.py:231(__init__)
+        7    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\enum.py:1393(_iter_member_by_value_)
+      8/2    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_operations.py:73(collect_sum_terms)
+       34    0.000    0.000    0.000    0.000 {method 'setdefault' of 'dict' objects}
+       19    0.000    0.000    0.000    0.000 {method 'extend' of 'list' objects}
+       11    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\collections\__init__.py:466(__repr__)
+        4    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\_parser.py:265(getwhile)
+       18    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:1226(__exit__)
+        6    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\_compiler.py:472(_get_charset_prefix)
+        6    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_parser.py:66(atom)
+        1    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:989(create_module)
+        7    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:82(remove)
+        7    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:79(__init__)
+       36    0.000    0.000    0.000    0.000 {method 'items' of 'dict' objects}
+       14    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\_compiler.py:575(isstring)
+       18    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:1222(__enter__)
+        5    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:445(cb)
+       30    0.000    0.000    0.000    0.000 {built-in method builtins.getattr}
+       20    0.000    0.000    0.000    0.000 {built-in method __new__ of type object at 0x00007FFB6A8698F0}
+        7    0.000    0.000    0.000    0.000 {built-in method _sre.compile}
+        4    0.000    0.000    0.000    0.000 <frozen ntpath>:179(splitroot)
+       11    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\_parser.py:172(__setitem__)
+        4    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:1128(find_spec)
+        5    0.000    0.000    0.000    0.000 {built-in method nt._path_splitroot}
+       11    0.000    0.000    0.000    0.000 <string>:1(<lambda>)
+        1    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:662(spec_from_loader)
+       16    0.000    0.000    0.000    0.000 {method 'rfind' of 'str' objects}
+       28    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\_parser.py:113(__init__)
+        7    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:173(__exit__)
+       30    0.000    0.000    0.000    0.000 {built-in method _imp.acquire_lock}
+       12    0.000    0.000    0.000    0.000 {method 'pop' of 'dict' objects}
+      5/1    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_ast.py:15(__repr__)
+        4    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:647(_check_name_wrapper)
+       16    0.000    0.000    0.000    0.000 {built-in method builtins.hasattr}
+        1    0.000    0.000    0.000    0.000 {built-in method _imp.create_builtin}
+       30    0.000    0.000    0.000    0.000 {built-in method _imp.release_lock}
+       12    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_operations.py:20(<genexpr>)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\json\decoder.py:285(__init__)
+       12    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_parser.py:31(advance)
+        7    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\_parser.py:953(fix_flags)
+        5    0.000    0.000    0.000    0.000 {built-in method _imp.is_builtin}
+        6    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:67(_relax_case)
+       29    0.000    0.000    0.000    0.000 {built-in method builtins.ord}
+       32    0.000    0.000    0.000    0.000 {built-in method builtins.chr}
+       11    0.000    0.000    0.000    0.000 {method 'replace' of 'str' objects}
+       16    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py:1790(isEnabledFor)
+        4    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:48(_new_module)
+        7    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\enum.py:117(_iter_bits_lsb)
+       11    0.000    0.000    0.000    0.000 {method 'lower' of 'str' objects}
+       14    0.000    0.000    0.000    0.000 {method '__exit__' of '_thread.RLock' objects}
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\_parser.py:372(_escape)
+       13    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_parser.py:35(get_precedence)
+       17    0.000    0.000    0.000    0.000 {built-in method nt.fspath}
+       12    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\_compiler.py:31(_combine_flags)
+       10    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_parser.py:9(<genexpr>)
+       14    0.000    0.000    0.000    0.000 {built-in method _thread.get_ident}
+        2    0.000    0.000    0.000    0.000 {built-in method builtins.locals}
+       12    0.000    0.000    0.000    0.000 {built-in method from_bytes}
+       11    0.000    0.000    0.000    0.000 {method 'group' of 're.Match' objects}
+        4    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\enum.py:202(__get__)
+       10    0.000    0.000    0.000    0.000 {method 'pop' of 'list' objects}
+        7    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\_parser.py:77(__init__)
+       15    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\_compiler.py:433(_get_iscased)
+        7    0.000    0.000    0.000    0.000 {built-in method _weakref._remove_dead_weakref}
+        5    0.000    0.000    0.000    0.000 {method 'translate' of 'bytearray' objects}
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_parser.py:27(__init__)
+        4    0.000    0.000    0.000    0.000 {built-in method _imp._fix_co_filename}
+        7    0.000    0.000    0.000    0.000 {method 'remove' of 'list' objects}
+        1    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:501(_requires_builtin_wrapper)
+       11    0.000    0.000    0.000    0.000 {method 'start' of 're.Match' objects}
+        6    0.000    0.000    0.000    0.000 {method 'partition' of 'str' objects}
+        5    0.000    0.000    0.000    0.000 {built-in method builtins.divmod}
+        3    0.000    0.000    0.000    0.000 {built-in method builtins.setattr}
+        5    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:599(__init__)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\json\decoder.py:255(JSONDecoder)
+       11    0.000    0.000    0.000    0.000 {method 'end' of 're.Match' objects}
+        4    0.000    0.000    0.000    0.000 {built-in method _imp.find_frozen}
+        6    0.000    0.000    0.000    0.000 {method 'add' of 'set' objects}
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\json\encoder.py:74(JSONEncoder)
+        8    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:1577(<genexpr>)
+        1    0.000    0.000    0.000    0.000 {method 'finditer' of 're.Pattern' objects}
+        6    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_ast.py:11(__repr__)
+        6    0.000    0.000    0.000    0.000 {method 'keys' of 'dict' objects}
+        7    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:158(__init__)
+        6    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_ast.py:10(__init__)
+        4    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\enum.py:1291(value)
+        5    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\enum.py:1410(<lambda>)
+        5    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:412(__init__)
+        4    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:1157(__init__)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\json\decoder.py:20(JSONDecodeError)
+        5    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_ast.py:13(__init__)
+        5    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:653(has_location)
+        4    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:990(create_module)
+        4    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:1182(get_filename)
+        3    0.000    0.000    0.000    0.000 {built-in method builtins.abs}
+        1    0.000    0.000    0.000    0.000 {method 'insert' of 'list' objects}
+        2    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\site-packages\_distutils_hack\__init__.py:108(<lambda>)
+        1    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:1014(is_package)
+
+

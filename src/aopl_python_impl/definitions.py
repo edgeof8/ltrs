@@ -23,8 +23,8 @@ UPPERCASE_AOP_LETTERS_STD = string.ascii_uppercase[:25] # A-Y (exponents 26-50)
 
 _letter_map_builder = {l: i + 1 for i, l in enumerate(LOWERCASE_AOP_LETTERS)} # a-y: 1-25
 _letter_map_builder.update({l: i + 26 for i, l in enumerate(UPPERCASE_AOP_LETTERS_STD)}) # A-Y: 26-50
-# 'z' is not added here; it will be an alias for 'Z' handled in the parser.
 _letter_map_builder['Z'] = 100 # Uppercase Z for base^100
+_letter_map_builder['z'] = 100 # Lowercase z as alias for Z, also base^100
 
 LETTER_TO_EXPONENT_MAP: Dict[str, int] = _letter_map_builder
 EXPONENT_TO_LETTER_MAP: Dict[int, str] = {v: k for k, v in LETTER_TO_EXPONENT_MAP.items()}
