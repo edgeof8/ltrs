@@ -1,0 +1,369 @@
+         6144 function calls (6102 primitive calls) in 0.103 seconds
+
+   Ordered by: cumulative time
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    0.103    0.103 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_calculator.py:15(evaluate_expression)
+        1    0.000    0.000    0.101    0.101 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_operations.py:7(evaluate_ast)
+        1    0.000    0.000    0.101    0.101 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_operations.py:76(evaluate_sum_parallel)
+        1    0.000    0.000    0.101    0.101 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\pool.py:738(__exit__)
+        1    0.000    0.000    0.101    0.101 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\pool.py:654(terminate)
+        1    0.000    0.000    0.085    0.085 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\pool.py:305(_repopulate_pool)
+        1    0.000    0.000    0.085    0.085 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\pool.py:314(_repopulate_pool_static)
+       16    0.000    0.000    0.084    0.005 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\process.py:110(start)
+       16    0.000    0.000    0.083    0.005 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\context.py:334(_Popen)
+       16    0.000    0.000    0.083    0.005 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\popen_spawn_win32.py:45(__init__)
+       16    0.075    0.005    0.075    0.005 {built-in method _winapi.CreateProcess}
+        1    0.000    0.000    0.015    0.015 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\util.py:208(__call__)
+        1    0.000    0.000    0.015    0.015 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\pool.py:680(_terminate_pool)
+        3    0.000    0.000    0.008    0.003 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\threading.py:1117(join)
+        5    0.000    0.000    0.008    0.002 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\threading.py:1155(_wait_for_tstate_lock)
+    28/21    0.000    0.000    0.008    0.000 {method 'acquire' of '_thread.lock' objects}
+      3/1    0.000    0.000    0.008    0.008 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\threading.py:1018(_bootstrap)
+      175    0.000    0.000    0.008    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\popen_spawn_win32.py:103(wait)
+      175    0.007    0.000    0.007    0.000 {built-in method _winapi.WaitForSingleObject}
+        7    0.000    0.000    0.007    0.001 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\process.py:142(join)
+        5    0.000    0.000    0.006    0.001 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\queues.py:391(put)
+       21    0.000    0.000    0.006    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\connection.py:284(_send_bytes)
+        5    0.000    0.000    0.006    0.001 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\connection.py:182(send_bytes)
+       21    0.000    0.000    0.006    0.000 {built-in method _winapi.WriteFile}
+       32    0.000    0.000    0.005    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\reduction.py:58(dump)
+        4    0.003    0.001    0.005    0.001 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\queues.py:374(empty)
+       56    0.002    0.000    0.004    0.000 {method 'dump' of '_pickle.Pickler' objects}
+        1    0.000    0.000    0.004    0.004 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\pool.py:506(_handle_workers)
+        1    0.000    0.000    0.004    0.004 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\pool.py:500(_wait_for_updates)
+        1    0.000    0.000    0.002    0.002 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py:2175(error)
+        1    0.000    0.000    0.002    0.002 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py:1558(error)
+        1    0.000    0.000    0.002    0.002 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py:1660(_log)
+        1    0.000    0.000    0.002    0.002 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py:1686(handle)
+        1    0.000    0.000    0.002    0.002 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py:1746(callHandlers)
+        1    0.000    0.000    0.002    0.002 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py:1011(handle)
+        1    0.000    0.000    0.002    0.002 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py:1148(emit)
+       64    0.000    0.000    0.001    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\connection.py:1161(reduce_pipe_connection)
+        1    0.000    0.000    0.001    0.001 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py:988(format)
+        1    0.000    0.000    0.001    0.001 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py:690(format)
+        1    0.000    0.000    0.001    0.001 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py:649(formatException)
+        1    0.000    0.000    0.001    0.001 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\traceback.py:111(print_exception)
+       16    0.000    0.000    0.001    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\process.py:128(terminate)
+       16    0.000    0.000    0.001    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\popen_spawn_win32.py:124(terminate)
+       16    0.001    0.000    0.001    0.000 {built-in method _winapi.TerminateProcess}
+        1    0.000    0.000    0.001    0.001 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\pool.py:362(map)
+        1    0.001    0.001    0.001    0.001 {method 'write' of '_io.TextIOWrapper' objects}
+       64    0.000    0.000    0.001    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\reduction.py:106(__init__)
+      168    0.000    0.000    0.001    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\popen_spawn_win32.py:121(poll)
+      6/2    0.000    0.000    0.001    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\connection.py:253(poll)
+      6/2    0.000    0.000    0.001    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\connection.py:342(_poll)
+       16    0.000    0.000    0.001    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\process.py:61(_cleanup)
+        4    0.000    0.000    0.001    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\threading.py:637(wait)
+      6/4    0.000    0.000    0.001    0.000 {built-in method _winapi.PeekNamedPipe}
+       56    0.001    0.000    0.001    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\reduction.py:38(__init__)
+        4    0.000    0.000    0.001    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\threading.py:323(wait)
+       16    0.000    0.000    0.001    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\spawn.py:160(get_preparation_data)
+        1    0.000    0.000    0.001    0.001 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\traceback.py:1045(print)
+        3    0.000    0.000    0.001    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\threading.py:975(start)
+       11    0.000    0.000    0.001    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\traceback.py:944(format)
+        1    0.000    0.000    0.001    0.001 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\traceback.py:718(__init__)
+        1    0.000    0.000    0.001    0.001 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\traceback.py:399(_extract_from_extended_frame_gen)
+       16    0.000    0.000    0.001    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\spawn.py:83(get_command_line)
+        1    0.000    0.000    0.001    0.001 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\pool.py:767(get)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\traceback.py:525(format)
+       19    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\connection.py:202(send)
+        3    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\context.py:110(SimpleQueue)
+        8    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\traceback.py:460(format_frame_summary)
+       32    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\synchronize.py:100(__getstate__)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\context.py:115(Pool)
+        3    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\queues.py:361(__init__)
+        5    0.000    0.000    0.000    0.000 {method 'cancel' of '_winapi.Overlapped' objects}
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\pool.py:764(wait)
+      3/1    0.001    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\threading.py:1058(_bootstrap_inner)
+      3/1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\threading.py:1001(run)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\pool.py:527(_handle_tasks)
+       16    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\pool.py:179(Process)
+        4    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\threading.py:616(set)
+       64    0.000    0.000    0.000    0.000 {built-in method _winapi.OpenProcess}
+        3    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\pool.py:809(_set)
+       24    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\reduction.py:48(dumps)
+       32    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\process.py:224(exitcode)
+        4    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\threading.py:424(notify_all)
+        4    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\threading.py:394(notify)
+       16    0.000    0.000    0.000    0.000 {built-in method _winapi.CreatePipe}
+       73    0.000    0.000    0.000    0.000 {method 'join' of 'str' objects}
+       32    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\process.py:350(__reduce__)
+       16    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\process.py:80(__init__)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\pool.py:345(_setup_queues)
+        3    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\connection.py:552(Pipe)
+        5    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\linecache.py:52(checkcache)
+        5    0.000    0.000    0.000    0.000 {built-in method nt.stat}
+       16    0.000    0.000    0.000    0.000 {method '__exit__' of '_io._IOBase' objects}
+       16    0.000    0.000    0.000    0.000 {built-in method _io.open}
+       11    0.000    0.000    0.000    0.000 {method 'release' of '_thread.lock' objects}
+       16    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\subprocess.py:300(_args_from_interpreter_flags)
+        8    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\traceback.py:589(_extract_caret_anchors_from_line_segment)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\pool.py:333(_maintain_pool)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\pool.py:289(_join_exited_workers)
+       96    0.000    0.000    0.000    0.000 {built-in method _winapi.DuplicateHandle}
+        3    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\queues.py:385(get)
+       32    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\popen_spawn_win32.py:99(duplicate_for_child)
+      367    0.000    0.000    0.000    0.000 {built-in method builtins.getattr}
+        8    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\ast.py:34(parse)
+       51    0.000    0.000    0.000    0.000 {built-in method builtins.next}
+        8    0.000    0.000    0.000    0.000 {built-in method builtins.compile}
+        3    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\connection.py:70(arbitrary_address)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\pool.py:671(_help_stuff_finish)
+      160    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\context.py:366(get_spawning_popen)
+     10/9    0.000    0.000    0.000    0.000 {built-in method _winapi.ReadFile}
+        5    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\connection.py:1032(wait)
+        3    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\tempfile.py:400(mktemp)
+       72    0.000    0.000    0.000    0.000 {method 'update' of 'dict' objects}
+       32    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\reduction.py:71(duplicate)
+       80    0.000    0.000    0.000    0.000 {built-in method _winapi.CloseHandle}
+       64    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\context.py:372(assert_spawning)
+       16    0.000    0.000    0.000    0.000 <frozen ntpath>:87(isabs)
+       17    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\util.py:189(__init__)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_parser.py:7(tokenize_expression)
+        9    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\traceback.py:351(_walk_tb_with_full_positions)
+        3    0.000    0.000    0.000    0.000 {built-in method _thread.start_new_thread}
+       56    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:645(parent)
+        3    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\connection.py:208(recv_bytes)
+      169    0.000    0.000    0.000    0.000 {built-in method builtins.max}
+       16    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\process.py:153(is_alive)
+       32    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\queues.py:377(__getstate__)
+        8    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\traceback.py:365(_get_code_position)
+        3    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\threading.py:884(__init__)
+        3    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\context.py:65(Lock)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\pool.py:161(__delitem__)
+       70    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\connection.py:169(fileno)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\pool.py:284(_get_worker_sentinels)
+       13    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\traceback.py:665(emit)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\pool.py:183(__init__)
+      163    0.000    0.000    0.000    0.000 {built-in method nt.getpid}
+        3    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\synchronize.py:168(__init__)
+      126    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\process.py:99(_check_closed)
+        6    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\tempfile.py:153(__next__)
+        3    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\tempfile.py:76(_exists)
+       35    0.000    0.000    0.000    0.000 {built-in method builtins.hasattr}
+        3    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\synchronize.py:50(__init__)
+       34    0.000    0.000    0.000    0.000 {method 'GetOverlappedResult' of '_winapi.Overlapped' objects}
+        3    0.000    0.000    0.000    0.000 {built-in method nt.lstat}
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\pool.py:573(_handle_results)
+       72    0.000    0.000    0.000    0.000 {method 'copy' of 'dict' objects}
+       48    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\spawn.py:92(<genexpr>)
+       19    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\_weakrefset.py:85(add)
+        3    0.000    0.000    0.000    0.000 {built-in method _winapi.CreateNamedPipe}
+       32    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\context.py:369(set_spawning_popen)
+       48    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\traceback.py:318(line)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py:1645(makeRecord)
+        6    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\random.py:454(choices)
+       10    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\textwrap.py:470(indent)
+        5    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\connection.py:1010(_exhaustive_wait)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py:298(__init__)
+       96    0.000    0.000    0.000    0.000 {built-in method _winapi.GetCurrentProcess}
+       56    0.000    0.000    0.000    0.000 {method 'rpartition' of 'str' objects}
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\pool.py:471(_map_async)
+        4    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\threading.py:588(__init__)
+      104    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\connection.py:135(_check_closed)
+       80    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\popen_spawn_win32.py:70(<genexpr>)
+        3    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\synchronize.py:121(_make_name)
+       43    0.000    0.000    0.000    0.000 {method 'replace' of 'str' objects}
+        3    0.000    0.000    0.000    0.000 <frozen ntpath>:107(join)
+      159    0.000    0.000    0.000    0.000 {built-in method builtins.len}
+       16    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\spawn.py:138(_check_not_importing_main)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py:1611(findCaller)
+       16    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\traceback.py:573(_byte_offset_to_character_offset)
+       16    0.000    0.000    0.000    0.000 {method 'index' of 'list' objects}
+      6/1    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_parser.py:42(parse)
+       16    0.000    0.000    0.000    0.000 {built-in method nt.getcwd}
+      128    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\connection.py:159(readable)
+      100    0.000    0.000    0.000    0.000 {method 'append' of 'list' objects}
+       32    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\process.py:247(sentinel)
+        7    0.000    0.000    0.000    0.000 <frozen ntpath>:179(splitroot)
+       46    0.000    0.000    0.000    0.000 {method 'add' of 'set' objects}
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\connection.py:246(recv)
+       69    0.000    0.000    0.000    0.000 {built-in method builtins.isinstance}
+       32    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\process.py:94(<genexpr>)
+       16    0.000    0.000    0.000    0.000 {built-in method msvcrt.open_osfhandle}
+        3    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\threading.py:1045(_set_tstate_lock)
+       33    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\textwrap.py:482(prefixed_lines)
+       32    0.000    0.000    0.000    0.000 {method 'startswith' of 'str' objects}
+        3    0.000    0.000    0.000    0.000 {built-in method _winapi.CreateFile}
+      128    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\connection.py:164(writable)
+        4    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py:200(_is_internal_frame)
+        4    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\pool.py:385(_guarded_task_generation)
+        8    0.000    0.000    0.000    0.000 {built-in method _thread.allocate_lock}
+       16    0.000    0.000    0.000    0.000 {built-in method nt._path_normpath}
+       16    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\subprocess.py:290(_optim_args_from_interpreter_flags)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\pool.py:796(__init__)
+       16    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\process.py:193(name)
+        4    0.000    0.000    0.000    0.000 <frozen ntpath>:51(normcase)
+       13    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\threading.py:1485(current_thread)
+        4    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\threading.py:277(__init__)
+        1    0.000    0.000    0.000    0.000 <frozen ntpath>:268(basename)
+       32    0.000    0.000    0.000    0.000 {method 'items' of 'dict' objects}
+       22    0.000    0.000    0.000    0.000 {method 'getbuffer' of '_io.BytesIO' objects}
+        1    0.000    0.000    0.000    0.000 {method 'disable' of '_lsprof.Profiler' objects}
+        3    0.000    0.000    0.000    0.000 {built-in method _winapi.ConnectNamedPipe}
+        8    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\threading.py:299(__enter__)
+        4    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\pool.py:633(_get_tasks)
+        1    0.000    0.000    0.000    0.000 <frozen ntpath>:236(split)
+       16    0.000    0.000    0.000    0.000 {built-in method _winapi.GetExitCodeProcess}
+        8    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\linecache.py:26(getline)
+      4/1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\connection.py:310(_recv_bytes)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\pool.py:747(__init__)
+      5/3    0.000    0.000    0.000    0.000 {built-in method _winapi.WaitForMultipleObjects}
+       16    0.000    0.000    0.000    0.000 {method 'format' of 'str' objects}
+       16    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\context.py:253(get_start_method)
+        5    0.000    0.000    0.000    0.000 {method 'update' of 'set' objects}
+       56    0.000    0.000    0.000    0.000 {method 'strip' of 'str' objects}
+       43    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\util.py:48(debug)
+        8    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\threading.py:314(_is_owned)
+        8    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\threading.py:302(__exit__)
+       33    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\process.py:189(name)
+       16    0.000    0.000    0.000    0.000 {method 'copy' of 'list' objects}
+        2    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\traceback.py:869(format_exception_only)
+        3    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\threading.py:1108(_delete)
+        2    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\threading.py:1222(is_alive)
+       10    0.000    0.000    0.000    0.000 {built-in method builtins.print}
+        3    0.000    0.000    0.000    0.000 {built-in method _thread._set_sentinel}
+       32    0.000    0.000    0.000    0.000 {built-in method nt.fspath}
+        6    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_parser.py:66(atom)
+       11    0.000    0.000    0.000    0.000 <string>:1(<lambda>)
+        3    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\synchronize.py:94(__enter__)
+        3    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\threading.py:1251(daemon)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py:1137(flush)
+       19    0.000    0.000    0.000    0.000 {method 'get' of 'dict' objects}
+        3    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\threading.py:1081(_stop)
+      5/1    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_operations.py:63(collect_sum_terms)
+        4    0.000    0.000    0.000    0.000 {built-in method _pickle.loads}
+        6    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\tempfile.py:142(rng)
+        3    0.000    0.000    0.000    0.000 {built-in method _winapi.SetNamedPipeHandleState}
+       11    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\collections\__init__.py:466(__repr__)
+       10    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\traceback.py:638(_display_width)
+        3    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py:2218(debug)
+        3    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\threading.py:839(_newname)
+       20    0.000    0.000    0.000    0.000 {built-in method _thread.get_ident}
+        3    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\synchronize.py:97(__exit__)
+        1    0.000    0.000    0.000    0.000 <frozen ntpath>:257(splitext)
+        8    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\traceback.py:312(_original_line)
+        7    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\process.py:234(ident)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\traceback.py:856(_load_lines)
+       48    0.000    0.000    0.000    0.000 {method 'random' of '_random.Random' objects}
+       16    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\process.py:205(daemon)
+        4    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\threading.py:311(_acquire_restore)
+       36    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\process.py:37(current_process)
+       12    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_parser.py:31(advance)
+        8    0.000    0.000    0.000    0.000 {method '__enter__' of '_thread.lock' objects}
+       16    0.000    0.000    0.000    0.000 {method 'discard' of 'set' objects}
+       16    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\process.py:213(authkey)
+      5/1    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_ast.py:15(__repr__)
+       32    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\spawn.py:45(get_executable)
+       48    0.000    0.000    0.000    0.000 {built-in method math.floor}
+       16    0.000    0.000    0.000    0.000 {method 'decode' of 'bytes' objects}
+        8    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\linecache.py:152(lazycache)
+        4    0.000    0.000    0.000    0.000 {built-in method _winapi.LCMapStringEx}
+       10    0.000    0.000    0.000    0.000 {method 'splitlines' of 'str' objects}
+        9    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\threading.py:1236(daemon)
+        6    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\connection.py:118(__init__)
+        1    0.000    0.000    0.000    0.000 <frozen genericpath>:133(_splitext)
+        4    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\threading.py:308(_release_save)
+        8    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\linecache.py:36(getlines)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\__init__.py:226(compile)
+        3    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\threading.py:1038(_set_ident)
+        3    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\threading.py:1042(_set_native_id)
+        2    0.000    0.000    0.000    0.000 {method 'put' of '_queue.SimpleQueue' objects}
+       16    0.000    0.000    0.000    0.000 {method 'encode' of 'str' objects}
+        9    0.000    0.000    0.000    0.000 {method '__exit__' of '_thread.RLock' objects}
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py:674(formatMessage)
+        3    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\threading.py:1356(_make_invoke_excepthook)
+        2    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py:968(acquire)
+       24    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\connection.py:143(_check_writable)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py:170(<lambda>)
+        7    0.000    0.000    0.000    0.000 {method 'find' of 'str' objects}
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py:462(format)
+        1    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:1390(_handle_fromlist)
+        1    0.000    0.000    0.000    0.000 <frozen abc>:117(__instancecheck__)
+        4    0.000    0.000    0.000    0.000 {method 'remove' of 'collections.deque' objects}
+       13    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_parser.py:35(get_precedence)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\pool.py:157(__init__)
+        3    0.000    0.000    0.000    0.000 {method '__enter__' of '_multiprocessing.SemLock' objects}
+        8    0.000    0.000    0.000    0.000 {method '__exit__' of '_thread.lock' objects}
+       11    0.000    0.000    0.000    0.000 {method 'group' of 're.Match' objects}
+        5    0.000    0.000    0.000    0.000 {method 'keys' of 'dict' objects}
+        4    0.000    0.000    0.000    0.000 {method 'write' of '_io.BytesIO' objects}
+       12    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\threading.py:601(is_set)
+       11    0.000    0.000    0.000    0.000 {built-in method __new__ of type object at 0x00007FFB6A8698F0}
+        1    0.000    0.000    0.000    0.000 {built-in method nt.cpu_count}
+        8    0.000    0.000    0.000    0.000 {method 'co_positions' of 'code' objects}
+       10    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_parser.py:9(<genexpr>)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py:455(_format)
+        3    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py:1517(debug)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\__init__.py:280(_compile)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py:668(usesTime)
+        1    0.000    0.000    0.000    0.000 {method 'getvalue' of '_io.StringIO' objects}
+        6    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\connection.py:1107(<genexpr>)
+       22    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\traceback.py:676(<lambda>)
+        2    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py:975(release)
+       10    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\connection.py:139(_check_readable)
+       11    0.000    0.000    0.000    0.000 {method 'start' of 're.Match' objects}
+        3    0.000    0.000    0.000    0.000 {method '__exit__' of '_multiprocessing.SemLock' objects}
+        8    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\traceback.py:265(__init__)
+        3    0.000    0.000    0.000    0.000 {method 'getvalue' of '_io.BytesIO' objects}
+        8    0.000    0.000    0.000    0.000 {method 'lstrip' of 'str' objects}
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\pool.py:734(__enter__)
+       11    0.000    0.000    0.000    0.000 {method 'end' of 're.Match' objects}
+        4    0.000    0.000    0.000    0.000 {method 'getbuffer' of '_winapi.Overlapped' objects}
+       10    0.000    0.000    0.000    0.000 {method 'isascii' of 'str' objects}
+        1    0.000    0.000    0.000    0.000 {built-in method sys.getwindowsversion}
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py:447(usesTime)
+        8    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\contextlib.py:446(__exit__)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_parser.py:27(__init__)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\traceback.py:162(_format_final_exc_line)
+        1    0.000    0.000    0.000    0.000 {built-in method _abc._abc_instancecheck}
+        3    0.000    0.000    0.000    0.000 {method 'rfind' of 'str' objects}
+        4    0.000    0.000    0.000    0.000 {method 'append' of 'collections.deque' objects}
+        8    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\contextlib.py:440(__init__)
+        3    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\synchronize.py:90(_make_methods)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py:129(getLevelName)
+        6    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_ast.py:11(__repr__)
+        3    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\traceback.py:662(indent)
+        1    0.000    0.000    0.000    0.000 {method 'acquire' of '_multiprocessing.SemLock' objects}
+        2    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py:831(filter)
+        2    0.000    0.000    0.000    0.000 {method 'acquire' of '_thread.RLock' objects}
+        3    0.000    0.000    0.000    0.000 {built-in method _thread.get_native_id}
+        2    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\traceback.py:170(_safe_string)
+        3    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\context.py:197(get_start_method)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\pool.py:279(_get_sentinels)
+        6    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\context.py:187(get_context)
+        8    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\contextlib.py:443(__enter__)
+        4    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py:1790(isEnabledFor)
+        3    0.000    0.000    0.000    0.000 {built-in method _thread.daemon_threads_allowed}
+        4    0.000    0.000    0.000    0.000 {method 'extend' of 'list' objects}
+        4    0.000    0.000    0.000    0.000 {built-in method builtins.issubclass}
+        2    0.000    0.000    0.000    0.000 {built-in method builtins.iter}
+        6    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_ast.py:10(__init__)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\pool.py:756(ready)
+        3    0.000    0.000    0.000    0.000 {method 'upper' of 'str' objects}
+        1    0.000    0.000    0.000    0.000 <frozen ntpath>:35(_get_bothseps)
+        1    0.000    0.000    0.000    0.000 {built-in method sys.exc_info}
+        5    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_ast.py:13(__init__)
+        3    0.000    0.000    0.000    0.000 {method 'locked' of '_thread.lock' objects}
+        1    0.000    0.000    0.000    0.000 {method 'close' of '_io.StringIO' objects}
+        1    0.000    0.000    0.000    0.000 {method 'finditer' of 're.Pattern' objects}
+        1    0.000    0.000    0.000    0.000 {method 'flush' of '_io.TextIOWrapper' objects}
+        1    0.000    0.000    0.000    0.000 {method 'rstrip' of 'str' objects}
+        1    0.000    0.000    0.000    0.000 {built-in method sys._getframe}
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py:383(getMessage)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\threading.py:1182(name)
+        3    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\tempfile.py:229(_get_candidate_names)
+        1    0.000    0.000    0.000    0.000 {built-in method builtins.divmod}
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\traceback.py:96(_parse_value_tb)
+        2    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\pool.py:351(_check_running)
+        1    0.000    0.000    0.000    0.000 {method 'pop' of 'list' objects}
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\traceback.py:657(__init__)
+        2    0.000    0.000    0.000    0.000 {method 'release' of '_thread.RLock' objects}
+        1    0.000    0.000    0.000    0.000 {built-in method time.time}
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\context.py:237(get_context)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\util.py:44(sub_debug)
+        1    0.000    0.000    0.000    0.000 {built-in method builtins.id}
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\traceback.py:673(<lambda>)
+
+

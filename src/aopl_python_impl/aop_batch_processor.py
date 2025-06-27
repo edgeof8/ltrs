@@ -15,9 +15,12 @@ from aopl_python_impl.definitions import OutputFormatMode
 
 def process_batch(input_filepath: str, output_filepath: str, base: int, mode: str, precision: int):
     """
-    Reads expressions from input_file, evaluates them, and writes results to output_file.
+    Reads expressions from input_file, evaluates them using multiprocessing, and writes results to output_file.
     """
-    calculator = AoP_Calculator(base=base, load_default_vars=True) # Load defaults for context
+    from multiprocessing import Pool
+    from functools import partial
+
+    calculator = AoP_Calculator(base=base) # Initialize calculator with base
 
     mode_map = {
         "auto": OutputFormatMode.AUTO,
@@ -28,6 +31,7 @@ def process_batch(input_filepath: str, output_filepath: str, base: int, mode: st
     output_mode = mode_map.get(mode.lower(), OutputFormatMode.AUTO)
 
     results_output = []
+    expressions = []
 
     try:
         with open(input_filepath, 'r') as infile:
@@ -36,22 +40,33 @@ def process_batch(input_filepath: str, output_filepath: str, base: int, mode: st
                 if not expression or expression.startswith('#'): # Skip empty lines or comments
                     results_output.append(f"Skipped line {line_num}: {expression}")
                     continue
+                expressions.append((line_num, expression))
 
+        if expressions:
+            # Function to evaluate a single expression
+            def evaluate_single_expression(args, calc_base=base, calc_mode=output_mode):
+                line_num, expr = args
                 try:
-                    result_str = calculator.evaluate_expression(
-                        expression=expression,
-                        mode=output_mode,
-                        precision=precision
+                    calc = AoP_Calculator(base=calc_base)
+                    # Map OutputFormatMode back to string
+                    mode_str = {
+                        OutputFormatMode.AUTO: "auto",
+                        OutputFormatMode.AOP: "aop",
+                        OutputFormatMode.SCIENTIFIC: "sci",
+                        OutputFormatMode.NUMERICAL: "num"
+                    }.get(calc_mode, "num")
+                    result_str = calc.evaluate_expression(
+                        expression=expr,
+                        mode=mode_str
                     )
-                    results_output.append(f"Input: {expression}\nOutput: {result_str}\n---")
+                    return f"Input: {expr}\nOutput: {result_str}\n---"
                 except Exception as e:
-                    # Catch errors from evaluate_expression itself if any slip through its internal handling
-                    error_msg = f"Input: {expression}\nError: Unhandled exception during evaluation: {type(e).__name__}: {e}\n---"
-                    results_output.append(error_msg)
-                    # Log this more severely for developer attention
-                    # import logging
-                    # logging.error(error_msg, exc_info=True)
+                    return f"Input: {expr}\nError: Unhandled exception during evaluation: {type(e).__name__}: {e}\n---"
 
+            # Use multiprocessing Pool to parallelize expression evaluation
+            with Pool() as pool:
+                results = pool.map(evaluate_single_expression, expressions)
+                results_output.extend(results)
 
     except FileNotFoundError:
         results_output.append(f"Error: Input file not found: {input_filepath}")

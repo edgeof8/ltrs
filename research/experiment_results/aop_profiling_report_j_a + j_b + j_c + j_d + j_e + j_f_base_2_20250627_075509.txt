@@ -1,0 +1,59 @@
+         11112232 function calls (11112159 primitive calls) in 5.099 seconds
+
+   Ordered by: cumulative time
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    5.099    5.099 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_calculator.py:15(evaluate_expression)
+     23/1    0.000    0.000    5.098    5.098 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_operations.py:7(evaluate_ast)
+        5    0.000    0.000    5.097    1.019 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_value.py:71(__add__)
+        5    2.999    0.600    5.097    1.019 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_value.py:13(_simplify)
+ 11111080    2.098    0.000    2.098    0.000 {method 'get' of 'dict' objects}
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_parser.py:7(tokenize_expression)
+       35    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_value.py:267(__repr__)
+     35/5    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_operations.py:73(collect_sum_terms)
+       72    0.000    0.000    0.000    0.000 {method 'append' of 'list' objects}
+       37    0.000    0.000    0.000    0.000 {method 'join' of 'str' objects}
+       31    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py:2218(debug)
+     12/1    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_parser.py:42(parse)
+       12    0.000    0.000    0.000    0.000 {built-in method builtins.sum}
+       41    0.000    0.000    0.000    0.000 {built-in method builtins.sorted}
+       24    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_operations.py:20(<genexpr>)
+       85    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_value.py:269(<genexpr>)
+       23    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_value.py:7(__init__)
+       31    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py:1517(debug)
+      121    0.000    0.000    0.000    0.000 {built-in method builtins.isinstance}
+       12    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_parser.py:66(atom)
+       23    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\collections\__init__.py:466(__repr__)
+      112    0.000    0.000    0.000    0.000 {built-in method builtins.len}
+       23    0.000    0.000    0.000    0.000 <string>:1(<lambda>)
+        1    0.000    0.000    0.000    0.000 {method 'disable' of '_lsprof.Profiler' objects}
+     11/1    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_ast.py:15(__repr__)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_formatter.py:4(format_as_aop)
+        5    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:1390(_handle_fromlist)
+       24    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_parser.py:31(advance)
+       59    0.000    0.000    0.000    0.000 {method 'items' of 'dict' objects}
+       31    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_parser.py:35(get_precedence)
+       20    0.000    0.000    0.000    0.000 {built-in method builtins.divmod}
+        5    0.000    0.000    0.000    0.000 {built-in method builtins.max}
+       31    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py:1790(isEnabledFor)
+       23    0.000    0.000    0.000    0.000 {built-in method __new__ of type object at 0x00007FFB6A8698F0}
+       23    0.000    0.000    0.000    0.000 {method 'group' of 're.Match' objects}
+       30    0.000    0.000    0.000    0.000 {method 'extend' of 'list' objects}
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\__init__.py:226(compile)
+       10    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_parser.py:9(<genexpr>)
+       23    0.000    0.000    0.000    0.000 {method 'start' of 're.Match' objects}
+       23    0.000    0.000    0.000    0.000 {method 'end' of 're.Match' objects}
+        1    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:645(parent)
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\__init__.py:280(_compile)
+       15    0.000    0.000    0.000    0.000 {method 'keys' of 'dict' objects}
+       12    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_ast.py:11(__repr__)
+       12    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_ast.py:10(__init__)
+        1    0.000    0.000    0.000    0.000 {method 'finditer' of 're.Pattern' objects}
+        1    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_parser.py:27(__init__)
+        5    0.000    0.000    0.000    0.000 {built-in method builtins.hasattr}
+       11    0.000    0.000    0.000    0.000 C:\Users\Administrator\Desktop\ltrs\src\aopl_python_impl\aop_ast.py:13(__init__)
+        1    0.000    0.000    0.000    0.000 {method 'rpartition' of 'str' objects}
+        6    0.000    0.000    0.000    0.000 {built-in method builtins.abs}
+        1    0.000    0.000    0.000    0.000 {method 'replace' of 'str' objects}
+
+

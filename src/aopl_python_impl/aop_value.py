@@ -70,9 +70,41 @@ class AoPValue:
 
     def __add__(self, other: 'AoPValue') -> 'AoPValue':
         if self.is_negative == other.is_negative:
-            new_poly = self.poly.copy()
-            for exp, coeff in other.poly.items():
-                new_poly[exp] = new_poly.get(exp, 0) + coeff
+            from multiprocessing import Pool
+            import os
+
+            def process_batch(exps, poly1, poly2, base):
+                result = {}
+                for exp in exps:
+                    coeff = poly1.get(exp, 0) + poly2.get(exp, 0)
+                    if coeff != 0:
+                        result[exp] = coeff
+                return result
+
+            # Split exponents into multiple batches for parallel processing to maximize CPU usage
+            all_exps = sorted(set(self.poly.keys()) | set(other.poly.keys()))
+            if len(all_exps) > 10:  # Use parallel processing only for large polynomials
+                # Determine number of processes based on CPU count or a reasonable maximum
+                num_processes = min(8, max(2, os.cpu_count() or 2))
+                batch_size = max(1, len(all_exps) // num_processes)
+                batches = [all_exps[i:i + batch_size] for i in range(0, len(all_exps), batch_size)]
+
+                with Pool(num_processes) as pool:
+                    results = pool.starmap(process_batch, [
+                        (batch, self.poly, other.poly, self.base) for batch in batches
+                    ])
+
+                # Combine results from all batches
+                new_poly = {}
+                for result in results:
+                    new_poly.update(result)
+            else:
+                new_poly = {}
+                for exp in all_exps:
+                    coeff = self.poly.get(exp, 0) + other.poly.get(exp, 0)
+                    if coeff != 0:
+                        new_poly[exp] = coeff
+
             result = AoPValue(new_poly, self.base, self.is_negative)
             result._simplify()
             return result
@@ -186,11 +218,22 @@ class AoPValue:
         self.poly = {exp: coeff for exp, coeff in new_poly.items() if coeff != 0}
 
     def __mul__(self, other: 'AoPValue') -> 'AoPValue':
-        new_poly: Dict[int, int] = {}
         if not self.poly or not other.poly: return AoPValue(base=self.base)
-        for exp1, coeff1 in self.poly.items():
-            for exp2, coeff2 in other.poly.items():
-                new_poly[exp1 + exp2] = new_poly.get(exp1 + exp2, 0) + (coeff1 * coeff2)
+        new_poly: Dict[int, int] = {}
+        # Optimize by iterating over the smaller polynomial to reduce iterations
+        if len(self.poly) <= len(other.poly):
+            smaller, larger = self.poly, other.poly
+        else:
+            smaller, larger = other.poly, self.poly
+
+        for exp1, coeff1 in smaller.items():
+            for exp2, coeff2 in larger.items():
+                exp_sum = exp1 + exp2
+                if exp_sum in new_poly:
+                    new_poly[exp_sum] += coeff1 * coeff2
+                else:
+                    new_poly[exp_sum] = coeff1 * coeff2
+
         is_negative = self.is_negative != other.is_negative
         new_val = AoPValue(new_poly, self.base, is_negative)
         new_val._simplify()
@@ -207,10 +250,17 @@ class AoPValue:
         if n_int == 0: return AoPValue({0: 1}, self.base)
         if n_int == 1: return self
 
-        result = self
+        # Use square-and-multiply algorithm for efficient exponentiation
+        result = AoPValue({0: 1}, self.base)
+        base = AoPValue(self.poly.copy(), self.base, self.is_negative)
         is_negative = self.is_negative and (n_int % 2 == 1)
-        for _ in range(n_int - 1):
-            result = result * self
+        while n_int > 0:
+            if n_int % 2 == 1:
+                # Minimize object creation by updating result in-place if possible
+                result = result * base
+            # Square the base in-place to reduce copying
+            base = base * base
+            n_int //= 2
         result.is_negative = is_negative
         return result
 
