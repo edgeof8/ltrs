@@ -4,31 +4,31 @@ Skipped line 3:
 Skipped line 4: # --- Phase 1: Parser and Precedence Torture ---
 Skipped line 5: # Unary, implicit, explicit, and power operator soup. Expected: (-(2*a))^(-(3*b))
 Input: -2a^-3b
-Output: -0.2
+Output: (-0.002-0j)*((10+0j))^((2+0j))
 ---
 Skipped line 7: # Juxtaposition next to parentheses. Expected: a * (b+c) * d
 Input: a(b+c)d
-Output: 11g
+Output: ((10+0j))^((1+0j))*((10+0j))^((2+0j)) + ((10+0j))^((3+0j))*((10+0j))^((4+0j))
 ---
 Skipped line 9: # Mismatched parentheses. Expected: Error
 Input: (a+b)*c)
-Output: Error: Mismatched parentheses
+Output: Error: Unexpected token after expression: Token(kind='RPAREN', value=')', start=7, end=8)
 ---
 Skipped line 11: # Operator with no RHS. Expected: Error
 Input: a+b*
-Output: Error: Insufficient operands for +
+Output: Error: Unexpected end of expression
 ---
 Skipped line 13: # Multiple assignments and operators. Expected: Error (Assignment has low precedence)
 Input: $v=a+b*c
-Output: 100010
+Output: ((10+0j))^((1+0j)) + ((10+0j))^((2+0j))*((10+0j))^((3+0j))
 ---
 Skipped line 15: # Chained equality. Expected: (1==1) == 1 -> 1 == 1 -> 1
 Input: 1==1==1
-Output: 1
+Output: Error: Unexpected token after expression: Token(kind='OPERATOR', value='==', start=1, end=3)
 ---
 Skipped line 17: # Negative number juxtaposition. Expected: 2 * (-3) = -6
 Input: 2(-3)
-Output: -6
+Output: (-6-0j)
 ---
 Skipped line 19: # Constant juxtaposition. Expected: #pi * #e
 Skipped line 20: #pi#e
@@ -36,111 +36,111 @@ Skipped line 21:
 Skipped line 22: # --- Phase 2: Symbolic Nightmare ---
 Skipped line 23: # Self-referential symbolic exponent. Expected: a^(a)
 Input: a^a
-Output: j
+Output: (10000000000+0j)
 ---
 Skipped line 25: # Division within a power tower. Expected: a^(b/(c^d))
 Input: a^(b/c^d)
-Output: 1
+Output: (1+0j)
 ---
 Skipped line 27: # Symbolic exponent operating on a complex base. Expected: (#j)^a
 Skipped line 28: #j^a
 Skipped line 29: # Power of a symbolic sum. Expected: Error (Power of a sum is not supported)
 Input: (a+b)^c
-Output: Infinity
+Output: (((10+0j))^((1+0j)) + ((10+0j))^((2+0j)))^(((10+0j))^((3+0j)))
 ---
 Skipped line 31: # Symbolic subtraction leading to zero exponent. Expected: a^(b-b) -> a^0 -> 1
 Input: a^(b-b)
-Output: 1
+Output: ((10+0j))^((100+0j) + (-100+0j))
 ---
 Skipped line 33: # Extremely complex symbolic exponent. Expected: a^((b-c)/(d+e) - f)
 Input: a^((b-c)/(d+e)-f)
-Output: a^-1000000.0081818182
+Output: ((10+0j))^((100+0j) + (-1000+0j)*((10000+0j) + (100000+0j))^((-1+0j)) + (-1000000+0j))
 ---
 Skipped line 35: 
 Skipped line 36: # --- Phase 3: Type System and Numerical Torture ---
 Skipped line 37: # Catastrophic cancellation. Expected: 1 - (1-1e-100) -> 1e-100 (Symbolic or high-precision)
 Input: 1-(1-a^-Z)
-Output: 0
+Output: (1+0j) + (-1+0j)*(1+0j) + 0j
 ---
 Skipped line 39: # Mixing complex numbers and symbolic values. Expected: (2+#j*3) * a^b
 Input: (2+#j*3)a^b
-Output: (2e+1+3e+1#j)
+Output: Error: Unexpected token Token(kind='CONSTANT_LITERAL', value='#j', start=3, end=5)
 ---
 Skipped line 41: # Equality check between a numerical value and its symbolic letter. Expected: 1
 Input: Z == a^b
-Output: 1
+Output: Error: Unexpected token after expression: Token(kind='OPERATOR', value='==', start=2, end=4)
 ---
 Skipped line 43: # Equality check between two different symbolic towers. Expected: 0
 Input: a^b^c == a^(b*c)
-Output: 0
+Output: Error: Unexpected token after expression: Token(kind='OPERATOR', value='==', start=6, end=8)
 ---
 Skipped line 45: # Division of two massive, nearly-equal symbolic towers. Expected: Symbolic result near 1
 Input: (a^b^c) / (a^b^(c-a^-Z))
-Output: 1
+Output: ((10+0j))^(((10+0j))^((2000+0j)))*((10+0j))^((-1+0j)*((10+0j))^((2+0j)*(1000+0j) + 0j))
 ---
 Skipped line 47: 
 Skipped line 48: # --- Phase 4: Recursive and Redefined Variables ---
 Skipped line 49: # Simple redefinition
 Input: $k=a
-Output: a
+Output: ((10+0j))^((1+0j))
 ---
 Input: $k=b
-Output: b
+Output: ((10+0j))^((2+0j))
 ---
 Input: $k*c
-Output: e
+Output: (100+0j)*((10+0j))^((3+0j))
 ---
 Skipped line 53: # Recursive-style definition.
 Input: $v1 = c
-Output: c
+Output: ((10+0j))^((3+0j))
 ---
 Input: $v2 = a^$v1
-Output: a^c
+Output: ((10+0j))^((1000+0j))
 ---
 Input: $v3 = a^$v2
-Output: a^(a^c)
+Output: ((10+0j))^(((10+0j))^((1000+0j)))
 ---
 Input: $v3
-Output: a^(a^c)
+Output: ((10+0j))^(((10+0j))^((1000+0j)))
 ---
 Skipped line 58: # Redefining a variable used in another's definition
 Input: $m = a+b
-Output: 110
+Output: ((10+0j))^((1+0j)) + ((10+0j))^((2+0j))
 ---
 Input: $n = $m*c
-Output: 11d
+Output: (10+0j) + (100+0j)*((10+0j))^((3+0j))
 ---
 Skipped line 61: # Now, redefine $m. $n should NOT change.
 Input: $m = d
-Output: d
+Output: ((10+0j))^((4+0j))
 ---
 Skipped line 63: # Check $n's original value. Expected: (10+100)*1000 = 110000
 Input: $n
-Output: 11d
+Output: (10+0j) + (100+0j)*((10+0j))^((3+0j))
 ---
 Skipped line 65: # Check new $m. Expected: 10000
 Input: $m
-Output: d
+Output: ((10+0j))^((4+0j))
 ---
 Skipped line 67: 
 Skipped line 68: # --- Phase 5: Formatter Pathos ---
 Skipped line 69: # A result that is a sum of two very different symbolic towers.
 Input: a^b + a^c
-Output: Z + a^c
+Output: (1.0000000000000002e+100+0j) + ((10+0j))^((1000+0j))
 ---
 Skipped line 71: # A result with a complex coefficient on a symbolic term.
 Input: (1+#j)a^Z
-Output: (1+#j)*a^Z
+Output: Error: Unexpected token Token(kind='CONSTANT_LITERAL', value='#j', start=3, end=5)
 ---
 Skipped line 73: # A result that is a tiny fraction.
 Input: 1/Z
-Output: a^(-1b)
+Output: (9.999999999999998e-101+0j)
 ---
 Skipped line 75: # A result that is a fraction of symbolic terms.
 Input: a^b / c^d
-Output: 0
+Output: 0j
 ---
 Skipped line 77: # An exponent that is itself a complex sum.
 Input: a^(b + #j*c)
-Output: (-9.796026084e+99+2.009445933e+99#j)
+Output: Error: Unexpected token Token(kind='CONSTANT_LITERAL', value='#j', start=7, end=9)
 ---
