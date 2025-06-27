@@ -8,14 +8,16 @@ def format_as_aop(val: AoPValue, letter_map: dict) -> str:
     for exp, coeff in sorted(val.poly.items(), reverse=True):
         if coeff == 0: continue
 
+        display_coeff = -coeff if val.is_negative else coeff
         coeff_str = ""
-        if abs(coeff) != 1 or exp == 0: coeff_str = str(coeff)
-        if coeff == -1 and exp != 0: coeff_str = "-"
+        if abs(display_coeff) != 1 or exp == 0: coeff_str = str(display_coeff)
+        if display_coeff == -1 and exp != 0: coeff_str = "-"
 
         exp_str = letter_map.get(exp, f"base^{exp}") if exp != 0 else ""
         parts.append(f"{coeff_str}{exp_str}")
 
-    return " + ".join(parts).replace(" + -", " - ")
+    result = " + ".join(parts).replace(" + -", " - ")
+    return result
 
 def format_as_decimal_string(val: AoPValue) -> str:
     """Translates the sparse polynomial into a full decimal string."""

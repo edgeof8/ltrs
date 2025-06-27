@@ -14,6 +14,8 @@ def main():
     parser = argparse.ArgumentParser(description="Alphabet of Powers Calculator")
     parser.add_argument("expression", type=str, help="The expression to evaluate. Use '--' for expressions starting with a hyphen.")
     parser.add_argument("--base", type=int, default=10, help="Numerical base (default: 10)")
+    # --- NEW ---: Add argument for output mode
+    parser.add_argument("--mode", type=str, default="num", choices=["num", "aop"], help="Output mode: 'num' for decimal, 'aop' for letter-based notation (default: num)")
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
 
     args = parser.parse_args()
@@ -25,7 +27,8 @@ def main():
         logging.basicConfig(level=logging.WARNING)
 
     calculator = AoP_Calculator(base=args.base)
-    result = calculator.evaluate_expression(expression=args.expression)
+    # --- MODIFIED ---: Pass the selected mode to the evaluator
+    result = calculator.evaluate_expression(expression=args.expression, mode=args.mode)
 
     if result.startswith("Error:"):
         print(result, file=sys.stderr)
