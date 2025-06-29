@@ -1,9 +1,21 @@
 # aopl_python_impl/aop_value.py
 from __future__ import annotations
 from typing import Dict, Optional
+from itertools import zip_longest
 import math
 import logging
 from .aop_logger import log_pow
+# --- NEW: Top-level function for multiprocessing ---
+# This function must be at the top level of the module so that it can be
+# pickled and sent to worker processes.
+def _add_poly_batch(exps, poly1, poly2):
+    """Processes a batch of exponents for polynomial addition."""
+    result = {}
+    for exp in exps:
+        coeff = poly1.get(exp, 0) + poly2.get(exp, 0)
+        if coeff != 0:
+            result[exp] = coeff
+    return result
 
 class AoPValue:
     def __init__(self, poly: Optional[Dict[int, int]] = None, base: int = 10, is_negative: bool = False):
@@ -95,14 +107,6 @@ class AoPValue:
             from multiprocessing import Pool
             import os
 
-            def process_batch(exps, poly1, poly2, base):
-                result = {}
-                for exp in exps:
-                    coeff = poly1.get(exp, 0) + poly2.get(exp, 0)
-                    if coeff != 0:
-                        result[exp] = coeff
-                return result
-
             # Split exponents into multiple batches for parallel processing to maximize CPU usage
             all_exps = sorted(set(self.poly.keys()) | set(other.poly.keys()))
             if len(all_exps) > 10:  # Use parallel processing only for large polynomials
@@ -111,9 +115,9 @@ class AoPValue:
                 batch_size = max(1, len(all_exps) // num_processes)
                 batches = [all_exps[i:i + batch_size] for i in range(0, len(all_exps), batch_size)]
 
-                with Pool(num_processes) as pool:
-                    results = pool.starmap(process_batch, [
-                        (batch, self.poly, other.poly, self.base) for batch in batches
+                with Pool(processes=num_processes) as pool:
+                    results = pool.starmap(_add_poly_batch, [
+                        (batch, self.poly, other.poly) for batch in batches
                     ])
 
                 # Combine results from all batches
@@ -279,13 +283,79 @@ class AoPValue:
         new_val._simplify()
         return new_val
 
+    def _split_at_midpoint(self) -> tuple['AoPValue', 'AoPValue']:
+        """
+        Splits a polynomial into two halves for Karatsuba's algorithm.
+        Returns (low_part, high_part)
+        """
+        if not self.poly:
+            return AoPValue(base=self.base), AoPValue(base=self.base)
+
+        # Find the midpoint based on the degree of the polynomial
+        max_degree = max(self.poly.keys()) if self.poly else 0
+        mid = (max_degree // 2) + 1
+
+        low_poly = {}
+        high_poly = {}
+
+        for exp, coeff in self.poly.items():
+            if exp < mid:
+                low_poly[exp] = coeff
+            else:
+                high_poly[exp - mid] = coeff  # Shift high-degree terms down
+
+        return AoPValue(low_poly, self.base), AoPValue(high_poly, self.base)
+
+    def _karatsuba_mul(self, other: 'AoPValue') -> 'AoPValue':
+        """
+        Multiplies two polynomials using the Karatsuba algorithm, which is
+        more efficient for large, dense polynomials (O(n^1.585) vs O(n^2)).
+        """
+        if not self.poly or not other.poly:
+            return AoPValue(base=self.base)
+
+        # Base case for recursion
+        if len(self.poly) < 2 or len(other.poly) < 2:
+            return self._dense_mul(other)
+
+        # 1. Split polynomials into low and high parts
+        a, b = self._split_at_midpoint()   # self = a + b*x^m
+        c, d = other._split_at_midpoint()  # other = c + d*x^m
+
+        # Determine the midpoint m for recombination
+        m = (max(max(self.poly.keys()) if self.poly else 0, max(other.poly.keys()) if other.poly else 0) // 2) + 1
+
+        # 2. Recursive calls
+        ac = a * c       # z0 = ac
+        bd = b * d       # z2 = bd
+        ad_plus_bc = (a + b) * (c + d) - ac - bd  # z1 = (a+b)(c+d) - ac - bd
+
+        # 3. Recombine the results
+        # Result = z2 * x^(2m) + z1 * x^m + z0
+
+        # Shift bd by 2m
+        term_bd_shifted = AoPValue({exp + 2 * m: coeff for exp, coeff in bd.poly.items()}, base=self.base)
+
+        # Shift ad_plus_bc by m
+        term_adbc_shifted = AoPValue({exp + m: coeff for exp, coeff in ad_plus_bc.poly.items()}, base=self.base)
+
+        # Combine all parts. We can do this with our existing addition.
+        result = ac + term_adbc_shifted + term_bd_shifted
+        result.is_negative = self.is_negative != other.is_negative
+        result._simplify()
+
+        return result
+
     # --- THE NEW DISPATCHER ---
 
     def __mul__(self, other: 'AoPValue') -> 'AoPValue':
         """
-        The Intelligent Dispatcher for multiplication. It analyzes the operands
+        Intelligent Dispatcher for multiplication. It analyzes the operands
         and chooses the most efficient algorithm.
         """
+        # Threshold for switching to Karatsuba. This can be tuned.
+        KARATSUBA_THRESHOLD = 20
+
         # --- Tier 0: The Trailing Zero Shortcut ---
         self_zeros = self._get_trailing_zeros()
         other_zeros = self._get_trailing_zeros()
@@ -305,14 +375,15 @@ class AoPValue:
             final_poly = {exp + total_zeros: coeff for exp, coeff in result_head.poly.items()}
             return AoPValue(final_poly, self.base, result_head.is_negative)
 
-        # --- Tier 1: Split-and-Conquer (Future Implementation) ---
-        # if self._is_splittable() and other._is_splittable():
-        #     log_pow(f"DISPATCHER: Using Split-and-Conquer.")
-        #     return self._split_conquer_mul(other)
+        # If either polynomial is small, use the simple, fast algorithm.
+        if len(self.poly) < KARATSUBA_THRESHOLD or len(other.poly) < KARATSUBA_THRESHOLD:
+            log_pow(f"DISPATCHER: Using Grade School Multiplication for smaller polynomials.")
+            return self._dense_mul(other)
 
-        # --- Tier 2: Fallback to the Dense Multiplier ---
-        log_pow(f"DISPATCHER: Using Dense Polynomial Multiplier.")
-        return self._dense_mul(other)
+        # For large, dense polynomials, use Karatsuba's algorithm.
+        else:
+            log_pow(f"DISPATCHER: Using Karatsuba Multiplication for large polynomials.")
+            return self._karatsuba_mul(other)
 
     def __pow__(self, other: 'AoPValue') -> 'AoPValue':
         # --- Tier 1: The "Hyper-Fast Path" (Exploiting the Logarithmic Shortcut) ---
