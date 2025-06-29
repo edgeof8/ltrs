@@ -3,14 +3,15 @@ from .definitions import TOKEN_REGEX, AoPError, EXPONENT_TO_LETTER_MAP
 from .aop_parser import tokenize_expression, Parser
 from .aop_formatter import format_as_aop, format_as_decimal_string
 from .aop_operations import evaluate_ast
+from .aop_types import SymbolicPowerResult
 import logging
 import os
 import json
 # --- NEW: Imports for pickling and encoding ---
 import pickle
 import base64
-from .aop_logger import print_legend, log_eval_report_start
-from .aop_value import AoPValue # Import AoPValue for type hints and unpickling
+from .aop_logger import print_legend, log_eval_report_start, log_pow
+from .aop_value import AoPValue, int_to_key # Import AoPValue for type hints and unpickling
 
 # --- NEW: Define a new cache filename to avoid conflicts with the old format ---
 CACHE_FILENAME = 'precalculated_cache_v2.json'
@@ -63,18 +64,29 @@ class AoP_Calculator:
             ast = parser.parse()
 
             log_eval_report_start(repr(ast))
-            result_aop = evaluate_ast(ast, self.base, self.cache)
+            result_obj = evaluate_ast(ast, self.base, self.cache)
 
             # Format the result
             if mode == "aop":
-                final_result_str = format_as_aop(result_aop, EXPONENT_TO_LETTER_MAP)
+                # The formatter now understands SymbolicPowerResult directly
+                final_result_str = format_as_aop(result_obj, EXPONENT_TO_LETTER_MAP)
+                # The object we want to cache is the unevaluated symbolic object
+                cacheable_obj = result_obj
             else:  # "num" is the default
-                final_result_str = format_as_decimal_string(result_aop)
+                # If the result is a symbolic power, we must evaluate it now
+                if isinstance(result_obj, SymbolicPowerResult):
+                    from .aop_operations import _exponentiate_aop_value
+                    final_aop_value = _exponentiate_aop_value(result_obj.base, result_obj.exponent)
+                else: # It was already a simple value
+                    final_aop_value = result_obj
+
+                final_result_str = format_as_decimal_string(final_aop_value)
+                cacheable_obj = final_aop_value
 
             # --- MODIFIED: New cache update logic ---
             # After a successful calculation, update the cache with the new data.
             if self.cache is not None:
-                pickled_obj = pickle.dumps(result_aop)
+                pickled_obj = pickle.dumps(cacheable_obj)
                 b64_pickle = base64.b64encode(pickled_obj).decode('utf-8')
 
                 new_cache_entry = {
@@ -95,6 +107,16 @@ class AoP_Calculator:
         except Exception as e:
             logging.error("Unexpected error in calculation", exc_info=True)
             return f"Error: An unexpected system error occurred."
+
+    def _evaluate_symbolic_power_numerically(self, power_result: SymbolicPowerResult) -> AoPValue:
+        """
+        Evaluates a SymbolicPowerResult numerically using exponentiation by squaring.
+        This function takes a SymbolicPowerResult and performs the actual
+        exponentiation by squaring, returning a final AoPValue.
+        This is where the "General Path" for __pow__ now lives.
+        """
+        from .aop_operations import _exponentiate_aop_value
+        return _exponentiate_aop_value(power_result.base, power_result.exponent)
 
     def _load_cache(self):
         """Load the precalculated cache from file if available."""

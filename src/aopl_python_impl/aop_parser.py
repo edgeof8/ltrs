@@ -5,23 +5,73 @@ from .definitions import Token, AoPError, OPERATORS
 from .aop_ast import ASTNode, NumberNode, IdentifierNode, BinaryOpNode, UnaryOpNode
 
 def tokenize_expression(expression: str) -> List[Token]:
-    from .definitions import TOKEN_SPECIFICATION
-    full_regex = re.compile('|'.join(f'(?P<{name}>{pattern})' for name, pattern in TOKEN_SPECIFICATION))
+    """
+    A stateful tokenizer that understands the 'additive by default' grammar.
+    It correctly tokenizes sequences like '2b3c' and 'abc' into separate terms.
+    """
+    from .definitions import TOKEN_REGEX
     tokens = []
-    for match in full_regex.finditer(expression):
-        kind = match.lastgroup
-        if kind and kind not in ('WHITESPACE', 'MISMATCH'):
-            tokens.append(Token(kind, match.group(), match.start(), match.end()))
+    pos = 0
+    while pos < len(expression):
+        char = expression[pos]
 
-    result, i = [], 0
-    while i < len(tokens):
-        result.append(tokens[i])
+        if char.isspace():
+            pos += 1
+            continue
+
+        # Match standard operators and parentheses using regex
+        match = TOKEN_REGEX.match(expression, pos)
+        if match:
+            kind = match.lastgroup
+            value = match.group()
+            if kind is not None:
+                tokens.append(Token(kind, value, pos, match.end()))
+                pos = match.end()
+                continue
+
+        # Match numbers (could be part of a term or standalone)
+        if char.isdigit() or char == '.':
+            num_str = ""
+            start_pos = pos
+            while pos < len(expression) and (expression[pos].isdigit() or expression[pos] == '.'):
+                num_str += expression[pos]
+                pos += 1
+
+            # Look ahead to see if it's followed by a letter
+            if pos < len(expression) and expression[pos].isalpha():
+                # It's a coefficient for a letter, e.g., "2a"
+                tokens.append(Token('TERM', num_str + expression[pos], start_pos, pos + 1))
+                pos += 1 # Consume the letter
+            else:
+                # It's a standalone number
+                tokens.append(Token('NUMBER', num_str, start_pos, pos))
+            continue
+
+        # Match single letters (which can form implicit terms)
+        if char.isalpha():
+            # A letter by itself is a term with a coefficient of 1
+            tokens.append(Token('TERM', char, pos, pos + 1))
+            pos += 1
+            continue
+
+        # If we get here, it's an unknown character
+        raise SyntaxError(f"Unexpected character at position {pos}: {char}")
+
+    # --- Phase 2: Insert Implicit Addition Operators ---
+    # Iterate through the token stream and insert ADD operators where needed.
+    final_tokens = []
+    for i, token in enumerate(tokens):
+        final_tokens.append(token)
+        # If the current token is a TERM or a RPAREN, and the next token is a TERM or LPAREN, insert ADD
         if i + 1 < len(tokens):
-            if tokens[i].kind in ('NUMBER', 'IDENTIFIER', 'RPAREN') and tokens[i+1].kind in ('NUMBER', 'IDENTIFIER', 'LPAREN'):
-                result.append(Token('IMPLICIT_OPERATOR', '*', -1, -1))
-        i += 1
-    logging.debug(f"Tokens: {result}")
-    return result
+            current_type = token.kind
+            next_type = tokens[i+1].kind
+            if (current_type in ('TERM', 'NUMBER', 'RPAREN')) and \
+               (next_type in ('TERM', 'NUMBER', 'LPAREN')):
+                final_tokens.append(Token('OPERATOR', '+', -1, -1)) # Position doesn't matter for implicit ops
+
+    logging.debug(f"Tokens: {final_tokens}")
+    return final_tokens
 
 class Parser:
     def __init__(self, tokens: List[Token]):
@@ -67,6 +117,7 @@ class Parser:
         token = self.current_token
         if not token: raise AoPError("Unexpected end of expression")
         if token.kind == 'NUMBER': self.advance(); return NumberNode(token)
+        if token.kind == 'TERM': self.advance(); return IdentifierNode(token) # Treat TERM as Identifier for now
         if token.kind == 'IDENTIFIER': self.advance(); return IdentifierNode(token)
         if token.value == '(':
             self.advance(); node = self.parse()

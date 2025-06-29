@@ -121,7 +121,7 @@ class TestComplexOperations(unittest.TestCase):
                             duration = time.perf_counter() - start_time
                             total_duration += duration
                         avg_duration_val = total_duration / runs_for_this_complex_op
-                    current_row_complex_avg_times[algo_name] = f"{avg_duration_val:<18.6f}" if isinstance(avg_duration_val, float) else avg_duration_val
+                        current_row_complex_avg_times[algo_name] = f"{avg_duration_val:<18.6f}" if isinstance(avg_duration_val, float) else str(avg_duration_val)
 
                 for algo_name_in_header in header_algo_names:
                     row_output_parts.append(f"{current_row_complex_avg_times[algo_name_in_header]:<18}")

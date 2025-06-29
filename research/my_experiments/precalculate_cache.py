@@ -20,6 +20,7 @@ from aopl_python_impl.aop_parser import tokenize_expression, Parser
 from aopl_python_impl.aop_operations import evaluate_ast
 from aopl_python_impl.aop_formatter import format_as_aop, format_as_decimal_string
 from aopl_python_impl.definitions import EXPONENT_TO_LETTER_MAP
+from aopl_python_impl.aop_types import SymbolicPowerResult
 
 # Configuration
 BASES = [2, 10, 16]  # Common bases to precalculate for
@@ -45,6 +46,7 @@ def process_task(task):
     from aopl_python_impl.aop_operations import evaluate_ast
     from aopl_python_impl.aop_formatter import format_as_aop, format_as_decimal_string
     from aopl_python_impl.definitions import EXPONENT_TO_LETTER_MAP
+    from aopl_python_impl.aop_types import SymbolicPowerResult
     import pickle
     import base64
 
@@ -57,14 +59,20 @@ def process_task(task):
             raise ValueError("Expression resulted in no tokens.")
         ast = Parser(tokens).parse()
 
-        # 2. EVALUATE: Run the evaluator to get the final AoPValue object
+        # 2. EVALUATE: Run the evaluator to get the final AoPValue or SymbolicPowerResult object
         #    We pass cache=None to ensure it performs a raw calculation, which is the point of this script.
-        result_aop_value = evaluate_ast(ast, base, cache=None)
+        result_obj = evaluate_ast(ast, base, cache=None)
 
         # 3. FORMAT & SERIALIZE: Create all parts of the rich cache entry
-        aop_str = format_as_aop(result_aop_value, EXPONENT_TO_LETTER_MAP)
+        aop_str = format_as_aop(result_obj, EXPONENT_TO_LETTER_MAP)
+        if isinstance(result_obj, SymbolicPowerResult):
+            from aopl_python_impl.aop_calculator import AoP_Calculator
+            calc = AoP_Calculator(base=base)
+            result_aop_value = calc._evaluate_symbolic_power_numerically(result_obj)
+        else:
+            result_aop_value = result_obj
         num_str = format_as_decimal_string(result_aop_value)
-        raw_pickle = base64.b64encode(pickle.dumps(result_aop_value)).decode('utf-8')
+        raw_pickle = base64.b64encode(pickle.dumps(result_obj)).decode('utf-8')
 
         # 4. ASSEMBLE: Create the final dictionary for the cache
         cache_entry = {

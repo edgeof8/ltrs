@@ -32,3 +32,12 @@ class UnaryOpNode(ASTNode):
     def __repr__(self) -> str: return f"({self.op.value}{self.right!r})"
     def to_str(self) -> str:
         return f"{self.op.value}{self.right.to_str()}"
+
+class SymbolicPowerNode(ASTNode):
+    def __init__(self, base, exponent):
+        self.base = base
+        self.exponent = exponent
+    def __repr__(self) -> str:
+        return f"SymbolicPower({self.base!r} ^ {self.exponent!r})"
+    def to_str(self) -> str:
+        return f"({self.base.to_str()})^{self.exponent.to_str()}"

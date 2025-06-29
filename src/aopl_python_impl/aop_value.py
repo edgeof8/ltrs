@@ -5,6 +5,9 @@ from itertools import zip_longest
 import math
 import logging
 from .aop_logger import log_pow
+from .definitions import LETTER_TO_EXPONENT_MAP
+from .aop_types import SymbolicPowerResult
+
 # --- NEW: Top-level function for multiprocessing ---
 # This function must be at the top level of the module so that it can be
 # pickled and sent to worker processes.
@@ -17,12 +20,64 @@ def _add_poly_batch(exps, poly1, poly2):
             result[exp] = coeff
     return result
 
+def key_to_int(key: str, base: int = 10) -> int:
+    """Convert a string key in AoP notation to its numerical exponent value."""
+    if not key:
+        return 0
+    total = 0
+    i = 0
+    while i < len(key):
+        if key[i].isdigit():
+            num = ""
+            while i < len(key) and key[i].isdigit():
+                num += key[i]
+                i += 1
+            coeff = int(num) if num else 1
+            if i < len(key):
+                letter = key[i]
+                exp_val = LETTER_TO_EXPONENT_MAP.get(letter, 0)
+                total += coeff * exp_val
+                i += 1
+            else:
+                total += coeff * 0  # Assume 'a0' or similar for single digit
+        else:
+            letter = key[i]
+            exp_val = LETTER_TO_EXPONENT_MAP.get(letter, 0)
+            total += exp_val
+            i += 1
+    return total
+
+def int_to_key(exp: int, base: int = 10) -> str:
+    """Convert a numerical exponent to its canonical string representation in AoP notation."""
+    if exp == 0:
+        return ""
+    result = []
+    remaining = exp
+    # Create a reverse mapping from exponent value to letter
+    REVERSE_LETTER_MAP = {v: k for k, v in LETTER_TO_EXPONENT_MAP.items()}
+    for value, letter in sorted(REVERSE_LETTER_MAP.items(), reverse=True):
+        if value == 0:
+            continue
+        coeff = remaining // value if value != 0 else 0
+        if coeff > 0:
+            if coeff > 1:
+                result.append(f"{coeff}{letter}")
+            else:
+                result.append(letter)
+            remaining -= coeff * value
+    if remaining > 0:
+        if remaining == 1:
+            result.append("a0")
+        else:
+            result.append(f"{remaining}a0")
+    return "".join(result)
+
 class AoPValue:
-    def __init__(self, poly: Optional[Dict[int, int]] = None, base: int = 10, is_negative: bool = False):
-        self.poly: Dict[int, int] = poly if poly is not None else {}
+    def __init__(self, poly: Optional[Dict[str, int]] = None, base: int = 10, is_negative: bool = False):
+        self.poly: Dict[str, int] = poly if poly is not None else {}
         self.base = base
         self.is_negative = is_negative
-        self.poly = {e:c for e, c in self.poly.items() if c != 0}
+        self.poly = {e: c for e, c in self.poly.items() if c != 0}
 
     def _simplify(self):
         """
@@ -35,9 +90,12 @@ class AoPValue:
 
         new_poly = {}
         carry = 0
-        max_exp = max(self.poly.keys(), default=0)
-        for exp in range(max_exp + 2):  # Go one beyond to handle final carry
-            coeff = self.poly.get(exp, 0) + carry
+        # Convert string keys to numerical for ordering
+        exp_map = {key_to_int(exp, self.base): exp for exp in self.poly.keys()}
+        max_exp_num = max(exp_map.keys(), default=0) if exp_map else 0
+        for exp_num in range(max_exp_num + 2):  # Go one beyond to handle final carry
+            exp_str = exp_map.get(exp_num, int_to_key(exp_num, self.base))
+            coeff = self.poly.get(exp_str, 0) + carry
             if coeff == 0:
                 continue
 
@@ -46,17 +104,19 @@ class AoPValue:
                 carry -= 1
                 remainder += self.base
             if remainder != 0:
-                new_poly[exp] = remainder
+                new_poly[exp_str] = remainder
 
         if carry > 0:
-            new_poly[max_exp + 1] = carry
+            carry_exp_str = int_to_key(max_exp_num + 1, self.base)
+            new_poly[carry_exp_str] = carry
 
         self.poly = new_poly
 
     def to_numerical(self) -> int:
         total = 0
-        for exp, coeff in self.poly.items():
-            total += coeff * (self.base ** exp)
+        for exp_str, coeff in self.poly.items():
+            exp_num = key_to_int(exp_str, self.base)
+            total += coeff * (self.base ** exp_num)
         return -total if self.is_negative else total
 
     def to_decimal_string(self) -> str:
@@ -65,7 +125,7 @@ class AoPValue:
             return "0"
 
         # Find the highest power to determine the length of the number
-        max_exponent = max(self.poly.keys())
+        max_exponent = max(key_to_int(exp, self.base) for exp in self.poly.keys()) if self.poly else 0
 
         # Create a list of digits, initialized to 0
         # The length is max_exponent + 1 (e.g., 10^2 needs 3 digits: 1, 0, 0)
@@ -73,9 +133,9 @@ class AoPValue:
         digits = [0] * num_digits
 
         # Place the coefficients at the correct positions
-        for exp, coeff in self.poly.items():
-            # This assumes coefficients are single digits after simplification
-            digits[exp] = coeff
+        for exp_str, coeff in self.poly.items():
+            exp_num = key_to_int(exp_str, self.base)
+            digits[exp_num] = coeff
 
         # The list is in reverse order (index 0 is the 1s place), so reverse it and join
         result = "".join(map(str, reversed(digits)))
@@ -93,12 +153,13 @@ class AoPValue:
             n = -n
 
         poly = {}
-        exp = 0
+        exp_num = 0
         while n > 0:
             n, remainder = divmod(n, base)
             if remainder != 0:
-                poly[exp] = remainder
-            exp += 1
+                exp_str = int_to_key(exp_num, base)
+                poly[exp_str] = remainder
+            exp_num += 1
 
         return AoPValue(poly, base=base, is_negative=is_negative)
 
@@ -108,7 +169,7 @@ class AoPValue:
             import os
 
             # Split exponents into multiple batches for parallel processing to maximize CPU usage
-            all_exps = sorted(set(self.poly.keys()) | set(other.poly.keys()))
+            all_exps = sorted(set(self.poly.keys()) | set(other.poly.keys()), key=lambda x: key_to_int(x, self.base))
             if len(all_exps) > 10:  # Use parallel processing only for large polynomials
                 # Determine number of processes based on CPU count or a reasonable maximum
                 num_processes = min(8, max(2, os.cpu_count() or 2))
@@ -146,8 +207,8 @@ class AoPValue:
         Compares the magnitude of two polynomials.
         Returns 1 if self > other, -1 if self < other, 0 if equal.
         """
-        self_exps = sorted(self.poly.keys(), reverse=True)
-        other_exps = sorted(other.poly.keys(), reverse=True)
+        self_exps = sorted(self.poly.keys(), key=lambda x: key_to_int(x, self.base), reverse=True)
+        other_exps = sorted(other.poly.keys(), key=lambda x: key_to_int(x, self.base), reverse=True)
 
         if not self_exps and not other_exps:
             return 0
@@ -156,11 +217,11 @@ class AoPValue:
         if not other_exps:
             return 1
 
-        max_self_exp = self_exps[0]
-        max_other_exp = other_exps[0]
+        max_self_exp_num = key_to_int(self_exps[0], self.base)
+        max_other_exp_num = key_to_int(other_exps[0], self.base)
 
-        if max_self_exp != max_other_exp:
-            return 1 if max_self_exp > max_other_exp else -1
+        if max_self_exp_num != max_other_exp_num:
+            return 1 if max_self_exp_num > max_other_exp_num else -1
 
         for exp in self_exps:
             self_coeff = self.poly.get(exp, 0)
@@ -210,14 +271,15 @@ class AoPValue:
             return
 
         new_poly = self.poly.copy()
-        exps = sorted(new_poly.keys())
+        exps = sorted(new_poly.keys(), key=lambda x: key_to_int(x, self.base))
         i = 0
         while i < len(exps):
             exp = exps[i]
             coeff = new_poly.get(exp, 0)  # Safe access in case exp was deleted
             if coeff < 0:
                 # Borrow from the next higher exponent
-                borrow_exp = exp + 1
+                borrow_exp_num = key_to_int(exp, self.base) + 1
+                borrow_exp = int_to_key(borrow_exp_num, self.base)
                 while coeff < 0:
                     if borrow_exp not in new_poly:
                         new_poly[borrow_exp] = 0
@@ -229,8 +291,9 @@ class AoPValue:
                         # Ensure borrow_exp is in exps if it still exists
                         if borrow_exp not in exps:
                             exps.append(borrow_exp)
-                            exps.sort()
-                    borrow_exp += 1
+                            exps.sort(key=lambda x: key_to_int(x, self.base))
+                    borrow_exp_num += 1
+                    borrow_exp = int_to_key(borrow_exp_num, self.base)
                 if coeff != 0:
                     new_poly[exp] = coeff
                 else:
@@ -249,13 +312,13 @@ class AoPValue:
         """Helper to find the number of trailing zeros (lowest exponent)."""
         if not self.poly:
             return 0
-        return min(self.poly.keys())
+        return min(key_to_int(exp, self.base) for exp in self.poly.keys()) if self.poly else 0
 
     def _strip_trailing_zeros(self, zero_count: int) -> 'AoPValue':
         """Helper to return a new AoPValue with zeros removed."""
         if zero_count == 0:
             return self
-        new_poly = {exp - zero_count: coeff for exp, coeff in self.poly.items()}
+        new_poly = {int_to_key(key_to_int(exp, self.base) - zero_count, self.base): coeff for exp, coeff in self.poly.items()}
         return AoPValue(new_poly, self.base, self.is_negative)
 
     def _dense_mul(self, other: 'AoPValue') -> 'AoPValue':
@@ -263,7 +326,7 @@ class AoPValue:
         The original, robust multiplication algorithm for dense polynomials.
         """
         if not self.poly or not other.poly: return AoPValue(base=self.base)
-        new_poly: Dict[int, int] = {}
+        new_poly: Dict[str, int] = {}
         # Optimize by iterating over the smaller polynomial to reduce iterations
         if len(self.poly) <= len(other.poly):
             smaller, larger = self.poly, other.poly
@@ -272,7 +335,10 @@ class AoPValue:
 
         for exp1, coeff1 in smaller.items():
             for exp2, coeff2 in larger.items():
-                exp_sum = exp1 + exp2
+                exp1_num = key_to_int(exp1, self.base)
+                exp2_num = key_to_int(exp2, self.base)
+                exp_sum_num = exp1_num + exp2_num
+                exp_sum = int_to_key(exp_sum_num, self.base)
                 if exp_sum in new_poly:
                     new_poly[exp_sum] += coeff1 * coeff2
                 else:
@@ -299,17 +365,19 @@ class AoPValue:
             return AoPValue(base=self.base), AoPValue(base=self.base)
 
         # Find the midpoint based on the degree of the polynomial
-        max_degree = max(self.poly.keys()) if self.poly else 0
+        max_degree = max(key_to_int(exp, self.base) for exp in self.poly.keys()) if self.poly else 0
         mid = (max_degree // 2) + 1
 
         low_poly = {}
         high_poly = {}
 
         for exp, coeff in self.poly.items():
-            if exp < mid:
+            exp_num = key_to_int(exp, self.base)
+            if exp_num < mid:
                 low_poly[exp] = coeff
             else:
-                high_poly[exp - mid] = coeff  # Shift high-degree terms down
+                high_exp = int_to_key(exp_num - mid, self.base)
+                high_poly[high_exp] = coeff  # Shift high-degree terms down
 
         return AoPValue(low_poly, self.base), AoPValue(high_poly, self.base)
 
@@ -330,7 +398,8 @@ class AoPValue:
         c, d = other._split_at_midpoint()  # other = c + d*x^m
 
         # Determine the midpoint m for recombination
-        m = (max(max(self.poly.keys()) if self.poly else 0, max(other.poly.keys()) if other.poly else 0) // 2) + 1
+        m = (max(max(key_to_int(exp, self.base) for exp in self.poly.keys()) if self.poly else 0,
+                 max(key_to_int(exp, self.base) for exp in other.poly.keys()) if other.poly else 0) // 2) + 1
 
         # 2. Recursive calls
         ac = a * c       # z0 = ac
@@ -341,10 +410,10 @@ class AoPValue:
         # Result = z2 * x^(2m) + z1 * x^m + z0
 
         # Shift bd by 2m
-        term_bd_shifted = AoPValue({exp + 2 * m: coeff for exp, coeff in bd.poly.items()}, base=self.base)
+        term_bd_shifted = AoPValue({int_to_key(key_to_int(exp, self.base) + 2 * m, self.base): coeff for exp, coeff in bd.poly.items()}, base=self.base)
 
         # Shift ad_plus_bc by m
-        term_adbc_shifted = AoPValue({exp + m: coeff for exp, coeff in ad_plus_bc.poly.items()}, base=self.base)
+        term_adbc_shifted = AoPValue({int_to_key(key_to_int(exp, self.base) + m, self.base): coeff for exp, coeff in ad_plus_bc.poly.items()}, base=self.base)
 
         # Combine all parts. We can do this with our existing addition.
         result = ac + term_adbc_shifted + term_bd_shifted
@@ -358,10 +427,11 @@ class AoPValue:
     def __mul__(self, other: 'AoPValue') -> 'AoPValue':
         """
         Intelligent Dispatcher for multiplication. It analyzes the operands
-        and chooses the most efficient algorithm.
+        and chooses the most efficient algorithm based on benchmark data.
         """
-        # Threshold for switching to Karatsuba. This can be tuned.
-        KARATSUBA_THRESHOLD = 20
+        # Define a much higher threshold based on benchmark data.
+        # Karatsuba only wins at 2048 bits and above for dense numbers.
+        KARATSUBA_THRESHOLD_BITS = 2048
 
         # --- Tier 0: The Trailing Zero Shortcut ---
         self_zeros = self._get_trailing_zeros()
@@ -379,74 +449,57 @@ class AoPValue:
 
             # 3. Stitch the result back together by adding the exponents
             total_zeros = self_zeros + other_zeros
-            final_poly = {exp + total_zeros: coeff for exp, coeff in result_head.poly.items()}
+            final_poly = {int_to_key(key_to_int(exp, self.base) + total_zeros, self.base): coeff for exp, coeff in result_head.poly.items()}
             return AoPValue(final_poly, self.base, result_head.is_negative)
 
-        # If either polynomial is small, use the simple, fast algorithm.
-        if len(self.poly) < KARATSUBA_THRESHOLD or len(other.poly) < KARATSUBA_THRESHOLD:
-            log_pow(f"DISPATCHER: Using Grade School Multiplication for smaller polynomials.")
+        # Get the bit length of the larger number
+        max_bits = max(self.to_numerical().bit_length(), other.to_numerical().bit_length())
+
+        # --- NEW, SIMPLIFIED DISPATCH LOGIC ---
+        # 1. If numbers are very large and dense, use Karatsuba.
+        if max_bits >= KARATSUBA_THRESHOLD_BITS:
+            log_pow(f"DISPATCHER: Using Karatsuba Multiplication for very large numbers ({max_bits} bits).")
+            return self._karatsuba_mul(other)
+        # 2. For everything else, use the superior AoP optimized algorithm.
+        else:
+            log_pow(f"DISPATCHER: Using AoP Optimized Multiplication for numbers ({max_bits} bits).")
             return self._dense_mul(other)
 
-        # For large, dense polynomials, use Karatsuba's algorithm.
-        else:
-            log_pow(f"DISPATCHER: Using Karatsuba Multiplication for large polynomials.")
-            return self._karatsuba_mul(other)
+    def __pow__(self, other: 'AoPValue') -> 'AoPValue | SymbolicPowerResult':
+        # --- POWER DISPATCHER ---
+        # We will always attempt the symbolic path first.
+        # This creates a representation of the operation without computing it.
+        # The 'to_numerical' or 'format' methods will handle the actual computation.
 
-    def __pow__(self, other: 'AoPValue') -> 'AoPValue':
-        # --- Tier 1: The "Hyper-Fast Path" (Exploiting the Logarithmic Shortcut) ---
-        # This path handles (base^(10^k)) ^ (base^n) using pure integer math.
-        # It's the fastest possible path for these specific hyper-power calculations.
-        is_self_pure_power = len(self.poly) == 1 and list(self.poly.values())[0] == 1
-        is_other_pure_power = len(other.poly) == 1 and list(other.poly.values())[0] == 1
+        log_pow(f"Creating SymbolicPowerResult for ({self!r}) ^ ({other!r})")
+        return SymbolicPowerResult(self, other)
 
-        if is_self_pure_power and is_other_pure_power and self.base == 10:
-            self_exp = list(self.poly.keys())[0]
-            # Check if the base's exponent is itself a clean power of 10
-            if self_exp > 0 and self_exp % 10 == 0:
-                try:
-                    k = int(math.log10(self_exp))
-                    if 10**k == self_exp: # It's a perfect power of 10
-                        n = list(other.poly.keys())[0]
-                        log_pow(f"HYPER-FAST PATH: Detected (10^(10^{k}))^(10^{n}). New exponent is 10^({k}+{n}).")
-                        new_final_exponent = 10**(k + n)
-                        return AoPValue({new_final_exponent: 1}, base=self.base)
-                except (ValueError, TypeError):
-                    # Not a perfect power of 10, fall through to the next path
-                    pass
+    def is_pure_power(self) -> bool:
+        """Check if the value is a pure power (single term with coefficient 1)."""
+        return len(self.poly) == 1 and list(self.poly.values())[0] == 1
 
-        # --- Tier 2: The "General Fast Path" (Symbolic Exponentiation) ---
-        # This handles (base^k) ^ other where k is not a power of 10.
-        # It's slower than Tier 1 but avoids converting `other` to a massive integer.
-        if is_self_pure_power:
-            # We are in the simple case: (base^k) ^ other
-            k = list(self.poly.keys())[0]
-            k_as_aop = AoPValue.from_number(k, base=self.base)
-            new_exponent_as_aop = k_as_aop * other
-            new_exponent_numerical = new_exponent_as_aop.to_numerical()
-            return AoPValue({new_exponent_numerical: 1}, base=self.base, is_negative=self.is_negative and (new_exponent_numerical % 2 == 1))
+    def get_single_exponent_value(self) -> int:
+        """Gets the integer exponent value, assuming it's a pure power. For internal use."""
+        if self.is_pure_power():
+            return key_to_int(list(self.poly.keys())[0], self.base)
+        raise ValueError("Cannot get single exponent from a complex polynomial.")
 
-        # --- Tier 3: The General-Purpose Algorithm (Exponentiation by Squaring) ---
-        # This is the fallback for all other cases (e.g., (a+b)^c).
-        # It converts the exponent to a numerical value.
-        log_pow(f"GENERAL PATH: Calculating ({self!r}) ^ ({other!r})")
-        n_int = other.to_numerical()
-        if n_int < 0: raise ValueError("Exponent must be a non-negative integer.")
-
-        if n_int == 0: return AoPValue({0: 1}, self.base)
-        if n_int == 1: return self
-
-        # Standard square-and-multiply algorithm
-        result = AoPValue({0: 1}, self.base)
-        current_base = self
-        while n_int > 0:
-            if n_int % 2 == 1: result *= current_base
-            current_base *= current_base
-            n_int //= 2
-        return result
+    def is_small_integer(self) -> bool:
+        """Check if the value is a small integer (can be converted to numerical easily)."""
+        if len(self.poly) == 0:
+            return True
+        max_exp_num = max(key_to_int(exp, self.base) for exp in self.poly.keys()) if self.poly else 0
+        if max_exp_num > 5:  # Arbitrary threshold for small exponent
+            return False
+        try:
+            num_val = self.to_numerical()
+            return abs(num_val) < 1000  # Another threshold for small integer
+        except OverflowError:
+            return False
 
     def __repr__(self) -> str:
         # --- MODIFIED: Remove redundant base display ---
-        poly_str = ", ".join(f"@{e}:{c}" for e, c in sorted(self.poly.items(), reverse=True))
+        poly_str = ", ".join(f"@{e}:{c}" for e, c in sorted(self.poly.items(), key=lambda x: key_to_int(x[0], self.base), reverse=True))
         if not poly_str:
             poly_str = "0"
         sign = "-" if self.is_negative else ""

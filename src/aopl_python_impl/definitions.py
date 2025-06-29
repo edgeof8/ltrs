@@ -39,21 +39,12 @@ _variable_name = r"\$[a-zA-Z_]\w*" # Assuming variables are GUI-only or distinct
 _constants = r'#pi|#e|#phi|#tau|#sqrt2|#j|#sqrt3|#ln2' # Added new constants
 
 TOKEN_SPECIFICATION: List[Tuple[str, str]] = [
-    # Operators first to ensure they are captured before numbers/coeff_words that might start with + or -
-    # Added '=='
-    ('OPERATOR', r"\*\*|==|[\+\-\*\/\^=]"), # Could also add !=, <=, >=, <, > later
-    ('VARIABLE', _variable_name),
-    # --- FIX: Removed the greedy COEFF_WORD token. This is the core fix. ---
-    # Now, '2a' will be tokenized as a NUMBER '2' followed by an IDENTIFIER 'a',
-    # allowing implicit multiplication to be handled correctly.
-    # ('COEFF_WORD', f"{_number_signed}{_word_simple}"),
-    ('CONSTANT_LITERAL', _constants),
-    ('NUMBER', _number_signed),
-    ('IDENTIFIER', _word_simple),
+    ('OPERATOR', r"\*\*|==|[\+\-\*\/^=]"), # Keep operators simple
     ('LPAREN', r"\("), ('RPAREN', r"\)"),
-    ('WHITESPACE', r"\s+"), ('MISMATCH', r"."),
+    ('WHITESPACE', r"\s+"),
 ]
-TOKEN_REGEX: Pattern[str] = re.compile('|'.join(f'(?P<{name}>{pattern})' for name, pattern in TOKEN_SPECIFICATION))
+# The new tokenizer will handle numbers and identifiers as a special case.
+TOKEN_REGEX: Pattern[str] = re.compile('|'.join(f'(?P<{name}>{pattern})' for name, pattern in TOKEN_SPECIFICATION if name != 'WHITESPACE'))
 OPERATORS: Dict[str, Dict] = {
     '=': {'precedence': 1, 'associativity': 'right'}, # Assignment (if ever used as an operator)
     '==': {'precedence': 1.5, 'associativity': 'left'}, # Equality comparison
