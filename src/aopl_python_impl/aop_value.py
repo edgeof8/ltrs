@@ -262,29 +262,55 @@ class AoPValue:
         return new_val
 
     def __pow__(self, other: 'AoPValue') -> 'AoPValue':
-        try:
-            n = other.to_numerical()
-            if n < 0 or n != int(n): raise ValueError("Exponent must be a non-negative integer.")
-        except (ValueError, TypeError):
-            raise ValueError("Exponent must be a non-negative integer.")
-        n_int = int(n)
-        log_pow(f"Calculating ({self!r}) ^ {n_int}")
+        # --- Tier 1: The "Hyper-Fast Path" (Exploiting the Logarithmic Shortcut) ---
+        # This path handles (base^(10^k)) ^ (base^n) using pure integer math.
+        # It's the fastest possible path for these specific hyper-power calculations.
+        is_self_pure_power = len(self.poly) == 1 and list(self.poly.values())[0] == 1
+        is_other_pure_power = len(other.poly) == 1 and list(other.poly.values())[0] == 1
+
+        if is_self_pure_power and is_other_pure_power and self.base == 10:
+            self_exp = list(self.poly.keys())[0]
+            # Check if the base's exponent is itself a clean power of 10
+            if self_exp > 0 and self_exp % 10 == 0:
+                try:
+                    k = int(math.log10(self_exp))
+                    if 10**k == self_exp: # It's a perfect power of 10
+                        n = list(other.poly.keys())[0]
+                        log_pow(f"HYPER-FAST PATH: Detected (10^(10^{k}))^(10^{n}). New exponent is 10^({k}+{n}).")
+                        new_final_exponent = 10**(k + n)
+                        return AoPValue({new_final_exponent: 1}, base=self.base)
+                except (ValueError, TypeError):
+                    # Not a perfect power of 10, fall through to the next path
+                    pass
+
+        # --- Tier 2: The "General Fast Path" (Symbolic Exponentiation) ---
+        # This handles (base^k) ^ other where k is not a power of 10.
+        # It's slower than Tier 1 but avoids converting `other` to a massive integer.
+        if is_self_pure_power:
+            # We are in the simple case: (base^k) ^ other
+            k = list(self.poly.keys())[0]
+            k_as_aop = AoPValue.from_number(k, base=self.base)
+            new_exponent_as_aop = k_as_aop * other
+            new_exponent_numerical = new_exponent_as_aop.to_numerical()
+            return AoPValue({new_exponent_numerical: 1}, base=self.base, is_negative=self.is_negative and (new_exponent_numerical % 2 == 1))
+
+        # --- Tier 3: The General-Purpose Algorithm (Exponentiation by Squaring) ---
+        # This is the fallback for all other cases (e.g., (a+b)^c).
+        # It converts the exponent to a numerical value.
+        log_pow(f"GENERAL PATH: Calculating ({self!r}) ^ ({other!r})")
+        n_int = other.to_numerical()
+        if n_int < 0: raise ValueError("Exponent must be a non-negative integer.")
+
         if n_int == 0: return AoPValue({0: 1}, self.base)
         if n_int == 1: return self
 
-        # Use square-and-multiply algorithm for efficient exponentiation
+        # Standard square-and-multiply algorithm
         result = AoPValue({0: 1}, self.base)
-        base = AoPValue(self.poly.copy(), self.base, self.is_negative)
-        is_negative = self.is_negative and (n_int % 2 == 1)
+        current_base = self
         while n_int > 0:
-            if n_int % 2 == 1:
-                # Minimize object creation by updating result in-place if possible
-                result = result * base
-            # Square the base in-place to reduce copying
-            base = base * base
+            if n_int % 2 == 1: result *= current_base
+            current_base *= current_base
             n_int //= 2
-
-        result.is_negative = is_negative
         return result
 
     def __repr__(self) -> str:

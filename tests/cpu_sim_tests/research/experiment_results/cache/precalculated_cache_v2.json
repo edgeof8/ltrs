@@ -1,0 +1,23 @@
+{
+  "10": {
+    "a": {
+      "raw_pickle": "gASVWQAAAAAAAACMGmFvcGxfcHl0aG9uX2ltcGwuYW9wX3ZhbHVllIwIQW9QVmFsdWWUk5QpgZR9lCiMBHBvbHmUfZRLAUsBc4wEYmFzZZRLCowLaXNfbmVnYXRpdmWUiXViLg==",
+      "num": "10"
+    },
+    "e": {
+      "raw_pickle": "gASVWQAAAAAAAACMGmFvcGxfcHl0aG9uX2ltcGwuYW9wX3ZhbHVllIwIQW9QVmFsdWWUk5QpgZR9lCiMBHBvbHmUfZRLBUsBc4wEYmFzZZRLCowLaXNfbmVnYXRpdmWUiXViLg==",
+      "num": "100000"
+    },
+    "y": {
+      "raw_pickle": "gASVWQAAAAAAAACMGmFvcGxfcHl0aG9uX2ltcGwuYW9wX3ZhbHVllIwIQW9QVmFsdWWUk5QpgZR9lCiMBHBvbHmUfZRLGUsBc4wEYmFzZZRLCowLaXNfbmVnYXRpdmWUiXViLg==",
+      "num": "10000000000000000000000000"
+    },
+    "bc": {
+      "raw_pickle": "gASVWQAAAAAAAACMGmFvcGxfcHl0aG9uX2ltcGwuYW9wX3ZhbHVllIwIQW9QVmFsdWWUk5QpgZR9lCiMBHBvbHmUfZRLBUsBc4wEYmFzZZRLCowLaXNfbmVnYXRpdmWUiXViLg=="
+    },
+    "a^bc": {
+      "raw_pickle": "gASVXAAAAAAAAACMGmFvcGxfcHl0aG9uX2ltcGwuYW9wX3ZhbHVllIwIQW9QVmFsdWWUk5QpgZR9lCiMBHBvbHmUfZRKoIYBAEsBc4wEYmFzZZRLCowLaXNfbmVnYXRpdmWUiXViLg==",
+      "aop": "a^e"
+    }
+  }
+}
