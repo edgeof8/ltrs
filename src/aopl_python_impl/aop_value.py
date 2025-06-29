@@ -239,7 +239,25 @@ class AoPValue:
                 i += 1
         self.poly = {exp: coeff for exp, coeff in new_poly.items() if coeff != 0}
 
-    def __mul__(self, other: 'AoPValue') -> 'AoPValue':
+    # --- SPECIALIZED MULTIPLIERS (New private methods) ---
+
+    def _get_trailing_zeros(self) -> int:
+        """Helper to find the number of trailing zeros (lowest exponent)."""
+        if not self.poly:
+            return 0
+        return min(self.poly.keys())
+
+    def _strip_trailing_zeros(self, zero_count: int) -> 'AoPValue':
+        """Helper to return a new AoPValue with zeros removed."""
+        if zero_count == 0:
+            return self
+        new_poly = {exp - zero_count: coeff for exp, coeff in self.poly.items()}
+        return AoPValue(new_poly, self.base, self.is_negative)
+
+    def _dense_mul(self, other: 'AoPValue') -> 'AoPValue':
+        """
+        The original, robust multiplication algorithm for dense polynomials.
+        """
         if not self.poly or not other.poly: return AoPValue(base=self.base)
         new_poly: Dict[int, int] = {}
         # Optimize by iterating over the smaller polynomial to reduce iterations
@@ -260,6 +278,41 @@ class AoPValue:
         new_val = AoPValue(new_poly, self.base, is_negative)
         new_val._simplify()
         return new_val
+
+    # --- THE NEW DISPATCHER ---
+
+    def __mul__(self, other: 'AoPValue') -> 'AoPValue':
+        """
+        The Intelligent Dispatcher for multiplication. It analyzes the operands
+        and chooses the most efficient algorithm.
+        """
+        # --- Tier 0: The Trailing Zero Shortcut ---
+        self_zeros = self._get_trailing_zeros()
+        other_zeros = self._get_trailing_zeros()
+
+        # Use this shortcut if there's a significant number of zeros to strip
+        if self_zeros > 5 and other_zeros > 5:
+            log_pow(f"DISPATCHER: Using Trailing Zero Shortcut.")
+            # 1. Strip the zeros to get the "heads"
+            self_head = self._strip_trailing_zeros(self_zeros)
+            other_head = other._strip_trailing_zeros(other_zeros)
+
+            # 2. Multiply the heads using the general dispatcher (recursive call)
+            result_head = self_head * other_head  # This recursive call is key
+
+            # 3. Stitch the result back together by adding the exponents
+            total_zeros = self_zeros + other_zeros
+            final_poly = {exp + total_zeros: coeff for exp, coeff in result_head.poly.items()}
+            return AoPValue(final_poly, self.base, result_head.is_negative)
+
+        # --- Tier 1: Split-and-Conquer (Future Implementation) ---
+        # if self._is_splittable() and other._is_splittable():
+        #     log_pow(f"DISPATCHER: Using Split-and-Conquer.")
+        #     return self._split_conquer_mul(other)
+
+        # --- Tier 2: Fallback to the Dense Multiplier ---
+        log_pow(f"DISPATCHER: Using Dense Polynomial Multiplier.")
+        return self._dense_mul(other)
 
     def __pow__(self, other: 'AoPValue') -> 'AoPValue':
         # --- Tier 1: The "Hyper-Fast Path" (Exploiting the Logarithmic Shortcut) ---

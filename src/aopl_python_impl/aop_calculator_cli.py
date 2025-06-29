@@ -3,7 +3,7 @@ import argparse
 import sys
 import logging
 from .aop_calculator import AoP_Calculator
-
+sys.set_int_max_str_digits(0)
 def main():
     parser = argparse.ArgumentParser(description="AoP Calculator - Calculate expressions in various bases.")
     parser.add_argument("expression", type=str, help="The expression to evaluate (e.g., 'a^b + c').")
@@ -12,6 +12,8 @@ def main():
     parser.add_argument("--debug", action="store_true", help="Enable debug mode for detailed calculation trace.")
     # --- NEW: Argument to disable caching for testing/benchmarking ---
     parser.add_argument("--no-cache", action="store_true", help="Disable loading from and saving to the cache.")
+    # --- NEW: Argument for file output ---
+    parser.add_argument("-o", "--output", type=str, help="Path to an output file to write the result to.")
     args = parser.parse_args()
 
     if args.debug:
@@ -28,8 +30,25 @@ def main():
     if args.no_cache:
         calc.cache = None
 
-    result = calc.evaluate_expression(args.expression, mode=args.mode)
-    print(result)
+    try:
+        result = calc.evaluate_expression(args.expression, mode=args.mode)
+
+        if args.output:
+            # Temporarily increase the digit limit ONLY for this file write operation
+            # This is safer than setting it globally.
+            original_limit = sys.get_int_max_str_digits()
+            try:
+                sys.set_int_max_str_digits(0) # 0 = no limit for this specific task
+                with open(args.output, 'w') as f:
+                    f.write(result)
+            finally:
+                sys.set_int_max_str_digits(original_limit) # Always restore the original limit
+            print(f"Result successfully written to: {args.output}")
+        else:
+            print(result)
+
+    except Exception as e:
+        print(f"An error occurred: {e}", file=sys.stderr)
 
     # --- NEW: Save the cache to disk before exiting ---
     if not args.no_cache:
