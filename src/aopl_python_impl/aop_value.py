@@ -283,6 +283,13 @@ class AoPValue:
         new_val._simplify()
         return new_val
 
+    def __imul__(self, other: 'AoPValue') -> 'AoPValue':
+        """In-place multiplication."""
+        result = self * other
+        self.poly = result.poly
+        self.is_negative = result.is_negative
+        return self
+
     def _split_at_midpoint(self) -> tuple['AoPValue', 'AoPValue']:
         """
         Splits a polynomial into two halves for Karatsuba's algorithm.
