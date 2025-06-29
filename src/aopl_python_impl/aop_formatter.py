@@ -99,7 +99,7 @@ def _format_polynomial(val: AoPValue, letter_map: dict) -> str:
             coeff_str = "" if display_coeff > 0 else "-"
 
         # Convert the string key from the dictionary into its integer value for lookups
-        exp_num = key_to_int(exp, base=current_base) if isinstance(exp, str) else exp
+        exp_num = key_to_int(exp, current_base) if isinstance(exp, str) else exp
         if exp_num == 0:
             exp_str = "" # This is a constant term
         elif exp_num in letter_map:

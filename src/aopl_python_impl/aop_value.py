@@ -5,7 +5,7 @@ from itertools import zip_longest
 import math
 import logging
 from .aop_logger import log_pow
-from .definitions import LETTER_TO_EXPONENT_MAP
+from .definitions import LETTER_TO_EXPONENT_MAP, EXPONENT_TO_LETTER_MAP
 from .aop_types import SymbolicPowerResult
 
 # --- NEW: Top-level function for multiprocessing ---
@@ -20,57 +20,85 @@ def _add_poly_batch(exps, poly1, poly2):
             result[exp] = coeff
     return result
 
-def key_to_int(key: str, base: int = 10) -> int:
-    """Convert a string key in AoP notation to its numerical exponent value."""
-    if not key:
+def key_to_int(key_str: str, _base: int = 10) -> int:
+    """
+    Converts a canonical AoP string exponent (e.g., "b", "Z", "2c5a", "0")
+    to its numerical integer value.
+    """
+    if key_str == "0": # Canonical string for exponent 0
         return 0
-    total = 0
-    i = 0
-    while i < len(key):
-        if key[i].isdigit():
-            num = ""
-            while i < len(key) and key[i].isdigit():
-                num += key[i]
-                i += 1
-            coeff = int(num) if num else 1
-            if i < len(key):
-                letter = key[i]
-                exp_val = LETTER_TO_EXPONENT_MAP.get(letter, 0)
-                total += coeff * exp_val
-                i += 1
-            else:
-                total += coeff * 0  # Assume 'a0' or similar for single digit
-        else:
-            letter = key[i]
-            exp_val = LETTER_TO_EXPONENT_MAP.get(letter, 0)
-            total += exp_val
-            i += 1
-    return total
 
-def int_to_key(exp: int, base: int = 10) -> str:
-    """Convert a numerical exponent to its canonical string representation in AoP notation."""
-    if exp == 0:
-        return ""
-    result = []
-    remaining = exp
-    # Create a reverse mapping from exponent value to letter
-    REVERSE_LETTER_MAP = {v: k for k, v in LETTER_TO_EXPONENT_MAP.items()}
-    for value, letter in sorted(REVERSE_LETTER_MAP.items(), reverse=True):
-        if value == 0:
-            continue
-        coeff = remaining // value if value != 0 else 0
-        if coeff > 0:
-            if coeff > 1:
-                result.append(f"{coeff}{letter}")
+    total_exp_val = 0
+    current_coeff_str = ""
+    current_letter_str = ""
+
+    # Iterate through the string to parse it
+    for char in key_str:
+        if char.isdigit():
+            current_coeff_str += char
+        elif char.isalpha():
+            # Process the previous coeff/letter group (if any)
+            if not current_coeff_str.isnumeric() and not current_letter_str.isalpha():
+                # This handles cases like "b" or "Z" where there's no explicit coeff
+                coeff = 1
+            elif current_coeff_str.isnumeric():
+                coeff = int(current_coeff_str)
             else:
-                result.append(letter)
-            remaining -= coeff * value
-    if remaining > 0:
-        if remaining == 1:
-            result.append("a0")
+                raise ValueError(f"Invalid AoP key format: '{key_str}'. Expected digit or letter, got '{char}' after non-coeff.")
+
+            current_letter_exp = LETTER_TO_EXPONENT_MAP.get(char, 0)
+            total_exp_val += coeff * current_letter_exp
+
+            current_coeff_str = "" # Reset for next group
+            current_letter_str = "" # Reset
         else:
-            result.append(f"{remaining}a0")
-    return "".join(result)
+            raise ValueError(f"Invalid character in AoP key string: '{key_str}' (char: '{char}')")
+
+    # Handle cases like "5" (a standalone number exponent)
+    if current_coeff_str.isnumeric() and not current_letter_str.isalpha():
+        total_exp_val += int(current_coeff_str) # Assume it's 5 * 10^0
+
+    return total_exp_val
+
+def int_to_key(exp_num: int, _base: int = 10) -> str:
+    """
+    Converts a numerical integer exponent to its canonical AoP string representation.
+    e.g., 1 -> "a", 2 -> "b", 26 -> "A", 100 -> "Z", 101 -> "Za" (or aZ based on canonical form)
+    """
+    if exp_num == 0:
+        return "0" # Canonical string for exponent 0
+
+    parts = []
+    remaining_exp = exp_num
+
+    # Use EXPONENT_TO_LETTER_MAP for direct lookups
+    # Sort by numerical value, largest first, to build canonical form
+    # EXPONENT_TO_LETTER_MAP is typically {1:'a', 2:'b', ..., 100:'Z'}
+
+    # It's crucial that EXPONENT_TO_LETTER_MAP is robust.
+    # We need to use the one from definitions.py that correctly maps values like 100 to 'Z'.
+    # Let's assume it's available and correct.
+
+    # Iterate through possible exponent values from highest to lowest
+    # This list needs to be derived from LETTER_TO_EXPONENT_MAP's values
+    sorted_exp_values = sorted(LETTER_TO_EXPONENT_MAP.values(), reverse=True)
+    sorted_exp_values = list(dict.fromkeys(sorted_exp_values)) # Remove duplicates if 'z' and 'Z' both map to 100
+
+    for val in sorted_exp_values:
+        if val == 0: continue # Skip 0, handled by "0" return
+
+        count = remaining_exp // val
+        if count > 0:
+            letter = EXPONENT_TO_LETTER_MAP.get(val, str(val)) # Fallback to number if no letter
+            parts.append(f"{count}{letter}" if count > 1 else letter)
+            remaining_exp -= count * val
+
+    if remaining_exp > 0:
+        # Append any remaining numerical value that couldn't be mapped to letters
+        # This handles cases like 101 -> "Z1" if 1 is not a letter or if it's already used
+        parts.append(str(remaining_exp))
+
+    return "".join(parts)
 
 class AoPValue:
     def __init__(self, poly: Optional[Dict[str, int]] = None, base: int = 10, is_negative: bool = False):
