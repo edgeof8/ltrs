@@ -1,16 +1,15 @@
 // aop_rust_core/src/python_interface.rs
 
 use super::aop_value::AoPValue;
-use super::exponent_map::int_to_key_rust; // Removed unused key_to_int_rust
+use super::exponent_map::int_to_key_rust;
 use num_bigint::BigInt;
+// Import the Integer trait to bring its methods (like is_odd, div_mod_floor) into scope.
 use num_integer::Integer;
 use num_traits::{One, Signed, ToPrimitive, Zero};
 use pyo3::prelude::*;
 use std::collections::HashMap;
 use std::ops::{Add, Mul, Sub};
 
-// --- NEW HELPER FUNCTION ---
-// This private helper creates an AoPValue from a Rust BigInt, bypassing PyO3's PyAny.
 fn from_bigint(n: &BigInt, base: u32) -> AoPValue {
     if n.is_zero() {
         return AoPValue::_new_internal(HashMap::new(), base, false);
@@ -21,7 +20,7 @@ fn from_bigint(n: &BigInt, base: u32) -> AoPValue {
     let mut poly = HashMap::new();
     let mut exp = BigInt::zero();
     while n_abs > BigInt::zero() {
-        let (new_n, remainder) = n_abs.div_mod_floor(&base_bigint);
+        let (new_n, remainder) = n_abs.div_rem(&base_bigint);
         if !remainder.is_zero() {
             poly.insert(exp.clone(), remainder);
         }
@@ -54,7 +53,6 @@ impl AoPValue {
     #[staticmethod]
     pub fn from_number(n: &PyAny, base: u32) -> PyResult<Self> {
         let n_bigint: BigInt = n.extract()?;
-        // Delegate to the internal Rust-native helper function
         Ok(from_bigint(&n_bigint, base))
     }
 
@@ -105,7 +103,6 @@ impl AoPValue {
     pub fn __add__(&self, other: &Self) -> Self {
         self.add(other)
     }
-
     pub fn __sub__(&self, other: &Self) -> Self {
         if self.is_negative != other.is_negative {
             let mut other_flipped = other.clone();
@@ -126,11 +123,8 @@ impl AoPValue {
         } else {
             !self.is_negative
         };
-        result._handle_neg_coeffs();
-        result._simplify();
         result
     }
-
     pub fn __mul__(&self, other: &Self) -> Self {
         self.mul(other)
     }
@@ -159,20 +153,15 @@ impl AoPValue {
             }
         }
 
-        // --- CRITICAL FIX ---
-        // For complex bases, attempt to flatten the exponent.
-        // If it's too big (to_numerical returns -1), then this operation is unresolvable.
         let n = other.to_numerical();
         if n == BigInt::from(-1) {
-            // Signal to Python that this cannot be resolved numerically.
             return Err(pyo3::exceptions::PyNotImplementedError::new_err(
                 "Complex base cannot be raised to a non-numeric exponent.",
             ));
         }
-
         if n < BigInt::zero() {
             return Err(pyo3::exceptions::PyValueError::new_err(
-                "Exponent must be non-negative for complex bases.",
+                "Exponent must be non-negative.",
             ));
         }
         if n.is_zero() {
@@ -194,7 +183,7 @@ impl AoPValue {
         let mut current_base = self.clone();
         let mut n_rem = n;
         while n_rem > BigInt::zero() {
-            if n_rem.is_odd() {
+            if (n_rem.clone() % 2) == BigInt::one() {
                 result = &result * &current_base;
             }
             current_base = &current_base * &current_base;

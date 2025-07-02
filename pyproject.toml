@@ -1,35 +1,21 @@
-# pyproject.toml
+# ltrs/pyproject.toml
 
 [build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
 
 [project]
-name = "ltrs"
-version = "1.0.0"
-authors = [
-  { name="AoP Developer", email="aop.dev@example.com" },
-]
-description = "An interpreter for the Alphabet of Powers mathematical system."
-readme = "README.md"
-requires-python = ">=3.9"
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-    "Topic :: Scientific/Engineering :: Mathematics",
-    "Environment :: Console",
-]
-dependencies = [
-    "matplotlib",
-    "numpy", # numpy is used in aop_visualizer.py
-    "requests", # For AI explainer feature
-]
+# The project name can be anything, e.g., "aop-calculator"
+name = "aop-calculator"
+version = "0.1.0"
 
-[project.urls]
-"Homepage" = "https://github.com/placeholder-username/letter-powers"
-"Bug Tracker" = "https://github.com/placeholder-username/letter-powers/issues"
-
-# This is the magic part that creates the `ltrs` command!
-[project.scripts]
-ltrs = "aopl_python_impl.aop_calculator_cli:main"
+# --- THIS SECTION IS THE FIX ---
+# We define a "src-layout" which is standard for mixed projects.
+[tool.maturin]
+# This tells maturin that the Python package 'aopl_python_impl' is inside the 'src' directory.
+python-source = "src"
+# This tells maturin where to find the Rust crate to compile.
+manifest-path = "aop_rust_core/Cargo.toml"
+# This tells maturin the name of the Python module it should create.
+# It MUST match the one defined in your Rust lib.rs (`#[pymodule] fn aop_rust_core(...)`).
+module-name = "aopl_python_impl.aop_rust_core"
