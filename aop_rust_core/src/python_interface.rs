@@ -7,9 +7,8 @@ use num_integer::Integer;
 use num_traits::{One, Signed, ToPrimitive, Zero};
 use pyo3::prelude::*;
 use std::collections::HashMap;
-use std::ops::{Add, Mul, Sub};
+use std::ops::{Add, Sub};
 
-// ... (from_bigint and other methods at the top are correct) ...
 fn from_bigint(n: &BigInt, base: u32) -> AoPValue {
     if n.is_zero() {
         return AoPValue::_new_internal(HashMap::new(), base, false);
@@ -32,7 +31,6 @@ fn from_bigint(n: &BigInt, base: u32) -> AoPValue {
 
 #[pymethods]
 impl AoPValue {
-    // ... (new, from_number, to_numerical, get_poly, __repr__, __add__, __sub__, __mul__ are correct) ...
     #[new]
     #[pyo3(signature = (poly_str_keys = None, base = 10, is_negative = false))]
     pub fn new(
@@ -121,8 +119,11 @@ impl AoPValue {
         };
         result
     }
+
     pub fn __mul__(&self, other: &Self) -> Self {
-        self.mul(other)
+        let mut result = self._mul_raw(other);
+        result._simplify();
+        result
     }
 
     fn __pow__(&self, other: &Self, modulo: Option<&PyAny>) -> PyResult<Self> {
@@ -132,15 +133,17 @@ impl AoPValue {
             ));
         }
 
+        // Symbolic path for (base^E1)^E2
         if self.poly.len() == 1 {
             if let Some((exp1, coeff1)) = self.poly.iter().next() {
                 if coeff1.is_one() && !self.is_negative {
+                    // new_exponent = old_exponent * other_value
                     let exp1_as_aop = from_bigint(exp1, self.base);
-                    let new_exponent_aop = exp1_as_aop.mul(other);
+                    let new_exponent_aop = exp1_as_aop.__mul__(other); // Use the public, simplifying mul
                     let final_exponent_val = new_exponent_aop.to_numerical();
                     if final_exponent_val == BigInt::from(-1) {
                         return Err(pyo3::exceptions::PyValueError::new_err(
-                            "Resulting exponent is too large to represent.",
+                            "Symbolic exponent is too large to represent.",
                         ));
                     }
                     let new_poly = HashMap::from([(final_exponent_val, BigInt::one())]);
@@ -180,14 +183,12 @@ impl AoPValue {
         let mut n_rem = n;
         while n_rem > BigInt::zero() {
             if n_rem.is_odd() {
-                // --- Use the fast, non-simplifying multiplication ---
                 result = result._mul_raw(&current_base);
             }
             current_base = current_base._mul_raw(&current_base);
             n_rem /= 2;
         }
 
-        // --- Simplify ONCE at the very end ---
         result._simplify();
         Ok(result)
     }

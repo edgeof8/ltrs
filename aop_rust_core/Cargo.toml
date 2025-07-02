@@ -8,6 +8,7 @@ name = "aop_rust_core"
 crate-type = ["cdylib"]
 
 [dependencies]
+# The `serde` feature is for serialization, which is good practice.
 num-bigint = { version = "0.4", features = ["serde"] }
 num-integer = "0.1.45"
 num-traits = "0.2"
@@ -16,5 +17,4 @@ rayon = "1.8.0"
 
 # --- THIS IS THE FIX ---
 # Add the "num-bigint" feature directly to the pyo3 dependency.
-# Remove the pyo3-num line.
-pyo3 = { version = "0.20.0", features = ["extension-module", "num-bigint"] }
+pyo3 = { version = "0.20.3", features = ["extension-module", "num-bigint"] }

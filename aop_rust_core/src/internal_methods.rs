@@ -4,13 +4,12 @@ use super::aop_value::AoPValue;
 use num_bigint::BigInt;
 use num_integer::Integer;
 use num_traits::{One, Signed, Zero};
-use rayon::prelude::*; // --- ADD RAYON PRELUDE ---
+// --- THIS IS THE FIX ---
+// Import the specific rayon traits needed for .par_iter() on collections.
+use rayon::prelude::*;
 use std::collections::HashMap;
 
 impl AoPValue {
-    // _new_internal, _simplify, _compare_magnitude, _handle_neg_coeffs,
-    // _get_trailing_zeros, and _strip_trailing_zeros are all correct and do not need changes.
-    // ... (keep all existing correct methods) ...
     pub fn _new_internal(poly: HashMap<BigInt, BigInt>, base: u32, is_negative: bool) -> Self {
         let poly_filtered = poly.into_iter().filter(|(_, c)| !c.is_zero()).collect();
         Self {
@@ -19,30 +18,39 @@ impl AoPValue {
             is_negative,
         }
     }
+
     pub fn _simplify(&mut self) {
         if self.poly.is_empty() {
             self.is_negative = false;
             return;
         }
+
         self._handle_neg_coeffs();
+
         let base_bigint = BigInt::from(self.base);
         let mut sorted_exps: Vec<_> = self.poly.keys().cloned().collect();
         sorted_exps.sort_unstable();
+
         let mut i = 0;
         while i < sorted_exps.len() {
             let exp = sorted_exps[i].clone();
             if let Some(coeff) = self.poly.get_mut(&exp) {
+                // --- THIS IS THE FIX ---
+                // Check magnitude without moving base_bigint.
                 if coeff.abs() >= base_bigint {
                     let (new_carry, remainder) = coeff.clone().div_mod_floor(&base_bigint);
+
                     if remainder.is_zero() {
-                        *coeff = BigInt::zero();
+                        *coeff = BigInt::zero(); // Mark for removal
                     } else {
                         *coeff = remainder;
                     }
+
                     if !new_carry.is_zero() {
                         let next_exp = exp.clone() + BigInt::one();
                         let entry = self.poly.entry(next_exp.clone()).or_default();
                         *entry += new_carry;
+
                         if let Err(pos) = sorted_exps.binary_search(&next_exp) {
                             sorted_exps.insert(pos, next_exp);
                         }
@@ -51,11 +59,15 @@ impl AoPValue {
             }
             i += 1;
         }
+
         self.poly.retain(|_, v| !v.is_zero());
+
         if self.poly.is_empty() {
             self.is_negative = false;
         }
     }
+
+    // ... (the rest of the internal methods are correct and do not need to change) ...
     pub fn _compare_magnitude(&self, other: &Self) -> i8 {
         let self_max_exp = self
             .poly
@@ -91,6 +103,7 @@ impl AoPValue {
         }
         0
     }
+
     pub fn _handle_neg_coeffs(&mut self) {
         if self.poly.values().all(|c| !c.is_negative()) {
             return;
@@ -111,9 +124,11 @@ impl AoPValue {
         }
         self.poly.retain(|_, v| !v.is_zero());
     }
+
     pub fn _get_trailing_zeros(&self) -> BigInt {
         self.poly.keys().min().cloned().unwrap_or_default()
     }
+
     pub fn _strip_trailing_zeros(&self, zero_count: &BigInt) -> Self {
         if zero_count.is_zero() {
             return self.clone();
@@ -126,37 +141,48 @@ impl AoPValue {
         Self::_new_internal(new_poly, self.base, self.is_negative)
     }
 
-    // --- RENAMED and PARALLELIZED: This is the raw multiplication engine ---
+    pub fn _dense_mul(&self, other: &Self) -> Self {
+        if self.poly.is_empty() || other.poly.is_empty() {
+            return Self::_new_internal(HashMap::new(), self.base, false);
+        }
+        let mut new_poly = HashMap::new();
+        for (e1, c1) in &self.poly {
+            for (e2, c2) in &other.poly {
+                *new_poly.entry(e1 + e2).or_default() += c1 * c2;
+            }
+        }
+        let mut result =
+            Self::_new_internal(new_poly, self.base, self.is_negative != other.is_negative);
+        result._simplify();
+        result
+    }
+
+    // --- FIX: Make this method public within the crate ---
     pub fn _mul_raw(&self, other: &Self) -> Self {
         if self.poly.is_empty() || other.poly.is_empty() {
             return Self::_new_internal(HashMap::new(), self.base, false);
         }
 
-        // Parallelize the outer loop of the multiplication.
-        // Each thread calculates a sub-map of new terms.
-        let new_poly_parts: Vec<HashMap<BigInt, BigInt>> = self
+        let new_poly = self
             .poly
             .par_iter()
-            .map(|(e1, c1)| {
-                let mut sub_map = HashMap::new();
-                for (e2, c2) in &other.poly {
-                    sub_map.insert(e1 + e2, c1 * c2);
-                }
-                sub_map
+            .flat_map(|(e1, c1)| {
+                other
+                    .poly
+                    .par_iter()
+                    .map(move |(e2, c2)| (e1 + e2, c1 * c2))
             })
-            .collect();
-
-        // Reduce the vector of HashMaps into a single HashMap by summing coefficients for duplicate keys.
-        let new_poly = new_poly_parts
-            .into_par_iter()
-            .reduce(HashMap::new, |mut a, b| {
-                for (k, v) in b {
-                    *a.entry(k).or_default() += v;
+            .fold(HashMap::new, |mut map, (exp, coeff)| {
+                *map.entry(exp).or_default() += coeff;
+                map
+            })
+            .reduce(HashMap::new, |mut map1, map2| {
+                for (exp, coeff) in map2 {
+                    *map1.entry(exp).or_default() += coeff;
                 }
-                a
+                map1
             });
 
-        // CRITICAL: Do NOT simplify here. Return the raw product.
         Self::_new_internal(new_poly, self.base, self.is_negative != other.is_negative)
     }
 }
