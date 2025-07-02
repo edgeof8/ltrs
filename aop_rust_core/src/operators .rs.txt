@@ -1,17 +1,50 @@
 // aop_rust_core/src/operators.rs
 
 use super::aop_value::AoPValue;
-use super::KARATSUBA_THRESHOLD; // Keep for future Karatsuba re-introduction
 use num_bigint::BigInt;
+use num_traits::Zero;
+use rayon::prelude::*;
+use std::collections::HashMap;
 use std::ops::{Add, Mul, Sub};
 
+const PARALLEL_ADD_THRESHOLD: usize = 2000;
+
 impl<'a, 'b> Add<&'b AoPValue> for &'a AoPValue {
+    // ... (add implementation is correct and does not need changes) ...
     type Output = AoPValue;
     fn add(self, other: &'b AoPValue) -> AoPValue {
-        let mut new_poly = self.poly.clone();
-        for (e, c) in &other.poly {
-            *new_poly.entry(e.clone()).or_default() += c;
+        if self.poly.is_empty() {
+            return other.clone();
         }
+        if other.poly.is_empty() {
+            return self.clone();
+        }
+        let mut all_exps: Vec<_> = self.poly.keys().chain(other.poly.keys()).cloned().collect();
+        all_exps.sort_unstable();
+        all_exps.dedup();
+        let zero_val = BigInt::zero();
+        let new_poly = if all_exps.len() < PARALLEL_ADD_THRESHOLD {
+            let mut new_poly_mut = HashMap::new();
+            for exp in all_exps {
+                let c1 = self.poly.get(&exp).unwrap_or(&zero_val);
+                let c2 = other.poly.get(&exp).unwrap_or(&zero_val);
+                let sum = c1 + c2;
+                if !sum.is_zero() {
+                    new_poly_mut.insert(exp, sum);
+                }
+            }
+            new_poly_mut
+        } else {
+            all_exps
+                .par_iter()
+                .map(|exp| {
+                    let c1 = self.poly.get(exp).unwrap_or(&zero_val);
+                    let c2 = other.poly.get(exp).unwrap_or(&zero_val);
+                    (exp.clone(), c1 + c2)
+                })
+                .filter(|(_, sum)| !sum.is_zero())
+                .collect()
+        };
         let mut result = AoPValue::_new_internal(new_poly, self.base, self.is_negative);
         result._simplify();
         result
@@ -19,6 +52,7 @@ impl<'a, 'b> Add<&'b AoPValue> for &'a AoPValue {
 }
 
 impl<'a, 'b> Sub<&'b AoPValue> for &'a AoPValue {
+    // ... (sub implementation is correct and does not need changes) ...
     type Output = AoPValue;
     fn sub(self, other: &'b AoPValue) -> AoPValue {
         let mut new_poly = self.poly.clone();
@@ -45,34 +79,28 @@ impl Sub<&AoPValue> for AoPValue {
     }
 }
 
-// --- NEW INTELLIGENT DISPATCHER FOR MULTIPLICATION ---
 impl<'a, 'b> Mul<&'b AoPValue> for &'a AoPValue {
     type Output = AoPValue;
     fn mul(self, other: &'b AoPValue) -> AoPValue {
-        // --- TRAILING ZERO SHORTCUT (Ported from your Python logic) ---
         let self_zeros = self._get_trailing_zeros();
         let other_zeros = other._get_trailing_zeros();
 
-        // This shortcut is the key to performance in exponentiation.
         if self_zeros > BigInt::from(0) || other_zeros > BigInt::from(0) {
             let self_head = self._strip_trailing_zeros(&self_zeros);
             let other_head = other._strip_trailing_zeros(&other_zeros);
-
-            // Recursively call mul on the "heads"
             let result_head = &self_head * &other_head;
-
-            // Stitch result back together by adding the exponents
             let total_zeros = self_zeros + other_zeros;
             let final_poly = result_head
                 .poly
                 .into_iter()
                 .map(|(e, c)| (e + &total_zeros, c))
                 .collect();
-            // We create the final value without simplifying, as the head is already simplified.
             return AoPValue::_new_internal(final_poly, self.base, result_head.is_negative);
         }
 
-        // For now, only use dense multiplication. Karatsuba can be added back later if needed.
-        self._dense_mul(other)
+        // The public operator always simplifies the result.
+        let mut result = self._mul_raw(other);
+        result._simplify();
+        result
     }
 }

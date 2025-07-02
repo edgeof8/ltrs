@@ -8,7 +8,6 @@ from .aop_logger import log_eval, Colors, log_pow
 _eval_depth = 0
 
 def _resolve_to_value(obj):
-    # ... (this function is now correct) ...
     current = obj
     while isinstance(current, SymbolicPowerResult):
         log_pow(f"Resolving SymbolicPower: {current!r}")
@@ -38,28 +37,32 @@ def evaluate_ast(node: ASTNode, base: int, cache: dict | None = None) -> 'AoPVal
     if isinstance(node, AopLiteralNode):
         # --- NEW LOGIC FOR AOP_LITERAL ---
         # It represents a single number, not a sum.
-        # e.g., "5e3b" -> 5*10^5 + 3*10^2
+        # e.g., "5e3b" -> 5*base^5 + 3*base^2
         poly = {}
-        # This regex finds terms like "5e" or "b"
         term_pattern = re.compile(r'(\d*)?([a-zA-Z])')
 
-        # Keep track of what part of the string we've processed
-        processed_value = node.value
-        for match in term_pattern.finditer(node.value):
+        # --- FIX: Add checks for None before calling string methods ---
+        node_val = node.value if node.value is not None else ""
+
+        # Check if the literal is purely numeric first, after stripping whitespace
+        if node_val.strip().isnumeric():
+             return AoPValue.from_number(int(node_val.strip()), base=base)
+
+        for match in term_pattern.finditer(node_val):
             coeff_str, letter = match.groups()
             coeff = int(coeff_str) if coeff_str else 1
             exp = LETTER_TO_EXPONENT_MAP.get(letter, 0)
             poly[str(exp)] = poly.get(str(exp), 0) + coeff
-            # Remove the matched part from our tracking string
-            processed_value = processed_value.replace(match.group(0), '', 1)
 
-        # Any part of the string left must be a number (constant term)
-        if processed_value.strip().isnumeric():
-            poly['0'] = poly.get('0', 0) + int(processed_value.strip())
+        last_part = term_pattern.sub('', node_val)
+        if last_part.strip().isnumeric():
+            poly['0'] = poly.get('0', 0) + int(last_part.strip())
 
         result = AoPValue(poly=poly, base=base)
     elif isinstance(node, UnaryOpNode):
         operand = _resolve_to_value(evaluate_ast(node.right, base, cache))
+        if not isinstance(operand, AoPValue):
+            raise TypeError(f"Cannot apply unary '{node.op.value}' to a non-numeric value")
         if node.op.value == '-':
             result = operand * AoPValue.from_number(-1, base=base)
         else:
@@ -71,9 +74,10 @@ def evaluate_ast(node: ASTNode, base: int, cache: dict | None = None) -> 'AoPVal
         log_eval(f"Evaluating: {left!r} {op} {right!r}", _eval_depth)
 
         if op in ('^', '**'):
-            # Must resolve operands before creating symbolic power
             left_aop = _resolve_to_value(left)
             right_aop = _resolve_to_value(right)
+            if not isinstance(left_aop, AoPValue) or not isinstance(right_aop, AoPValue):
+                 raise TypeError(f"Cannot raise a symbolic value to a symbolic power in this context.")
             result = SymbolicPowerResult(left_aop, right_aop)
         else:
             left_aop = _resolve_to_value(left)

@@ -5,7 +5,6 @@ use num_traits::{One, Zero};
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 
-// MODIFIED: The map values are now BigInt, not i64.
 pub static LETTER_TO_EXPONENT_MAP: Lazy<HashMap<char, BigInt>> = Lazy::new(|| {
     let mut map = HashMap::new();
     "abcdefghijklmnopqrstuvwxy"
@@ -25,7 +24,6 @@ pub static LETTER_TO_EXPONENT_MAP: Lazy<HashMap<char, BigInt>> = Lazy::new(|| {
     map
 });
 
-// MODIFIED: The map keys are now BigInt, not i64.
 pub static EXPONENT_TO_LETTER_MAP: Lazy<HashMap<BigInt, char>> = Lazy::new(|| {
     let mut map = HashMap::new();
     "abcdefghijklmnopqrstuvwxy"
@@ -44,18 +42,21 @@ pub static EXPONENT_TO_LETTER_MAP: Lazy<HashMap<BigInt, char>> = Lazy::new(|| {
     map
 });
 
-// REMOVED: The key_to_int_rust function is no longer used and has been deleted.
-
 pub fn int_to_key_rust(exp_num: &BigInt) -> String {
     if exp_num.is_zero() {
         return "0".to_string();
     }
+    if let Some(c) = EXPONENT_TO_LETTER_MAP.get(exp_num) {
+        return c.to_string();
+    }
+
     let mut parts = Vec::new();
     let mut remaining_exp = exp_num.clone();
-    // MODIFIED: The values are now BigInts.
+
     let mut sorted_exp_values: Vec<BigInt> = LETTER_TO_EXPONENT_MAP.values().cloned().collect();
-    sorted_exp_values.sort_unstable_by(|a, b| b.cmp(a)); // Correct sorting for BigInt
+    sorted_exp_values.sort_unstable_by(|a, b| b.cmp(a));
     sorted_exp_values.dedup();
+
     for val in &sorted_exp_values {
         if val.is_zero() {
             continue;
@@ -65,7 +66,7 @@ pub fn int_to_key_rust(exp_num: &BigInt) -> String {
             if !count.is_zero() {
                 let letter = EXPONENT_TO_LETTER_MAP.get(val).unwrap();
                 if count > BigInt::one() {
-                    parts.push(format!("{}{}", count, letter));
+                    parts.push(format!("{}*{}", count, letter));
                 } else {
                     parts.push(letter.to_string());
                 }
@@ -76,5 +77,5 @@ pub fn int_to_key_rust(exp_num: &BigInt) -> String {
     if !remaining_exp.is_zero() {
         parts.push(remaining_exp.to_string());
     }
-    parts.join("")
+    parts.join(" + ")
 }

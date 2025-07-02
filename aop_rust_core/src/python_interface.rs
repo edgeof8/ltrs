@@ -137,9 +137,8 @@ impl AoPValue {
         if self.poly.len() == 1 {
             if let Some((exp1, coeff1)) = self.poly.iter().next() {
                 if coeff1.is_one() && !self.is_negative {
-                    // new_exponent = old_exponent * other_value
                     let exp1_as_aop = from_bigint(exp1, self.base);
-                    let new_exponent_aop = exp1_as_aop.__mul__(other); // Use the public, simplifying mul
+                    let new_exponent_aop = exp1_as_aop.__mul__(other);
                     let final_exponent_val = new_exponent_aop.to_numerical();
                     if final_exponent_val == BigInt::from(-1) {
                         return Err(pyo3::exceptions::PyValueError::new_err(

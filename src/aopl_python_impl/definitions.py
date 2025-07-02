@@ -1,82 +1,89 @@
 # aopl_python_impl/definitions.py
-import re, string
-from typing import NamedTuple, List, Dict, Pattern, Optional, Tuple, TYPE_CHECKING, Union
 
-if TYPE_CHECKING:
-    from .aop_value import AoPValue
+# Mapping of exponents to their corresponding letter representations
+EXPONENT_TO_LETTER_MAP = {
+    0: "0",
+    1: "a",
+    2: "b",
+    3: "c",
+    4: "d",
+    5: "e",
+    6: "f",
+    7: "g",
+    8: "h",
+    9: "i",
+    10: "j",
+    20: "k",
+    30: "l",
+    40: "m",
+    50: "n",
+    60: "o",
+    70: "p",
+    80: "q",
+    90: "r",
+    100: "Z",
+}
 
+# Reverse mapping of letters to exponents
+LETTER_TO_EXPONENT_MAP = {v: k for k, v in EXPONENT_TO_LETTER_MAP.items()}
+
+# Token class for parsing
+class Token:
+    def __init__(self, kind, value=None):
+        self.kind = kind
+        self.value = value
+
+    # Token type constants
+    NUMBER = "NUMBER"
+    LETTER = "LETTER"
+    OPERATOR = "OPERATOR"
+    POWER = "POWER"
+    LPAREN = "LPAREN"
+    RPAREN = "RPAREN"
+    EOF = "EOF"
+
+# Regular expression for tokenizing input
+TOKEN_REGEX = r'(\d+|[a-zA-Z]+|[+\-*/^()]|\s+)'
+
+# Custom exception for AoP errors
+class AoPError(Exception):
+    pass
+
+# Class to represent symbolic power results
 class SymbolicPowerResult:
-    """A simple container for a lazy, unevaluated power operation."""
-    def __init__(self, base: Union['AoPValue', 'SymbolicPowerResult'], exponent: Union['AoPValue', 'SymbolicPowerResult']):
+    def __init__(self, base, exponent):
         self.base = base
         self.exponent = exponent
 
-    def __repr__(self):
-        return f"SymbolicPowerResult({self.base!r}^{self.exponent!r})"
+def int_to_key(exp: int, base: int = 10) -> str:
+    """
+    Converts a numerical integer exponent to its canonical AoP string representation.
+    """
+    if exp == 0: return "0"
 
-    @property
-    def system_base(self) -> int:
-        """Recursively finds the integer base of the entire symbolic power expression."""
-        # This helper is needed because self.base can be another SymbolicPowerResult.
-        current = self.base
-        while isinstance(current, SymbolicPowerResult):
-            current = current.base
-        # At the end of the chain, current is guaranteed to be an AoPValue.
-        return current.base
-
-    def __add__(self, other):
-        return NotImplemented
-
-    def __radd__(self, other):
-        return NotImplemented
-
-    def __mul__(self, other):
-        from .aop_value import AoPValue
-
-        if isinstance(other, SymbolicPowerResult) and self.base == other.base:
-            new_exponent = self.exponent + other.exponent
-            return SymbolicPowerResult(self.base, new_exponent)
-
-        if isinstance(other, AoPValue) and self.base == other:
-            # Use the new helper property to safely get the integer base.
-            one = AoPValue.from_number(1, base=self.system_base)
-            new_exponent = self.exponent + one
-            return SymbolicPowerResult(self.base, new_exponent)
-
-        return NotImplemented
-
-    def __rmul__(self, other):
-        return self.__mul__(other)
-
-
-class Token(NamedTuple): kind: str; value: str; start: int; end: int
-class AoPError(Exception): pass
-
-LOWERCASE_AOP_LETTERS = string.ascii_lowercase[:25]
-UPPERCASE_AOP_LETTERS = string.ascii_uppercase[:25]
-LETTER_TO_EXPONENT_MAP = {c: i+1 for i, c in enumerate(LOWERCASE_AOP_LETTERS)}
-LETTER_TO_EXPONENT_MAP.update({c: i+26 for i, c in enumerate(UPPERCASE_AOP_LETTERS)})
-LETTER_TO_EXPONENT_MAP['Z'] = 100
-LETTER_TO_EXPONENT_MAP['z'] = 100
-EXPONENT_TO_LETTER_MAP = {v: k for k, v in LETTER_TO_EXPONENT_MAP.items() if k != 'z'}
-
-def int_to_key(exp: int, base: int) -> str:
-    """Converts an integer exponent to a string representation using letter mapping."""
+    # Direct lookup for simple cases
     if exp in EXPONENT_TO_LETTER_MAP:
         return EXPONENT_TO_LETTER_MAP[exp]
-    elif exp == 0:
-        return ""
-    else:
-        return f"{exp}"
 
-TOKEN_REGEX = re.compile(r"(\*\*|==|[+\-*/^()])")
-OPERATORS = {
-    '=': {'precedence': 1, 'associativity': 'right'},
-    '==': {'precedence': 1.5, 'associativity': 'left'},
-    '+': {'precedence': 2, 'associativity': 'left'},
-    '-': {'precedence': 2, 'associativity': 'left'},
-    '*': {'precedence': 3, 'associativity': 'left'},
-    '/': {'precedence': 3, 'associativity': 'left'},
-    '^': {'precedence': 5, 'associativity': 'right'},
-    '**': {'precedence': 5, 'associativity': 'right'}
-}
+    parts = []
+    remaining_exp = exp
+    # Sort by value, descending, to build the string greedily (e.g., Z before a)
+    sorted_exp_values = sorted(LETTER_TO_EXPONENT_MAP.values(), reverse=True)
+    # Remove duplicates if z and Z map to the same value
+    sorted_exp_values = list(dict.fromkeys(sorted_exp_values))
+
+    for val in sorted_exp_values:
+        if val == 0: continue
+        if remaining_exp >= val:
+            count = remaining_exp // val
+            if count > 0:
+                letter = EXPONENT_TO_LETTER_MAP.get(val, str(val))
+                # Append count only if it's greater than 1
+                parts.append(f"{count}{letter}" if count > 1 else str(letter))
+                remaining_exp -= count * val
+
+    if remaining_exp > 0:
+        parts.append(str(remaining_exp))
+
+    # --- FIX: Join with '*' for multiplication, not '+' ---
+    return "*".join(parts)

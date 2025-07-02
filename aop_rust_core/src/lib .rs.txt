@@ -13,9 +13,6 @@ mod python_interface;
 use aop_value::AoPValue;
 use pyo3::prelude::*;
 
-// Define crate-level constants
-const KARATSUBA_THRESHOLD: usize = 70;
-
 // Define the python module
 #[pymodule]
 fn aop_rust_core(_py: Python, m: &PyModule) -> PyResult<()> {

@@ -4,8 +4,6 @@ use super::aop_value::AoPValue;
 use num_bigint::BigInt;
 use num_integer::Integer;
 use num_traits::{One, Signed, Zero};
-// --- THIS IS THE FIX ---
-// Import the specific rayon traits needed for .par_iter() on collections.
 use rayon::prelude::*;
 use std::collections::HashMap;
 
@@ -18,39 +16,30 @@ impl AoPValue {
             is_negative,
         }
     }
-
     pub fn _simplify(&mut self) {
         if self.poly.is_empty() {
             self.is_negative = false;
             return;
         }
-
         self._handle_neg_coeffs();
-
         let base_bigint = BigInt::from(self.base);
         let mut sorted_exps: Vec<_> = self.poly.keys().cloned().collect();
         sorted_exps.sort_unstable();
-
         let mut i = 0;
         while i < sorted_exps.len() {
             let exp = sorted_exps[i].clone();
             if let Some(coeff) = self.poly.get_mut(&exp) {
-                // --- THIS IS THE FIX ---
-                // Check magnitude without moving base_bigint.
                 if coeff.abs() >= base_bigint {
                     let (new_carry, remainder) = coeff.clone().div_mod_floor(&base_bigint);
-
                     if remainder.is_zero() {
-                        *coeff = BigInt::zero(); // Mark for removal
+                        *coeff = BigInt::zero();
                     } else {
                         *coeff = remainder;
                     }
-
                     if !new_carry.is_zero() {
                         let next_exp = exp.clone() + BigInt::one();
                         let entry = self.poly.entry(next_exp.clone()).or_default();
                         *entry += new_carry;
-
                         if let Err(pos) = sorted_exps.binary_search(&next_exp) {
                             sorted_exps.insert(pos, next_exp);
                         }
@@ -59,15 +48,11 @@ impl AoPValue {
             }
             i += 1;
         }
-
         self.poly.retain(|_, v| !v.is_zero());
-
         if self.poly.is_empty() {
             self.is_negative = false;
         }
     }
-
-    // ... (the rest of the internal methods are correct and do not need to change) ...
     pub fn _compare_magnitude(&self, other: &Self) -> i8 {
         let self_max_exp = self
             .poly
@@ -103,7 +88,6 @@ impl AoPValue {
         }
         0
     }
-
     pub fn _handle_neg_coeffs(&mut self) {
         if self.poly.values().all(|c| !c.is_negative()) {
             return;
@@ -125,6 +109,7 @@ impl AoPValue {
         self.poly.retain(|_, v| !v.is_zero());
     }
 
+    // --- FIX: Make these methods public ---
     pub fn _get_trailing_zeros(&self) -> BigInt {
         self.poly.keys().min().cloned().unwrap_or_default()
     }
@@ -141,23 +126,7 @@ impl AoPValue {
         Self::_new_internal(new_poly, self.base, self.is_negative)
     }
 
-    pub fn _dense_mul(&self, other: &Self) -> Self {
-        if self.poly.is_empty() || other.poly.is_empty() {
-            return Self::_new_internal(HashMap::new(), self.base, false);
-        }
-        let mut new_poly = HashMap::new();
-        for (e1, c1) in &self.poly {
-            for (e2, c2) in &other.poly {
-                *new_poly.entry(e1 + e2).or_default() += c1 * c2;
-            }
-        }
-        let mut result =
-            Self::_new_internal(new_poly, self.base, self.is_negative != other.is_negative);
-        result._simplify();
-        result
-    }
-
-    // --- FIX: Make this method public within the crate ---
+    // --- FIX: Make this method public ---
     pub fn _mul_raw(&self, other: &Self) -> Self {
         if self.poly.is_empty() || other.poly.is_empty() {
             return Self::_new_internal(HashMap::new(), self.base, false);

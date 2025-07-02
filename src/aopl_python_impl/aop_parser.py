@@ -16,8 +16,6 @@ OPERATORS: dict = {
 }
 
 def tokenize_expression(expression: str) -> List[Token]:
-    """A stateful tokenizer for the AoP grammar."""
-    # This regex splits the string by operators/parentheses, keeping them as delimiters.
     TOKEN_REGEX = re.compile(r"(\*\*|==|[+\-*/^()])")
     raw_parts = [p for p in TOKEN_REGEX.split(expression) if p]
     tokens = []
@@ -35,8 +33,6 @@ def tokenize_expression(expression: str) -> List[Token]:
         elif part in OPERATORS:
             tokens.append(Token('OPERATOR', part, start_pos, end_pos))
         else:
-            # Everything else is a literal to be parsed by the evaluator.
-            # This correctly handles "abc", "2b5c", "120", etc.
             tokens.append(Token('AOP_LITERAL', part, start_pos, end_pos))
 
     logging.debug(f"Tokens: {tokens}")
@@ -44,9 +40,7 @@ def tokenize_expression(expression: str) -> List[Token]:
 
 class Parser:
     def __init__(self, tokens: List[Token]):
-        self.tokens = tokens
-        self.pos = -1
-        self.current_token = None
+        self.tokens = tokens; self.pos = -1; self.current_token = None
         self.advance()
 
     def advance(self):
@@ -69,7 +63,6 @@ class Parser:
             op_token = self.current_token
             self.advance()
 
-            # For right-associative operators, recurse with a slightly lower precedence
             if op_info['associativity'] == 'right':
                 right = self.parse_expression(op_info['precedence'])
             else:
@@ -94,9 +87,8 @@ class Parser:
                 raise SyntaxError("Mismatched parentheses")
             self.advance()
             return node
-        elif token.value in ('-', '+'): # Handle unary operators
+        elif token.value in ('-', '+'):
             self.advance()
-            # Unary operators have high precedence (e.g., higher than multiplication)
             operand = self.parse_expression(10)
             return UnaryOpNode(token, operand)
 
