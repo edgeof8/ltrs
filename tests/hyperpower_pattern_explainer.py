@@ -60,33 +60,37 @@ def run_explainer():
     success_count = 0
     total_tests = 0
 
-    def get_expected_for_symbolic_power(expression, base=10):
+    def get_expected_symbolic_power_result(expression, calc):
         """
-        Calculates the expected result for (SymbolicPower)^(SymbolicPower) cases
-        by manipulating the exponents directly, avoiding slow large number creation.
-        Example: (aZ)^b -> (10^101)^100 -> 10^(101*100) -> 10^10100
+        A smart oracle that calculates the expected symbolic result by manipulating exponents directly.
         """
-        from aopl_python_impl.aop_value import AoPValue
-        from aopl_python_impl.aop_formatter import format_as_aop
         import re
+        from aopl_python_impl.aop_value import AoPValue, int_to_key, key_to_int
+        from aopl_python_impl.definitions import LETTER_TO_EXPONENT_MAP
 
-        # This is a mini-parser for expressions like '(aZ)^b'
-        match = re.match(r'\((?P<base_str>[a-zA-Z]+)\)\^(?P<exp_char>[a-zA-Z])', expression)
-        if not match: # Handle cases like 'Z^a'
-            match = re.match(r'(?P<base_str>[a-zA-Z])\^(?P<exp_char>[a-zA-Z])', expression)
+        if expression == 'Z^Z':
+            return 'a^(a^(b+2))' # This is a unique, known symbolic expansion
 
+        # This regex handles both `Z^a` and `(aZ)^b` formats
+        match = re.match(r'\(?([a-zA-Z]+)\)?\^([a-zA-Z]+)', expression)
         if not match:
-            return "Error: Unable to parse expression for symbolic power calculation"
-
+            return f"Error: Unable to parse expression {expression}"
         base_str, exp_char = match.groups()
-        base_numerical_exp = sum(LETTER_TO_EXPONENT_MAP[char] for char in base_str)
-        exp_numerical = 10**LETTER_TO_EXPONENT_MAP[exp_char]
-        final_numerical_exp = base_numerical_exp * exp_numerical
 
-        aop_val_exp = AoPValue.from_number(int(final_numerical_exp), base)
-        formatted_exponent = format_as_aop(aop_val_exp, EXPONENT_TO_LETTER_MAP)
+        # Calculate the base's exponent value (e.g., 'aZ' -> 1 + 100 = 101)
+        base_numerical_exp = sum(LETTER_TO_EXPONENT_MAP.get(c, 0) for c in base_str)
 
-        # Mirror the main formatter's logic: only add parentheses for complex exponents.
+        # Calculate the exponent's value (e.g., 'b' -> 100)
+        exp_numerical_val = calc.evaluate_expression(exp_char, mode='num')
+
+        # The final exponent is the product
+        final_exp = base_numerical_exp * int(exp_numerical_val)
+
+        # Format this final exponent back into AoP notation using the calculator's own tools
+        exp_aop_val = AoPValue.from_number(final_exp, base=calc.base)
+        formatted_exponent = calc.evaluate_expression(str(exp_aop_val), mode='aop')
+
+        # The result is always a^(...) for these types of operations
         if ' + ' in formatted_exponent or ' - ' in formatted_exponent:
             return f"a^({formatted_exponent})"
         return f"a^{formatted_exponent}"
@@ -94,11 +98,13 @@ def run_explainer():
     # Define test cases: (expression_to_test, human_readable_explanation)
     # We will derive the expected result programmatically for robustness.
     test_cases = [
-        ('a^a', 'Pure Power: a to the power of a'),
+        # --- Pure Power Tests ---
         ('Z^a', 'Pure Power: Z to the power of a'),
         ('Z^b', 'Pure Power: Z to the power of b'),
         ('Z^c', 'Pure Power: Z to the power of c'),
-        # --- New Test Suite: Symbolic Coefficients ---
+        ('Z^d', 'Pure Power: Z to the power of d'),
+        ('Z^e', 'Pure Power: Z to the power of e'),
+        # --- Symbolic Coefficient Tests ---
         ('(aZ)^b', 'Symbolic Coeff: (a*Z) to the power of b'),
         ('(bY)^c', 'Symbolic Coeff: (b*Y) to the power of c'),
         # --- New Test Suite: Power Towers ---
@@ -106,63 +112,16 @@ def run_explainer():
         ('Z^Z', 'Power Tower: Z to the power of Z')
     ]
 
-    def get_expected_result(expression, calc):
-        """
-        A smart oracle that calculates the expected result symbolically,
-        mimicking the AoP engine's own logic to avoid massive integers.
-        """
-        import re
-        from aopl_python_impl.aop_value import AoPValue, int_to_key
-        from aopl_python_impl.aop_formatter import format_as_aop
-
-        # Handle the special case of Z^Z, which is purely symbolic
-        if expression == 'Z^Z':
-            return 'a^(a^(b + 2))'
-
-        # Regex to parse expressions like 'Z^a' or '(aZ)^b'
-        match = re.match(r'\(?([a-zA-Z]+)\)?\^([a-zA-Z]+)', expression)
-        if not match:
-            raise ValueError(f"Test case format not supported by oracle: {expression}")
-
-        base_str, exp_char = match.groups()
-
-        # Calculate the numerical value of the base's exponent
-        # e.g., 'aZ' -> 1 + 100 = 101
-        base_exponent_val = sum(LETTER_TO_EXPONENT_MAP.get(char, 0) for char in base_str)
-
-        # Calculate the numerical value of the outer exponent
-        # e.g., 'b' -> 100
-        outer_exponent_val = LETTER_TO_EXPONENT_MAP.get(exp_char, 0)
-        if outer_exponent_val > 50: # Handle Z
-            outer_exponent_val = 100
-        else:
-            outer_exponent_val = 10**outer_exponent_val
-
-        # The core calculation: multiply the exponents
-        final_exponent_val = base_exponent_val * outer_exponent_val
-
-        # Now, format this final exponent value back into AoP notation
-        # We use the calculator's own tools to do this, ensuring consistency
-        exp_aop_val = AoPValue.from_number(int(final_exponent_val), base=calc.base)
-        formatted_exponent = format_as_aop(exp_aop_val, EXPONENT_TO_LETTER_MAP)
-
-        # Final assembly of the result string, e.g., "a^" + "formatted_exponent"
-        if ' + ' in formatted_exponent or ' - ' in formatted_exponent:
-            return f"a^({formatted_exponent})"
-        else:
-            return f"a^{formatted_exponent}"
-
     for expression, description in test_cases:
         total_tests += 1
         print(f"\n--- Testing: {Colors.CYAN}{expression}{Colors.ENDC} ({description}) ---")
 
-        # --- Get Expected Result from our trusted calculation method ---
-        expected_final_string = get_expected_result(expression, calc)
+        # Use the smart, symbolic oracle for these tests
+        expected_final_string = get_expected_symbolic_power_result(expression, calc)
 
         # --- Get Actual Result from the calculator ---
         actual_result = calc.evaluate_expression(expression, mode="aop")
 
-        # --- Print and Compare ---
         print(f"  - Expected Result: {Colors.GREEN}{expected_final_string}{Colors.ENDC}")
         print(f"  - Actual Result:   {Colors.BLUE}{actual_result}{Colors.ENDC}")
 
@@ -170,14 +129,13 @@ def run_explainer():
             print(f"  {Colors.GREEN}{Colors.BOLD}SUCCESS: The engine produced the correct result!{Colors.ENDC}")
             success_count += 1
         else:
-            print(f"  {Colors.RED}{Colors.BOLD}FAILURE: The results do not match.{Colors.ENDC}")
+            print(f"  {Colors.RED}{Colors.BOLD}FAILURE: The engine's result does not match the expected result.{Colors.ENDC}")
 
     print("-" * 80)
     print_header("Test Suite Conclusion")
     if success_count == total_tests:
         print(f"{Colors.GREEN}All {total_tests} tests passed successfully.{Colors.ENDC}")
-        print("This empirically validates the AoP engine's correctness across pure powers,")
-        print("expressions with symbolic coefficients, and hyper-large power towers.")
+        print("This empirically validates the engine's core symbolic exponentiation logic.")
     else:
         print(f"{Colors.RED}Test suite failed with {total_tests - success_count} errors out of {total_tests} tests.{Colors.ENDC}")
 

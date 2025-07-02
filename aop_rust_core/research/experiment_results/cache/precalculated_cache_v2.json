@@ -1,0 +1,40 @@
+{
+  "10": {
+    "Z": {
+      "raw_pickle": "gASVOwAAAAAAAACMGmFvcGxfcHl0aG9uX2ltcGwuYW9wX3ZhbHVllIwIQW9QVmFsdWWUk5R9lIwBWpRLAXNLComHlFKULg=="
+    },
+    "2Z": {
+      "raw_pickle": "gASVOwAAAAAAAACMGmFvcGxfcHl0aG9uX2ltcGwuYW9wX3ZhbHVllIwIQW9QVmFsdWWUk5R9lIwBWpRLAnNLComHlFKULg=="
+    },
+    "2b": {
+      "raw_pickle": "gASVOwAAAAAAAACMGmFvcGxfcHl0aG9uX2ltcGwuYW9wX3ZhbHVllIwIQW9QVmFsdWWUk5R9lIwBYpRLAnNLComHlFKULg=="
+    },
+    "2Z2b": {
+      "raw_pickle": "gASVQgAAAAAAAACMGmFvcGxfcHl0aG9uX2ltcGwuYW9wX3ZhbHVllIwIQW9QVmFsdWWUk5R9lCiMAWKUSwKMAVqUSwJ1SwqJh5RSlC4="
+    },
+    "Z^2Z2b": {
+      "raw_pickle": "gASVoAAAAAAAAACMGmFvcGxfcHl0aG9uX2ltcGwuYW9wX3ZhbHVllIwIQW9QVmFsdWWUk5R9lIxmMjAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAyMDBalEsBc0sKiYeUUpQu",
+      "aop": "a^(2d + 2a^(b + 2))"
+    },
+    "b": {
+      "raw_pickle": "gASVWQAAAAAAAACMGmFvcGxfcHl0aG9uX2ltcGwuYW9wX3ZhbHVllIwIQW9QVmFsdWWUk5QpgZR9lCiMBHBvbHmUfZRLAksBc4wEYmFzZZRLCowLaXNfbmVnYXRpdmWUiXViLg=="
+    },
+    "2": {
+      "raw_pickle": "gASVWQAAAAAAAACMGmFvcGxfcHl0aG9uX2ltcGwuYW9wX3ZhbHVllIwIQW9QVmFsdWWUk5QpgZR9lCiMBHBvbHmUfZRLAEsCc4wEYmFzZZRLCowLaXNfbmVnYXRpdmWUiXViLg=="
+    },
+    "b2": {
+      "raw_pickle": "gASVXgAAAAAAAACMGmFvcGxfcHl0aG9uX2ltcGwuYW9wX3ZhbHVllIwIQW9QVmFsdWWUk5QpgZR9lCiMBHBvbHmUfZQoSwBLAksCSwF1jARiYXNllEsKjAtpc19uZWdhdGl2ZZSJdWIu"
+    },
+    "a": {
+      "raw_pickle": "gASVWQAAAAAAAACMGmFvcGxfcHl0aG9uX2ltcGwuYW9wX3ZhbHVllIwIQW9QVmFsdWWUk5QpgZR9lCiMBHBvbHmUfZRLAUsBc4wEYmFzZZRLCowLaXNfbmVnYXRpdmWUiXViLg=="
+    },
+    "b2^a": {
+      "raw_pickle": "gASVpgAAAAAAAACMGmFvcGxfcHl0aG9uX2ltcGwuYW9wX3ZhbHVllIwIQW9QVmFsdWWUk5QpgZR9lCiMBHBvbHmUfZQoSwBLBEsBSwJLA0sDSwRLAUsFSwdLBksFSwdLB0sISwRLCUsJSwpLCUsLSwlLDEsBSw1LBEsOSwRLD0sJSxBLCUsRSwhLEksBSxNLAksUSwF1jARiYXNllEsKjAtpc19uZWdhdGl2ZZSJdWIu",
+      "aop": "t + 2s + r + 8q + 9p + 9o + 4n + 4m + l + 9k + 9j + 9i + 4h + 7g + 5f + 7e + d + 3c + 2a + 4"
+    },
+    "b2^b": {
+      "raw_pickle": "gASVJgMAAAAAAACMGmFvcGxfcHl0aG9uX2ltcGwuYW9wX3ZhbHVllIwIQW9QVmFsdWWUk5QpgZR9lCiMBHBvbHmUfZQoSwBLBksBSwdLAksDSwNLBUsESwhLBksISwdLBUsISwZLCUsBSwtLBksMSwdLDUsISw5LA0sPSwJLEUsDSxJLCEsTSwJLFEsISxVLBEsWSwlLF0sHSxhLCUsZSwNLGksGSxxLB0sdSwlLHksJSx9LBEsgSwJLIUsFSyJLAksjSwZLJEsGSyVLBEsmSwlLKEsGSylLCEsqSwZLLEsESy1LBEsuSwNLL0sDSzBLA0sySwJLNEsHSzVLA0s2SwJLN0sJSzhLCUs5SwFLOksBSztLB0s8SwJLPUsFSz5LCUs/SwNLQEsCS0JLBEtDSwdLRUsHS0ZLCUtHSwRLSksBS0tLBUtMSwFLTUsBS05LCUtPSwNLUEsES1FLBktSSwFLU0sHS1VLBEtWSwVLV0sIS1hLAktZSwNLWksIS1tLA0tcSwdLXUsBS15LBEtgSwdLYUsJS2JLBUtjSwhLZEsHS2VLCUtnSwRLaEsDS2lLAUtqSwRLa0sIS2xLBUttSwJLb0sDS3BLCEtxSwJLcksJS3NLCEt0SwhLdksGS3dLBUt4SwRLeUsBS3pLCUt8SwhLfUsHS35LBkt/SwNLgEsHS4FLBUuCSwJLg0sCS4RLA0uFSwFLhksBS4dLCEuISwZLiUsGS4pLCUuLSwZLjEsHS41LBUuOSwdLj0sIS5BLBUuSSwdLk0sGS5RLB0uVSwZLlksHS5dLB0uYSwlLmUsHS5pLCEubSwZLnUsHS55LB0ufSwlLoEsDS6FLCUuiSwRLo0sGS6RLA0ulSwNLpksBS6dLA0uoSwdLqUsIS6pLAUurSwNLrUsCS65LCUuvSwFLsEsIS7FLAkuySwdLs0sFS7RLBUu1SwFLtksFS7dLA0u4SwZLuUsFS7pLA0u7SwNLvEsCS71LBUu+SwJLv0sIS8BLAUvBSwFLwksGS8NLBEvESwZLxUsES8ZLBEvHSwJLyEsHdYwEYmFzZZRLCowLaXNfbmVnYXRpdmWUiXViLg==",
+      "aop": "7a^2b + 2a^(b + 9a + 9) + 4a^(b + 9a + 8) + 4a^(b + 9a + 7) + 6a^(b + 9a + 6) + 4a^(b + 9a + 5) + 6a^(b + 9a + 4) + a^(b + 9a + 3) + a^(b + 9a + 2) + 8a^(b + 9a + 1) + 2a^(b + 9a) + 5a^(b + 8a + 9) + 2a^(b + 8a + 8) + 3a^(b + 8a + 7) + 3a^(b + 8a + 6) + 5a^(b + 8a + 5) + 6a^(b + 8a + 4) + 3a^(b + 8a + 3) + 5a^(b + 8a + 2) + a^(b + 8a + 1) + 5a^(b + 8a) + 5a^(b + 7a + 9) + 7a^(b + 7a + 8) + 2a^(b + 7a + 7) + 8a^(b + 7a + 6) + a^(b + 7a + 5) + 9a^(b + 7a + 4) + 2a^(b + 7a + 3) + 3a^(b + 7a + 1) + a^(b + 7a) + 8a^(b + 6a + 9) + 7a^(b + 6a + 8) + 3a^(b + 6a + 7) + a^(b + 6a + 6) + 3a^(b + 6a + 5) + 3a^(b + 6a + 4) + 6a^(b + 6a + 3) + 4a^(b + 6a + 2) + 9a^(b + 6a + 1) + 3a^(b + 6a) + 9a^(b + 5a + 9) + 7a^(b + 5a + 8) + 7a^(b + 5a + 7) + 6a^(b + 5a + 5) + 8a^(b + 5a + 4) + 7a^(b + 5a + 3) + 9a^(b + 5a + 2) + 7a^(b + 5a + 1) + 7a^(b + 5a) + 6a^(b + 4a + 9) + 7a^(b + 4a + 8) + 6a^(b + 4a + 7) + 7a^(b + 4a + 6) + 5a^(b + 4a + 4) + 8a^(b + 4a + 3) + 7a^(b + 4a + 2) + 5a^(b + 4a + 1) + 7a^(b + 4a) + 6a^(b + 3a + 9) + 9a^(b + 3a + 8) + 6a^(b + 3a + 7) + 6a^(b + 3a + 6) + 8a^(b + 3a + 5) + a^(b + 3a + 4) + a^(b + 3a + 3) + 3a^(b + 3a + 2) + 2a^(b + 3a + 1) + 2a^(b + 3a) + 5a^(b + 2a + 9) + 7a^(b + 2a + 8) + 3a^(b + 2a + 7) + 6a^(b + 2a + 6) + 7a^(b + 2a + 5) + 8a^(b + 2a + 4) + 9a^(b + 2a + 2) + a^(b + 2a + 1) + 4a^(b + 2a) + 5a^(b + a + 9) + 6a^(b + a + 8) + 8a^(b + a + 6) + 8a^(b + a + 5) + 9a^(b + a + 4) + 2a^(b + a + 3) + 8a^(b + a + 2) + 3a^(b + a + 1) + 2a^(b + 9) + 5a^(b + 8) + 8a^(b + 7) + 4a^(b + 6) + a^(b + 5) + 3a^(b + 4) + 4a^(b + 3) + 9a^(b + 1) + 7Z + 8a^(9a + 9) + 5a^(9a + 8) + 9a^(9a + 7) + 7a^(9a + 6) + 4a^(9a + 4) + a^(9a + 3) + 7a^(9a + 2) + 3a^(9a + 1) + 8a^9a + 3a^(8a + 9) + 2a^(8a + 8) + 8a^(8a + 7) + 5a^(8a + 6) + 4a^(8a + 5) + 7a^(8a + 3) + a^(8a + 2) + 6a^(8a + 1) + 4a^8a + 3a^(7a + 9) + 9a^(7a + 8) + a^(7a + 7) + a^(7a + 6) + 5a^(7a + 5) + a^(7a + 4) + 4a^(7a + 1) + 9a^7a + 7a^(6a + 9) + 7a^(6a + 7) + 4a^(6a + 6) + 2a^(6a + 4) + 3a^(6a + 3) + 9a^(6a + 2) + 5a^(6a + 1) + 2a^6a + 7a^(5a + 9) + a^(5a + 8) + a^(5a + 7) + 9a^(5a + 6) + 9a^(5a + 5) + 2a^(5a + 4) + 3a^(5a + 3) + 7a^(5a + 2) + 2Y + 3W + 3V + 3U + 4T + 4S + 6Q + 8P + 6O + 9M + 4L + 6K + 6J + 2I + 5H + 2G + 4F + 9E + 9D + 7C + 6A + 3y + 9x + 7w + 9v + 4u + 8t + 2s + 8r + 3q + 2o + 3n + 8m + 7l + 6k + i + 6h + 5g + 8f + 8d + 5c + 3b + 7a + 6"
+    }
+  }
+}

@@ -10,11 +10,32 @@ import json
 # --- NEW: Imports for pickling and encoding ---
 import pickle
 import base64
+# --- Note: Removed specific PyO3 exception import due to unresolved import issue ---
+# Using a more generic exception handling approach instead.
 from .aop_logger import print_legend, log_eval_report_start, log_pow
-from .aop_value import AoPValue, int_to_key # Import AoPValue for type hints and unpickling
+from .aop_value import AoPValue # Import AoPValue for type hints and unpickling
 
 # --- NEW: Define a new cache filename to avoid conflicts with the old format ---
 CACHE_FILENAME = 'precalculated_cache_v2.json'
+
+def _resolve_power(self: SymbolicPowerResult) -> AoPValue:
+    """
+    The EAGER power evaluator. This is the single entry point for all
+    numerical power calculations. It analyzes the base and exponent
+    and chooses the most efficient path.
+    """
+    base_val = self.base.resolve() if isinstance(self.base, SymbolicPowerResult) else self.base
+    exp_val = self.exponent.resolve() if isinstance(self.exponent, SymbolicPowerResult) else self.exponent
+
+    if not isinstance(base_val, AoPValue) or not isinstance(exp_val, AoPValue):
+        raise TypeError("Cannot resolve power on non-AoPValue types.")
+
+    # With the Rust core enabled, the __pow__ method handles all logic,
+    # including any symbolic shortcuts. We simply call it.
+    return base_val ** exp_val
+
+# Add the resolve method to the SymbolicPowerResult class dynamically
+SymbolicPowerResult.resolve = _resolve_power
 
 class AoP_Calculator:
     def __init__(self, base: int = 10):
@@ -29,34 +50,35 @@ class AoP_Calculator:
             print_legend(expression, self.base)
             base_str = str(self.base)
 
-            # --- MODIFIED: New, efficient cache check ---
             if self.cache and base_str in self.cache and expression in self.cache[base_str]:
                 cached_data = self.cache[base_str][expression]
                 logging.debug(f"Cache hit for '{expression}' (base {base_str}). Cached data: {list(cached_data.keys())}")
 
-                # 1. Fast path: If the requested format is already cached, return it directly.
                 if mode in cached_data:
                     logging.debug(f"Returning pre-formatted '{mode}' from cache.")
                     return cached_data[mode]
 
-                # 2. Slower path: If we have the raw object, use it to generate the requested format.
                 if "raw_pickle" in cached_data:
                     logging.debug("Unpickling AoPValue from cache to generate new format.")
                     pickle_data = base64.b64decode(cached_data["raw_pickle"])
-                    result_aop = pickle.loads(pickle_data)
+                    result_obj = pickle.loads(pickle_data)
 
                     # Format the unpickled object into the desired mode
                     if mode == "aop":
-                        formatted_result = format_as_aop(result_aop, EXPONENT_TO_LETTER_MAP)
+                        # Use the main formatter which can handle both AoPValue and SymbolicPowerResult
+                        formatted_result = format_as_aop(result_obj, EXPONENT_TO_LETTER_MAP)
                     else: # "num"
-                        formatted_result = format_as_decimal_string(result_aop)
+                        # to_numerical will fail on SymbolicPowerResult, so we must resolve first.
+                        # This path is for when we have a raw object but not the specific format.
+                        resolved_val = self._resolve_to_value(result_obj)
+                        if isinstance(resolved_val, SymbolicPowerResult):
+                            return "Error: Result is symbolic and has no numerical value."
+                        formatted_result = format_as_decimal_string(resolved_val)
 
-                    # IMPORTANT: Update the cache with the newly generated format and save it.
                     self.cache[base_str][expression][mode] = formatted_result
                     self.cache_dirty = True
                     return formatted_result
 
-            # --- If not in cache or cache is incomplete, compute as usual ---
             logging.debug(f"Cache miss for '{expression}' (base {base_str}). Computing from scratch.")
             tokens = tokenize_expression(expression)
             if not tokens: return ""
@@ -66,36 +88,26 @@ class AoP_Calculator:
             log_eval_report_start(repr(ast))
             result_obj = evaluate_ast(ast, self.base, self.cache)
 
-            # Format the result
+            # The final object might be an AoPValue or an unresolvable SymbolicPowerResult
+            final_obj = self._resolve_to_value(result_obj)
+
             if mode == "aop":
-                # The formatter now understands SymbolicPowerResult directly
-                final_result_str = format_as_aop(result_obj, EXPONENT_TO_LETTER_MAP)
-                # The object we want to cache is the unevaluated symbolic object
-                cacheable_obj = result_obj
-            else:  # "num" is the default
-                # If the result is a symbolic power, we must evaluate it now
-                if isinstance(result_obj, SymbolicPowerResult):
-                    from .aop_operations import _exponentiate_aop_value
-                    final_aop_value = _exponentiate_aop_value(result_obj.base, result_obj.exponent)
-                else: # It was already a simple value
-                    final_aop_value = result_obj
+                final_result_str = format_as_aop(final_obj, EXPONENT_TO_LETTER_MAP)
+            else: # "num" mode
+                # If the final object is still symbolic, numerical conversion is impossible.
+                if isinstance(final_obj, SymbolicPowerResult):
+                    return "Error: Result is symbolic and has no numerical value."
+                final_result_str = format_as_decimal_string(final_obj)
 
-                final_result_str = format_as_decimal_string(final_aop_value)
-                cacheable_obj = final_aop_value
+            cacheable_obj = final_obj # Cache the final object, whatever its type
 
-            # --- MODIFIED: New cache update logic ---
-            # After a successful calculation, update the cache with the new data.
             if self.cache is not None:
                 pickled_obj = pickle.dumps(cacheable_obj)
                 b64_pickle = base64.b64encode(pickled_obj).decode('utf-8')
 
-                new_cache_entry = {
-                    "raw_pickle": b64_pickle,
-                    mode: final_result_str # Store the format we just calculated
-                }
+                new_cache_entry = { "raw_pickle": b64_pickle, mode: final_result_str }
 
-                if base_str not in self.cache:
-                    self.cache[base_str] = {}
+                if base_str not in self.cache: self.cache[base_str] = {}
                 self.cache[base_str][expression] = new_cache_entry
                 self.cache_dirty = True
                 logging.debug(f"Populated cache for '{expression}' (base {base_str}).")
@@ -106,17 +118,40 @@ class AoP_Calculator:
             return f"Error: {e}"
         except Exception as e:
             logging.error("Unexpected error in calculation", exc_info=True)
-            return f"Error: An unexpected system error occurred."
+            return f"Error: An unexpected system error occurred: {type(e).__name__}"
 
-    def _evaluate_symbolic_power_numerically(self, power_result: SymbolicPowerResult) -> AoPValue:
-        """
-        Evaluates a SymbolicPowerResult numerically using exponentiation by squaring.
-        This function takes a SymbolicPowerResult and performs the actual
-        exponentiation by squaring, returning a final AoPValue.
-        This is where the "General Path" for __pow__ now lives.
-        """
-        from .aop_operations import _exponentiate_aop_value
-        return _exponentiate_aop_value(power_result.base, power_result.exponent)
+    def _resolve_to_value(self, obj: object) -> 'AoPValue | SymbolicPowerResult':
+        """Recursively resolves an object into a final AoPValue or leaves it as a SymbolicPowerResult if unresolvable."""
+        if isinstance(obj, AoPValue):
+            return obj
+
+        if isinstance(obj, SymbolicPowerResult):
+            log_pow(f"Resolving SymbolicPower: {obj!r}")
+
+            resolved_base = self._resolve_to_value(obj.base)
+            resolved_exponent = self._resolve_to_value(obj.exponent)
+
+            # If either part is still symbolic, we can't proceed.
+            if isinstance(resolved_base, SymbolicPowerResult) or isinstance(resolved_exponent, SymbolicPowerResult):
+                return SymbolicPowerResult(resolved_base, resolved_exponent)
+
+            try:
+                # Attempt the power operation only if both are AoPValue.
+                if isinstance(resolved_base, AoPValue) and isinstance(resolved_exponent, AoPValue):
+                    result = resolved_base ** resolved_exponent
+                    return result
+                else:
+                    # If not both AoPValue, return symbolic result without attempting operation.
+                    log_pow(f"Power operation skipped due to non-AoPValue types. Returning unevaluated: {obj!r}")
+                    return SymbolicPowerResult(resolved_base, resolved_exponent)
+            except Exception as e:
+                # --- CRITICAL FIX ---
+                # Catch any exception from the power operation, assuming it's unresolvable (e.g., complex^symbolic).
+                # In this case, we do not fail. We return the unevaluated symbolic object.
+                log_pow(f"Power operation failed with error: {e}. Returning unevaluated: {obj!r}")
+                return SymbolicPowerResult(resolved_base, resolved_exponent)
+
+        raise TypeError(f"Cannot resolve unexpected type: {type(obj)}")
 
     def _load_cache(self):
         """Load the precalculated cache from file if available."""
