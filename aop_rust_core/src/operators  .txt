@@ -2,15 +2,15 @@
 
 use super::aop_value::AoPValue;
 use num_bigint::BigInt;
-use num_traits::Zero;
 use rayon::prelude::*;
 use std::collections::HashMap;
 use std::ops::{Add, Mul, Sub};
+// --- ADD THESE MISSING IMPORTS ---
+use num_traits::Zero;
 
 const PARALLEL_ADD_THRESHOLD: usize = 2000;
 
 impl<'a, 'b> Add<&'b AoPValue> for &'a AoPValue {
-    // ... (add implementation is correct and does not need changes) ...
     type Output = AoPValue;
     fn add(self, other: &'b AoPValue) -> AoPValue {
         if self.poly.is_empty() {
@@ -19,32 +19,35 @@ impl<'a, 'b> Add<&'b AoPValue> for &'a AoPValue {
         if other.poly.is_empty() {
             return self.clone();
         }
+
         let mut all_exps: Vec<_> = self.poly.keys().chain(other.poly.keys()).cloned().collect();
         all_exps.sort_unstable();
         all_exps.dedup();
-        let zero_val = BigInt::zero();
-        let new_poly = if all_exps.len() < PARALLEL_ADD_THRESHOLD {
-            let mut new_poly_mut = HashMap::new();
+
+        let new_poly: HashMap<BigInt, BigInt>;
+
+        if all_exps.len() < PARALLEL_ADD_THRESHOLD {
+            new_poly = HashMap::new();
             for exp in all_exps {
-                let c1 = self.poly.get(&exp).unwrap_or(&zero_val);
-                let c2 = other.poly.get(&exp).unwrap_or(&zero_val);
+                let c1 = self.poly.get(&exp).unwrap_or(&BigInt::zero());
+                let c2 = other.poly.get(&exp).unwrap_or(&BigInt::zero());
                 let sum = c1 + c2;
                 if !sum.is_zero() {
-                    new_poly_mut.insert(exp, sum);
+                    new_poly.insert(exp, sum);
                 }
             }
-            new_poly_mut
         } else {
-            all_exps
+            new_poly = all_exps
                 .par_iter()
                 .map(|exp| {
-                    let c1 = self.poly.get(exp).unwrap_or(&zero_val);
-                    let c2 = other.poly.get(exp).unwrap_or(&zero_val);
+                    let c1 = self.poly.get(exp).unwrap_or(&BigInt::zero());
+                    let c2 = other.poly.get(exp).unwrap_or(&BigInt::zero());
                     (exp.clone(), c1 + c2)
                 })
                 .filter(|(_, sum)| !sum.is_zero())
-                .collect()
-        };
+                .collect();
+        }
+
         let mut result = AoPValue::_new_internal(new_poly, self.base, self.is_negative);
         result._simplify();
         result
@@ -52,7 +55,6 @@ impl<'a, 'b> Add<&'b AoPValue> for &'a AoPValue {
 }
 
 impl<'a, 'b> Sub<&'b AoPValue> for &'a AoPValue {
-    // ... (sub implementation is correct and does not need changes) ...
     type Output = AoPValue;
     fn sub(self, other: &'b AoPValue) -> AoPValue {
         let mut new_poly = self.poly.clone();
@@ -98,9 +100,6 @@ impl<'a, 'b> Mul<&'b AoPValue> for &'a AoPValue {
             return AoPValue::_new_internal(final_poly, self.base, result_head.is_negative);
         }
 
-        // The public operator always simplifies the result.
-        let mut result = self._mul_raw(other);
-        result._simplify();
-        result
+        self._dense_mul(other)
     }
 }

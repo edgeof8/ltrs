@@ -11,11 +11,13 @@ OPERATORS: dict = {
     '-': {'precedence': 2, 'associativity': 'left'},
     '*': {'precedence': 3, 'associativity': 'left'},
     '/': {'precedence': 3, 'associativity': 'left'},
-    '^': {'precedence': 5, 'associativity': 'right'}, # Correctly defined as right-associative
+    '^': {'precedence': 5, 'associativity': 'right'},
     '**': {'precedence': 5, 'associativity': 'right'}
 }
 
 def tokenize_expression(expression: str) -> List[Token]:
+    """A stateful tokenizer for the AoP grammar."""
+    # This regex splits the string by operators/parentheses, keeping them as delimiters.
     TOKEN_REGEX = re.compile(r"(\*\*|==|[+\-*/^()])")
     raw_parts = [p for p in TOKEN_REGEX.split(expression) if p]
     tokens = []
@@ -33,8 +35,8 @@ def tokenize_expression(expression: str) -> List[Token]:
         elif part in OPERATORS:
             tokens.append(Token('OPERATOR', part, start_pos, end_pos))
         else:
-            # This is a sequence of numbers and letters, e.g., "2b5c" or "abc" or "5"
-            # We treat the entire contiguous block as one literal.
+            # Everything else is a literal to be parsed by the evaluator.
+            # This correctly handles "abc", "2b5c", "120", etc.
             tokens.append(Token('AOP_LITERAL', part, start_pos, end_pos))
 
     logging.debug(f"Tokens: {tokens}")
@@ -42,7 +44,9 @@ def tokenize_expression(expression: str) -> List[Token]:
 
 class Parser:
     def __init__(self, tokens: List[Token]):
-        self.tokens = tokens; self.pos = -1; self.current_token = None
+        self.tokens = tokens
+        self.pos = -1
+        self.current_token = None
         self.advance()
 
     def advance(self):
@@ -50,27 +54,32 @@ class Parser:
         self.current_token = self.tokens[self.pos] if self.pos < len(self.tokens) else None
 
     def parse(self):
-        return self.parse_expression()
+        if not self.tokens:
+            return None
+        return self.parse_expression(0)
 
-    # --- NEW SHUNTING-YARD-LIKE PARSER ---
-    def parse_expression(self, precedence=0):
-        left = self.atom()
+    def parse_expression(self, precedence: int):
+        left = self.parse_prefix()
 
-        while self.current_token and self.current_token.kind == 'OPERATOR' and OPERATORS.get(self.current_token.value, {}).get('precedence', -1) >= precedence:
-            op = self.current_token
-            op_info = OPERATORS[op.value]
-            next_precedence = op_info['precedence']
-            # For right-associative operators, we use a slightly lower precedence for the recursive call
-            if op_info['associativity'] == 'left':
-                next_precedence += 1
+        while self.current_token and self.current_token.kind == 'OPERATOR':
+            op_info = OPERATORS.get(self.current_token.value)
+            if not op_info or op_info['precedence'] < precedence:
+                break
 
+            op_token = self.current_token
             self.advance()
-            right = self.parse_expression(next_precedence)
-            left = BinaryOpNode(left, op, right)
+
+            # For right-associative operators, recurse with a slightly lower precedence
+            if op_info['associativity'] == 'right':
+                right = self.parse_expression(op_info['precedence'])
+            else:
+                right = self.parse_expression(op_info['precedence'] + 1)
+
+            left = BinaryOpNode(left, op_token, right)
 
         return left
 
-    def atom(self):
+    def parse_prefix(self):
         token = self.current_token
         if not token:
             raise SyntaxError("Unexpected end of expression")
@@ -80,10 +89,15 @@ class Parser:
             return AopLiteralNode(token)
         elif token.value == '(':
             self.advance()
-            node = self.parse_expression(0) # Reset precedence inside parentheses
+            node = self.parse_expression(0)
             if not self.current_token or self.current_token.value != ')':
                 raise SyntaxError("Mismatched parentheses")
             self.advance()
             return node
+        elif token.value in ('-', '+'): # Handle unary operators
+            self.advance()
+            # Unary operators have high precedence (e.g., higher than multiplication)
+            operand = self.parse_expression(10)
+            return UnaryOpNode(token, operand)
 
         raise SyntaxError(f"Unexpected token: {token}")

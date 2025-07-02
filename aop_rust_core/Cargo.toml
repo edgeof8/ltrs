@@ -1,4 +1,3 @@
-# aop_rust_core/Cargo.toml
 [package]
 name = "aop_rust_core"
 version = "0.1.0"
@@ -6,11 +5,16 @@ edition = "2021"
 
 [lib]
 name = "aop_rust_core"
-crate-type = ["cdylib"] # This tells Cargo to build a C-compatible dynamic library
+crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.20.0", features = ["extension-module", "num-bigint"] } # Required for Python integration with BigInt support
-num-bigint = "0.4" # For arbitrary-precision integers in Rust
-num-traits = "0.2" # For traits like Zero, One, Signed
-once_cell = "1.18" # Add this line
-num-integer = "0.1.46"
+num-bigint = { version = "0.4", features = ["serde"] }
+num-integer = "0.1.45"
+num-traits = "0.2"
+once_cell = "1.18.0"
+rayon = "1.8.0"
+
+# --- THIS IS THE FIX ---
+# Add the "num-bigint" feature directly to the pyo3 dependency.
+# Remove the pyo3-num line.
+pyo3 = { version = "0.20.0", features = ["extension-module", "num-bigint"] }

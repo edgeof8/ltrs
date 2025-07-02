@@ -3,13 +3,13 @@
 use super::aop_value::AoPValue;
 use super::exponent_map::int_to_key_rust;
 use num_bigint::BigInt;
+// --- ADD THESE MISSING IMPORTS ---
 use num_integer::Integer;
 use num_traits::{One, Signed, ToPrimitive, Zero};
 use pyo3::prelude::*;
 use std::collections::HashMap;
 use std::ops::{Add, Mul, Sub};
 
-// ... (from_bigint and other methods at the top are correct) ...
 fn from_bigint(n: &BigInt, base: u32) -> AoPValue {
     if n.is_zero() {
         return AoPValue::_new_internal(HashMap::new(), base, false);
@@ -32,7 +32,6 @@ fn from_bigint(n: &BigInt, base: u32) -> AoPValue {
 
 #[pymethods]
 impl AoPValue {
-    // ... (new, from_number, to_numerical, get_poly, __repr__, __add__, __sub__, __mul__ are correct) ...
     #[new]
     #[pyo3(signature = (poly_str_keys = None, base = 10, is_negative = false))]
     pub fn new(
@@ -50,11 +49,13 @@ impl AoPValue {
         val._simplify();
         val
     }
+
     #[staticmethod]
     pub fn from_number(n: &PyAny, base: u32) -> PyResult<Self> {
         let n_bigint: BigInt = n.extract()?;
         Ok(from_bigint(&n_bigint, base))
     }
+
     pub fn to_numerical(&self) -> BigInt {
         let mut total = BigInt::zero();
         let base_bigint = BigInt::from(self.base);
@@ -73,6 +74,7 @@ impl AoPValue {
             total
         }
     }
+
     #[getter]
     pub fn get_poly(&self) -> HashMap<String, BigInt> {
         self.poly
@@ -80,6 +82,7 @@ impl AoPValue {
             .map(|(e, c)| (e.to_string(), c.clone()))
             .collect()
     }
+
     pub fn __repr__(&self) -> String {
         let mut parts: Vec<_> = self.poly.iter().collect();
         parts.sort_by_key(|(e, _)| (*e).clone());
@@ -96,6 +99,7 @@ impl AoPValue {
             if poly_str.is_empty() { "0" } else { &poly_str }
         )
     }
+
     pub fn __add__(&self, other: &Self) -> Self {
         self.add(other)
     }
@@ -136,7 +140,7 @@ impl AoPValue {
             if let Some((exp1, coeff1)) = self.poly.iter().next() {
                 if coeff1.is_one() && !self.is_negative {
                     let exp1_as_aop = from_bigint(exp1, self.base);
-                    let new_exponent_aop = exp1_as_aop.mul(other);
+                    let new_exponent_aop = &exp1_as_aop * other;
                     let final_exponent_val = new_exponent_aop.to_numerical();
                     if final_exponent_val == BigInt::from(-1) {
                         return Err(pyo3::exceptions::PyValueError::new_err(
@@ -180,15 +184,11 @@ impl AoPValue {
         let mut n_rem = n;
         while n_rem > BigInt::zero() {
             if n_rem.is_odd() {
-                // --- Use the fast, non-simplifying multiplication ---
-                result = result._mul_raw(&current_base);
+                result = &result * &current_base;
             }
-            current_base = current_base._mul_raw(&current_base);
+            current_base = &current_base * &current_base;
             n_rem /= 2;
         }
-
-        // --- Simplify ONCE at the very end ---
-        result._simplify();
         Ok(result)
     }
 }

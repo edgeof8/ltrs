@@ -8,6 +8,7 @@ from .aop_logger import log_eval, Colors, log_pow
 _eval_depth = 0
 
 def _resolve_to_value(obj):
+    # ... (this function is now correct) ...
     current = obj
     while isinstance(current, SymbolicPowerResult):
         log_pow(f"Resolving SymbolicPower: {current!r}")
@@ -39,16 +40,22 @@ def evaluate_ast(node: ASTNode, base: int, cache: dict | None = None) -> 'AoPVal
         # It represents a single number, not a sum.
         # e.g., "5e3b" -> 5*10^5 + 3*10^2
         poly = {}
+        # This regex finds terms like "5e" or "b"
         term_pattern = re.compile(r'(\d*)?([a-zA-Z])')
+
+        # Keep track of what part of the string we've processed
+        processed_value = node.value
         for match in term_pattern.finditer(node.value):
             coeff_str, letter = match.groups()
             coeff = int(coeff_str) if coeff_str else 1
             exp = LETTER_TO_EXPONENT_MAP.get(letter, 0)
             poly[str(exp)] = poly.get(str(exp), 0) + coeff
+            # Remove the matched part from our tracking string
+            processed_value = processed_value.replace(match.group(0), '', 1)
 
-        last_part = term_pattern.sub('', node.value)
-        if last_part.isnumeric():
-            poly['0'] = poly.get('0', 0) + int(last_part)
+        # Any part of the string left must be a number (constant term)
+        if processed_value.strip().isnumeric():
+            poly['0'] = poly.get('0', 0) + int(processed_value.strip())
 
         result = AoPValue(poly=poly, base=base)
     elif isinstance(node, UnaryOpNode):
@@ -64,7 +71,10 @@ def evaluate_ast(node: ASTNode, base: int, cache: dict | None = None) -> 'AoPVal
         log_eval(f"Evaluating: {left!r} {op} {right!r}", _eval_depth)
 
         if op in ('^', '**'):
-            result = SymbolicPowerResult(left, right)
+            # Must resolve operands before creating symbolic power
+            left_aop = _resolve_to_value(left)
+            right_aop = _resolve_to_value(right)
+            result = SymbolicPowerResult(left_aop, right_aop)
         else:
             left_aop = _resolve_to_value(left)
             right_aop = _resolve_to_value(right)
