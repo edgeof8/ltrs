@@ -20,45 +20,79 @@ except ImportError as e:
 class AoPValue:
     _rust_obj: Any
 
-    # Private constructor for internal wrapping
-    def __init__(self, rust_obj=None):
+    def __init__(self, poly: Optional[Dict[str, int]] = None, base: int = 10, coeff: Optional[int] = None):
         if not rust_core:
             raise RuntimeError("Rust core is not enabled.")
-        if rust_obj:
-            self._rust_obj = rust_obj
-        else:
-            # Create a default empty rust object
-            self._rust_obj = rust_core.AoPValue()
-
-    @classmethod
-    def from_literal(cls, literal_str: str, base: int = 10) -> 'AoPValue':
-        if not rust_core: raise RuntimeError("Rust core not loaded.")
-        # Call the Rust static method
-        rust_obj = rust_core.AoPValue.from_literal(literal_str, base)
-        # Wrap the returned Rust object in our Python class
-        return cls(rust_obj=rust_obj)
+        final_coeff = coeff if coeff is not None else 1
+        # The Rust constructor was updated to take coeff.
+        self._rust_obj = rust_core.AoPValue(poly, base, final_coeff)
 
     @classmethod
     def from_number(cls, n: int, base: int = 10) -> 'AoPValue':
-        if not rust_core: raise RuntimeError("Rust core not loaded.")
-        rust_obj = rust_core.AoPValue.from_number(n, base)
-        return cls(rust_obj=rust_obj)
+        if not rust_core: raise RuntimeError("Rust core is not enabled.")
+        instance = cls.__new__(cls)
+        instance._rust_obj = rust_core.AoPValue.from_number(n, base)
+        return instance
 
+    @classmethod
+    def from_literal(cls, literal_str: str, base: int = 10) -> 'AoPValue':
+        poly = {}
+        term_pattern = re.compile(r'(\d+)?([a-zA-Z])|(\d+)')
+        matches = list(term_pattern.finditer(literal_str))
+
+        if len(matches) == 1:
+            match = matches[0]
+            coeff_str, letter, _ = match.groups()
+            if letter:
+                main_coeff = int(coeff_str) if coeff_str else 1
+                exp = LETTER_TO_EXPONENT_MAP.get(letter, 0)
+                poly[str(exp)] = 1
+                return cls(poly=poly, base=base, coeff=main_coeff)
+
+        for match in matches:
+            coeff_str, letter, standalone_num = match.groups()
+            if letter:
+                coeff_val = int(coeff_str) if coeff_str else 1
+                exp = LETTER_TO_EXPONENT_MAP.get(letter, 0)
+                poly[str(exp)] = poly.get(str(exp), 0) + coeff_val
+            elif standalone_num:
+                poly['0'] = poly.get('0', 0) + int(standalone_num)
+
+        return cls(poly=poly, base=base, coeff=1)
+
+    @staticmethod
+    def int_to_key(exp_str: str) -> str:
+        if not rust_core: raise RuntimeError("Rust core is not enabled, cannot format key.")
+        return rust_core.AoPValue.int_to_key(exp_str)
+
+    # --- Start of explicit wrapper methods for Pylance ---
     def __add__(self, other: 'AoPValue') -> 'AoPValue':
-        result_rust_obj = self._rust_obj.__add__(other._rust_obj)
-        return AoPValue(rust_obj=result_rust_obj)
+        if not isinstance(other, AoPValue): raise TypeError(f"Unsupported operand type for +: '{type(other).__name__}'")
+        new_instance = self.__class__.__new__(self.__class__)
+        new_instance._rust_obj = self._rust_obj.__add__(other._rust_obj)
+        return new_instance
 
     def __sub__(self, other: 'AoPValue') -> 'AoPValue':
-        result_rust_obj = self._rust_obj.__sub__(other._rust_obj)
-        return AoPValue(rust_obj=result_rust_obj)
+        if not isinstance(other, AoPValue): raise TypeError(f"Unsupported operand type for -: '{type(other).__name__}'")
+        new_instance = self.__class__.__new__(self.__class__)
+        new_instance._rust_obj = self._rust_obj.__sub__(other._rust_obj)
+        return new_instance
 
     def __mul__(self, other: 'AoPValue') -> 'AoPValue':
-        result_rust_obj = self._rust_obj.__mul__(other._rust_obj)
-        return AoPValue(rust_obj=result_rust_obj)
+        if not isinstance(other, AoPValue): raise TypeError(f"Unsupported operand type for *: '{type(other).__name__}'")
+        new_instance = self.__class__.__new__(self.__class__)
+        new_instance._rust_obj = self._rust_obj.__mul__(other._rust_obj)
+        return new_instance
 
     def __pow__(self, other: 'AoPValue') -> 'AoPValue':
-        result_rust_obj = self._rust_obj.power(other._rust_obj)
-        return AoPValue(rust_obj=result_rust_obj)
+        if not isinstance(other, AoPValue): raise TypeError(f"Unsupported operand type for **: '{type(other).__name__}'")
+        new_instance = self.__class__.__new__(self.__class__)
+        new_instance._rust_obj = self._rust_obj.power(other._rust_obj)
+        return new_instance
+
+    def get_coeff_as_power(self) -> Optional[tuple[int, int]]:
+        """Returns the coefficient as a power tuple (base, exponent) if it is a power, else None."""
+        return self._rust_obj.get_coeff_as_power()
 
     def to_numerical(self) -> int:
         return self._rust_obj.to_numerical()
@@ -69,15 +103,9 @@ class AoPValue:
     def __repr__(self) -> str:
         return self._rust_obj.__repr__()
 
-    # Delegate attribute access to the underlying rust object
-    def __getattr__(self, name):
-        return getattr(self._rust_obj, name)
-
-    # Pickle support
-    def __getstate__(self):
-        return self._rust_obj.__getstate__()
-
-    def __setstate__(self, state):
-        if not hasattr(self, '_rust_obj'):
-            self._rust_obj = rust_core.AoPValue()
-        self._rust_obj.__setstate__(state)
+    def __reduce__(self):
+        """Tells Python's pickle module how to serialize this object."""
+        rust_poly_str_keys = self._rust_obj.get_poly()
+        rust_base = self._rust_obj.base
+        rust_coeff = self._rust_obj.coeff
+        return (self.__class__, (rust_poly_str_keys, rust_base, rust_coeff))

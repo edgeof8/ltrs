@@ -44,10 +44,8 @@ def evaluate_ast(node: ASTNode, base: int, cache: dict | None = None) -> 'AoPVal
         if isinstance(node, NumberNode):
             result = AoPValue.from_number(int(node.value), base)
         elif isinstance(node, IdentifierNode):
-            if node.name not in LETTER_TO_EXPONENT_MAP:
-                raise AoPError(f"Unknown identifier: {node.name}")
-            exponent = LETTER_TO_EXPONENT_MAP[node.name]
-            result = AoPValue(poly={str(exponent): 1}, base=base)
+            # An identifier is a simple literal like 'a' or 'Z'
+            result = AoPValue.from_literal(node.name, base)
         elif isinstance(node, AopLiteralNode):
             result = AoPValue.from_literal(node.value, base)
         elif isinstance(node, UnaryOpNode):

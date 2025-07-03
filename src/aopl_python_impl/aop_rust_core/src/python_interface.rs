@@ -1,194 +1,85 @@
 // aop_rust_core/src/python_interface.rs
 
-use super::aop_value::{AoPValue, CoeffData, SymbolicCoefficientPy};
+use super::aop_value::AoPValue;
 use super::exponent_map::int_to_key_rust;
-use super::multinomial::expand_multinomial;
 use num_bigint::{BigInt, Sign};
 use num_integer::Integer;
-use num_traits::{One, Signed, ToPrimitive, Zero}; // Added Zero back
+use num_traits::{One, Signed, ToPrimitive, Zero};
 use pyo3::prelude::*;
 use std::collections::HashMap;
+use std::ops::Neg;
 
-// --- NEW: Manual ToPyObject implementation ---
-// This tells PyO3 how to convert our Rust struct into a Python object.
-impl ToPyObject for SymbolicCoefficientPy {
-    fn to_object(&self, py: Python<'_>) -> PyObject {
-        // Create a new Python instance of the SymbolicCoefficientPy class
-        // and pass `self` (the Rust struct) to its constructor.
-        Py::new(py, self.clone()).unwrap().to_object(py)
-    }
-}
-
-#[pymethods]
-impl SymbolicCoefficientPy {
-    #[new]
-    fn __new__() -> Self {
-        SymbolicCoefficientPy {
-            data: CoeffData::Literal(BigInt::zero()),
+impl AoPValue {
+    // New internal helper to create an AoPValue from a plain BigInt
+    pub fn from_numerical_internal(n: BigInt, base: u32) -> AoPValue {
+        if n.is_zero() {
+            return AoPValue::_new_internal(BigInt::zero(), HashMap::new(), base);
         }
-    }
-
-    // Correct: Get Python instance from the method signature
-    fn __getstate__<'py>(&self, py: Python<'py>) -> PyResult<PyObject> {
-        match &self.data {
-            CoeffData::Literal(val) => Ok((1, val).to_object(py)),
-            CoeffData::Power { base, exponent } => Ok((2, base, exponent).to_object(py)),
+        if n.abs() < BigInt::from(base) && n.abs() > BigInt::zero() {
+            return AoPValue::_new_internal(n, HashMap::new(), base);
         }
-    }
-
-    // Correct: Get Python instance from the method signature
-    fn __setstate__(&mut self, state: PyObject, py: Python) -> PyResult<()> {
-        if let Ok((tag, value)) = state.extract::<(i32, BigInt)>(py) {
-            if tag == 1 {
-                self.data = CoeffData::Literal(value);
-                return Ok(());
+        let coeff = if n.is_negative() {
+            -BigInt::one()
+        } else {
+            BigInt::one()
+        };
+        let mut n_abs = n.abs();
+        let base_bigint = BigInt::from(base);
+        let mut poly = HashMap::new();
+        let mut exp = BigInt::zero();
+        while n_abs > BigInt::zero() {
+            let (new_n, remainder) = n_abs.div_mod_floor(&base_bigint);
+            if !remainder.is_zero() {
+                poly.insert(exp.clone(), remainder);
             }
+            n_abs = new_n;
+            exp += 1;
         }
-        if let Ok((tag, base, exponent)) = state.extract::<(i32, BigInt, BigInt)>(py) {
-            if tag == 2 {
-                self.data = CoeffData::Power { base, exponent };
-                return Ok(());
-            }
-        }
-        Err(pyo3::exceptions::PyValueError::new_err(
-            "Invalid state for SymbolicCoefficient",
-        ))
+        AoPValue::_new_internal(coeff, poly, base)
     }
-}
 
-fn from_bigint(n: &BigInt, base: u32) -> AoPValue {
-    let coeff_data = CoeffData::Literal(if n.is_negative() {
-        -BigInt::one()
-    } else {
-        BigInt::one()
-    });
-    let coeff = SymbolicCoefficientPy { data: coeff_data };
-    let mut n_abs = n.abs();
-    let base_bigint = BigInt::from(base);
-    let mut poly = HashMap::new();
-    let mut exp = BigInt::zero(); // Correct: uses the Zero trait
-    while n_abs > BigInt::from(0) {
-        let (new_n, remainder) = n_abs.div_mod_floor(&base_bigint);
-        if remainder != BigInt::from(0) {
-            poly.insert(exp.clone(), remainder);
+    pub fn to_numerical(&self) -> BigInt {
+        if self.poly.is_empty() {
+            return self.coeff.clone();
         }
-        n_abs = new_n;
-        exp += 1;
+        let mut total = BigInt::zero();
+        let base_bigint = BigInt::from(self.base);
+        for (exp, poly_coeff) in &self.poly {
+            total += poly_coeff * base_bigint.pow(exp.to_u32().unwrap_or(0));
+        }
+        total * &self.coeff
     }
-    AoPValue::_new_internal(coeff, poly, base)
 }
 
 #[pymethods]
 impl AoPValue {
-    // --- CORRECTED: A SINGLE, UNIFIED CONSTRUCTOR ---
     #[new]
-    fn __new__(
+    #[pyo3(signature = (poly_str_keys = None, base = 10, coeff = None))]
+    pub fn new(
         poly_str_keys: Option<HashMap<String, BigInt>>,
-        base: Option<u32>,
+        base: u32,
         coeff: Option<BigInt>,
     ) -> Self {
-        let final_base = base.unwrap_or(10);
-        let coeff_data = CoeffData::Literal(coeff.unwrap_or_else(BigInt::one));
-        let final_coeff = SymbolicCoefficientPy { data: coeff_data };
+        let final_coeff = coeff.unwrap_or_else(BigInt::one);
         let poly = poly_str_keys
             .unwrap_or_default()
-            .into_iter()
-            .filter_map(|(k, v)| k.parse::<BigInt>().ok().map(|exp| (exp, v)))
+            .iter()
+            .filter_map(|(k, v)| k.parse::<BigInt>().ok().map(|exp| (exp, v.clone())))
             .collect();
-        Self::_new_internal(final_coeff, poly, final_base)
-    }
-
-    // --- Pickle Protocol Implementation ---
-
-    // 1. __getnewargs__: Tells pickle what to pass to __new__ when unpickling.
-    //    We want it to create a default object, so we return an empty tuple.
-    fn __getnewargs__(&self) -> PyResult<(Option<()>, Option<()>, Option<()>)> {
-        Ok((None, None, None))
-    }
-
-    #[staticmethod]
-    pub fn from_literal(literal_str: &str, base: u32) -> PyResult<Self> {
-        // This regex logic is moved from Python to Rust
-        let term_pattern = regex::Regex::new(r"(\d+)?([a-zA-Z])|(\d+)").unwrap();
-        let mut matches = Vec::new();
-        for cap in term_pattern.find_iter(literal_str) {
-            matches.push(term_pattern.captures(cap.as_str()).unwrap());
-        }
-
-        let mut poly = HashMap::new();
-        let mut main_coeff = BigInt::one();
-
-        if matches.len() == 1 {
-            let cap = &matches[0];
-            if let Some(letter_match) = cap.get(2) {
-                let letter = letter_match.as_str().chars().next().unwrap();
-                let coeff_str = cap.get(1).map_or("1", |m| m.as_str());
-                main_coeff = coeff_str.parse().unwrap();
-                let exp = super::exponent_map::LETTER_TO_EXPONENT_MAP
-                    .get(&letter)
-                    .unwrap()
-                    .clone();
-                poly.insert(exp, BigInt::one());
-
-                let coeff_data = CoeffData::Literal(main_coeff);
-                let final_coeff = SymbolicCoefficientPy { data: coeff_data };
-                return Ok(Self::_new_internal(final_coeff, poly, base));
-            }
-        }
-
-        // Fallback for multi-term
-        for cap in matches {
-            if let Some(letter_match) = cap.get(2) {
-                let letter = letter_match.as_str().chars().next().unwrap();
-                let coeff_str = cap.get(1).map_or("1", |m| m.as_str());
-                let coeff_val: BigInt = coeff_str.parse().unwrap();
-                let exp = super::exponent_map::LETTER_TO_EXPONENT_MAP
-                    .get(&letter)
-                    .unwrap()
-                    .clone();
-                *poly.entry(exp).or_default() += coeff_val;
-            } else if let Some(num_match) = cap.get(3) {
-                let num_val: BigInt = num_match.as_str().parse().unwrap();
-                *poly.entry(BigInt::zero()).or_default() += num_val;
-            }
-        }
-
-        let coeff_data = CoeffData::Literal(main_coeff);
-        let final_coeff = SymbolicCoefficientPy { data: coeff_data };
-        Ok(Self::_new_internal(final_coeff, poly, base))
+        let mut val = Self::_new_internal(final_coeff, poly, base);
+        val._simplify();
+        val
     }
 
     #[staticmethod]
     pub fn from_number(n: &PyAny, base: u32) -> PyResult<Self> {
         let n_bigint: BigInt = n.extract()?;
-        Ok(from_bigint(&n_bigint, base))
+        Ok(AoPValue::from_numerical_internal(n_bigint, base))
     }
 
-    pub fn to_numerical(&self) -> BigInt {
-        let coeff_val = match &self.coeff.data {
-            CoeffData::Literal(value) => value.clone(),
-            CoeffData::Power { base, exponent } => {
-                if let Some(exp_u32) = exponent.to_u32() {
-                    base.pow(exp_u32)
-                } else {
-                    return BigInt::from(-999);
-                }
-            }
-        };
-        if self.poly.is_empty() {
-            return coeff_val;
-        }
-        let mut total = BigInt::from(0);
-        let base_bigint = BigInt::from(self.base);
-        for (exp, poly_coeff) in &self.poly {
-            let term_val = if let Some(e_u32) = exp.to_u32() {
-                poly_coeff * base_bigint.pow(e_u32)
-            } else {
-                return BigInt::from(-998);
-            };
-            total += term_val;
-        }
-        total * coeff_val
+    // to_numerical is now a Python-facing method
+    pub fn py_to_numerical(&self) -> BigInt {
+        self.to_numerical()
     }
 
     pub fn get_poly(&self) -> HashMap<String, BigInt> {
@@ -199,99 +90,105 @@ impl AoPValue {
     }
 
     pub fn __repr__(&self) -> String {
-        let coeff_part = match &self.coeff.data {
-            CoeffData::Literal(value) => match value.sign() {
-                Sign::NoSign if self.poly.is_empty() => return "AoP(0)".to_string(),
-                Sign::Plus if *value == BigInt::one() => "".to_string(),
-                Sign::Minus if *value == -BigInt::one() => "-".to_string(),
-                _ => format!("{} * ", value),
-            },
-            CoeffData::Power { base, exponent } => format!("({}^{}) * ", base, exponent),
+        let coeff_part = match self.coeff.sign() {
+            Sign::NoSign => return "AoP(0)".to_string(),
+            Sign::Plus if self.coeff.is_one() => "".to_string(),
+            Sign::Minus if self.coeff == -BigInt::one() => "-".to_string(),
+            _ => format!("{} * ", self.coeff),
         };
         if self.poly.is_empty() {
-            return format!("AoP({})", coeff_part.trim_end_matches(" * "));
+            return format!("AoP({})", self.coeff);
         }
-        let mut parts: Vec<_> = self.poly.iter().collect();
-        parts.sort_by_key(|(e, _)| (*e).clone());
-        parts.reverse();
-        let poly_str = parts
-            .iter()
-            .map(|(e, c)| format!("@{}:{}", int_to_key_rust(e), c))
-            .collect::<Vec<_>>()
-            .join(", ");
-        format!("AoP({}{{{}}})", coeff_part, poly_str)
+        // ... (rest of repr) ...
+        format!("AoP({}{{{:?}}})", coeff_part, self.poly)
+    }
+
+    pub fn __add__(&self, other: &Self) -> Self {
+        self + other
+    }
+    pub fn __sub__(&self, other: &Self) -> Self {
+        self - other
+    }
+    pub fn __mul__(&self, other: &Self) -> Self {
+        self * other
+    }
+    pub fn __neg__(&self) -> Self {
+        self.neg()
+    }
+
+    fn __pow__(&self, other: &Self, _modulo: Option<&PyAny>) -> PyResult<Self> {
+        self.power(other)
     }
 
     pub fn power(&self, exp_val: &Self) -> PyResult<Self> {
-        let n = exp_val.to_numerical();
-        if n == BigInt::from(0) {
-            return Ok(from_bigint(&BigInt::one(), self.base));
+        // --- START OF PURE SYMBOLIC PATH ---
+        // Case 1: Base is a pure power, e.g., (base^E1)^E2. This handles z^z.
+        if self.coeff.is_one() && self.poly.len() == 1 {
+            if let Some((base_exp, poly_coeff)) = self.poly.iter().next() {
+                if poly_coeff.is_one() {
+                    // Base is base^E1. New exponent is E1 * E2.
+                    // Create an AoPValue for the number E1.
+                    let e1_as_aop = AoPValue::from_numerical_internal(base_exp.clone(), self.base);
+
+                    // The new exponent is a standard AoP multiplication.
+                    let new_exp_aop = &e1_as_aop * exp_val;
+
+                    // The result is a new pure power whose exponent is the numerical value of new_exp_aop.
+                    let final_exponent = new_exp_aop.to_numerical();
+                    let final_poly = HashMap::from([(final_exponent, BigInt::one())]);
+
+                    return Ok(AoPValue::_new_internal(
+                        BigInt::one(),
+                        final_poly,
+                        self.base,
+                    ));
+                }
+            }
         }
-        if n == BigInt::one() {
+        // --- END OF PURE SYMBOLIC PATH ---
+
+        // --- Fallback for all other cases, e.g., (C*P)^E ---
+        let n = exp_val.to_numerical();
+        if n.is_zero() {
+            return Ok(AoPValue::from_numerical_internal(BigInt::one(), self.base));
+        }
+        if n.is_one() {
             return Ok(self.clone());
         }
 
-        let new_coeff_data = match &self.coeff.data {
-            CoeffData::Literal(value) => {
-                if n < BigInt::from(10000) {
-                    if let Some(n_u32) = n.to_u32() {
-                        CoeffData::Literal(value.pow(n_u32))
-                    } else {
-                        CoeffData::Power {
-                            base: value.clone(),
-                            exponent: n.clone(),
-                        }
-                    }
-                } else {
-                    CoeffData::Power {
-                        base: value.clone(),
-                        exponent: n.clone(),
-                    }
-                }
-            }
-            CoeffData::Power { base, exponent } => CoeffData::Power {
-                base: base.clone(),
-                exponent: exponent * n.clone(),
-            },
-        };
-        let new_coeff = SymbolicCoefficientPy {
-            data: new_coeff_data,
-        };
-
-        let result_poly = if self.poly.is_empty() {
-            HashMap::new()
-        } else {
-            let n_u32 = n.to_u32().ok_or_else(|| {
-                pyo3::exceptions::PyValueError::new_err(
-                    "Exponent too large for polynomial expansion.",
-                )
-            })?;
-            match expand_multinomial(&self.poly, n_u32) {
-                Ok(poly) => poly,
-                Err(e) => return Err(pyo3::exceptions::PyValueError::new_err(e)),
-            }
-        };
-        Ok(Self::_new_internal(new_coeff, result_poly, self.base))
-    }
-
-    #[getter]
-    pub fn get_coeff_as_power(&self) -> Option<(BigInt, BigInt)> {
-        match &self.coeff.data {
-            CoeffData::Power { base, exponent } => Some((base.clone(), exponent.clone())),
-            _ => None,
+        if n < BigInt::zero() {
+            return Err(pyo3::exceptions::PyValueError::new_err(
+                "Negative exponents are not supported.",
+            ));
         }
+
+        let n_u32 = match n.to_u32() {
+            Some(val) => val,
+            None => {
+                return Err(pyo3::exceptions::PyValueError::new_err(
+                    "Exponent is too large for this operation.",
+                ))
+            }
+        };
+
+        let new_coeff = self.coeff.pow(n_u32);
+
+        let result_poly = if !self.poly.is_empty() {
+            crate::multinomial::expand_multinomial(&self.poly, n_u32)
+        } else {
+            HashMap::new()
+        };
+
+        let mut final_result = AoPValue::_new_internal(new_coeff, result_poly, self.base);
+        final_result._simplify();
+        Ok(final_result)
     }
 
-    fn __getstate__<'py>(&self, py: Python<'py>) -> PyResult<PyObject> {
-        Ok((self.coeff.clone(), self.poly.clone(), self.base).to_object(py))
-    }
-
-    fn __setstate__(&mut self, state: PyObject, py: Python) -> PyResult<()> {
-        let (coeff, poly, base): (SymbolicCoefficientPy, HashMap<BigInt, BigInt>, u32) =
-            state.extract(py)?;
-        self.coeff = coeff;
-        self.poly = poly;
-        self.base = base;
-        Ok(())
+    #[staticmethod]
+    pub fn int_to_key(exp_str: &str) -> PyResult<String> {
+        let exp_num = exp_str.parse::<BigInt>().map_err(|e| {
+            pyo3::exceptions::PyValueError::new_err(format!("Invalid exponent string: {}", e))
+        })?;
+        Ok(int_to_key_rust(&exp_num))
     }
 }

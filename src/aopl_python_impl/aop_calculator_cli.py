@@ -5,6 +5,8 @@ import logging
 from .aop_calculator import AoP_Calculator
 # Import the new setup function
 from .aop_logger import enable_explainer
+# Import the AI explainer function
+from .aop_ai_explainer import get_explanation
 
 sys.set_int_max_str_digits(0)
 
@@ -15,6 +17,7 @@ def main():
     parser.add_argument("--mode", choices=["num", "aop"], default="num", help="Output mode: 'num' for numerical, 'aop' for AoP notation (default: 'num').")
     parser.add_argument("--debug", action="store_true", help="Enable debug mode for detailed calculation trace.")
     parser.add_argument("--no-cache", action="store_true", help="Disable loading from and saving to the cache.")
+    parser.add_argument("--explain", action="store_true", help="Get an AI-powered explanation of the result.")
     parser.add_argument("-o", "--output", type=str, help="Path to an output file to write the result to.")
     args = parser.parse_args()
 
@@ -29,15 +32,22 @@ def main():
     try:
         result = calc.evaluate_expression(args.expression, mode=args.mode)
 
+        output_content = result
+
+        # If explanation is requested, get it and append it to the output
+        if args.explain:
+            explanation = get_explanation(args.expression, result, args.base)
+            output_content += "\n" + explanation
+
         if args.output:
             try:
                 with open(args.output, 'w') as f:
-                    f.write(result)
+                    f.write(output_content)
                 print(f"Result successfully written to: {args.output}")
             except IOError as e:
                 logging.error(f"Could not write to output file: {e}")
         else:
-            print(result)
+            print(output_content)
 
     except Exception as e:
         logging.error(f"An error occurred: {e}", exc_info=args.debug)
