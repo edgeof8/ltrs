@@ -8,9 +8,9 @@ use std::collections::HashMap;
 #[derive(Debug, Clone)]
 pub struct AoPValue {
     #[pyo3(get, set)]
+    pub coeff: BigInt, // NEW: Replaces is_negative
+    #[pyo3(get, set)]
     pub poly: HashMap<BigInt, BigInt>,
     #[pyo3(get, set)]
     pub base: u32,
-    #[pyo3(get, set)]
-    pub is_negative: bool,
 }

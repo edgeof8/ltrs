@@ -7,96 +7,95 @@ from .aop_logger import log_eval, Colors, log_pow
 
 _eval_depth = 0
 
-def _resolve_to_value(obj):
-    current = obj
+def _resolve_to_value(current: 'AoPValue | SymbolicPowerResult') -> 'AoPValue | SymbolicPowerResult':
     while isinstance(current, SymbolicPowerResult):
-        log_pow(f"Resolving SymbolicPower: {current!r}")
+        log_pow(f"Resolving SymbolicPower: {current!r}", _eval_depth)
         base = _resolve_to_value(current.base)
         exponent = _resolve_to_value(current.exponent)
         if isinstance(base, SymbolicPowerResult) or isinstance(exponent, SymbolicPowerResult):
-             return SymbolicPowerResult(base, exponent)
-        try:
-            current = base ** exponent
-        except Exception as e:
-            if type(e).__name__ == 'PyNotImplementedError':
-                log_pow(f"Power op is unresolvable. Returning symbolic: {current!r}")
-                return current
-            raise e
+            return SymbolicPowerResult(base, exponent)
+        # Perform the power operation
+        result_aop = base ** exponent
+
+        # CORRECTED CHECK: Call the getter directly on the returned object.
+        if result_aop.get_coeff_as_power() is not None:
+            return result_aop
+
+        current = result_aop # It's a numerical value, continue loop if needed (e.g. for (a^b)^c)
+
     return current
 
 def evaluate_ast(node: ASTNode, base: int, cache: dict | None = None) -> 'AoPValue | SymbolicPowerResult':
     global _eval_depth
+    # --- NEW: Sub-expression cache check ---
+    # We create a unique key for each node in the AST.
     node_repr = repr(node)
     base_str = str(base)
     if cache and base_str in cache and node_repr in cache[base_str]:
         cached_data = cache[base_str][node_repr]
-        if "raw_pickle" in cached_data: return pickle.loads(base64.b64decode(cached_data["raw_pickle"]))
+        if "raw_pickle" in cached_data:
+            log_eval(f"Cache HIT for sub-expression: {node_repr}", _eval_depth)
+            return pickle.loads(base64.b64decode(cached_data["raw_pickle"]))
 
-    result: 'AoPValue | SymbolicPowerResult'
+    log_eval(f"Node: {node!r}", _eval_depth)
+    _eval_depth += 1
+    try:
+        if isinstance(node, NumberNode):
+            result = AoPValue.from_number(int(node.value), base)
+        elif isinstance(node, IdentifierNode):
+            if node.name not in LETTER_TO_EXPONENT_MAP:
+                raise AoPError(f"Unknown identifier: {node.name}")
+            exponent = LETTER_TO_EXPONENT_MAP[node.name]
+            result = AoPValue(poly={str(exponent): 1}, base=base)
+        elif isinstance(node, AopLiteralNode):
+            result = AoPValue.from_literal(node.value, base)
+        elif isinstance(node, UnaryOpNode):
+            operand = _resolve_to_value(evaluate_ast(node.right, base, cache))
+            if not isinstance(operand, AoPValue): raise TypeError(f"Cannot apply unary '{node.op.value}' to a non-numeric value")
+            if node.op.value == '-':
+                result = AoPValue.from_number(0, base) - operand
+            else: # Unary '+'
+                result = operand
+        elif isinstance(node, BinaryOpNode):
+            # --- This is the type guard for Pylance ---
+            # It confirms to the static analyzer that 'node' is a BinaryOpNode here.
+            if not isinstance(node, BinaryOpNode):
+                # This branch is logically unreachable but satisfies the type checker.
+                raise AoPError("Internal error: Node type mismatch.")
 
-    if isinstance(node, AopLiteralNode):
-        # --- NEW LOGIC FOR AOP_LITERAL ---
-        # It represents a single number, not a sum.
-        # e.g., "5e3b" -> 5*base^5 + 3*base^2
-        poly = {}
-        term_pattern = re.compile(r'(\d*)?([a-zA-Z])')
+            log_eval(f"Node: {node.to_str()}", _eval_depth - 1)
 
-        # --- FIX: Add checks for None before calling string methods ---
-        node_val = node.value if node.value is not None else ""
-
-        # Check if the literal is purely numeric first, after stripping whitespace
-        if node_val.strip().isnumeric():
-             return AoPValue.from_number(int(node_val.strip()), base=base)
-
-        for match in term_pattern.finditer(node_val):
-            coeff_str, letter = match.groups()
-            coeff = int(coeff_str) if coeff_str else 1
-            exp = LETTER_TO_EXPONENT_MAP.get(letter, 0)
-            poly[str(exp)] = poly.get(str(exp), 0) + coeff
-
-        last_part = term_pattern.sub('', node_val)
-        if last_part.strip().isnumeric():
-            poly['0'] = poly.get('0', 0) + int(last_part.strip())
-
-        result = AoPValue(poly=poly, base=base)
-    elif isinstance(node, UnaryOpNode):
-        operand = _resolve_to_value(evaluate_ast(node.right, base, cache))
-        if not isinstance(operand, AoPValue):
-            raise TypeError(f"Cannot apply unary '{node.op.value}' to a non-numeric value")
-        if node.op.value == '-':
-            result = operand * AoPValue.from_number(-1, base=base)
+            left = evaluate_ast(node.left, base, cache)
+            right = evaluate_ast(node.right, base, cache)
+            op = node.op.value
+            if op in ('^', '**'):
+                # Power operation is lazy, it does not resolve its operands here
+                result = SymbolicPowerResult(left, right)
+            else:
+                left_aop = _resolve_to_value(left)
+                if not isinstance(left_aop, AoPValue): raise TypeError(f"Left operand for '{op}' could not be resolved to a value: {left_aop!r}")
+                right_aop = _resolve_to_value(right)
+                if not isinstance(right_aop, AoPValue): raise TypeError(f"Right operand for '{op}' could not be resolved to a value: {right_aop!r}")
+                if op == '+': result = left_aop + right_aop
+                elif op == '-': result = left_aop - right_aop
+                elif op == '*': result = left_aop * right_aop
+                elif op == '/':
+                    if right_aop.to_numerical() == 0:
+                        raise AoPError("Division by zero")
+                    result = AoPValue.from_number(left_aop.to_numerical() // right_aop.to_numerical(), base)
+                else:
+                    raise AoPError(f"Unsupported operator: {op}")
+            log_eval(f"Result -> {result!r}", _eval_depth - 1)
         else:
-            result = operand
-    elif isinstance(node, BinaryOpNode):
-        left = evaluate_ast(node.left, base, cache)
-        right = evaluate_ast(node.right, base, cache)
-        op = node.op.value
-        log_eval(f"Evaluating: {left!r} {op} {right!r}", _eval_depth)
-
-        if op in ('^', '**'):
-            left_aop = _resolve_to_value(left)
-            right_aop = _resolve_to_value(right)
-            if not isinstance(left_aop, AoPValue) or not isinstance(right_aop, AoPValue):
-                 raise TypeError(f"Cannot raise a symbolic value to a symbolic power in this context.")
-            result = SymbolicPowerResult(left_aop, right_aop)
-        else:
-            left_aop = _resolve_to_value(left)
-            right_aop = _resolve_to_value(right)
-            if not isinstance(left_aop, AoPValue) or not isinstance(right_aop, AoPValue):
-                raise TypeError(f"Cannot perform '{op}' on unresolved symbolic values: {left_aop!r}, {right_aop!r}")
-            if op == '+': result = left_aop + right_aop
-            elif op == '-': result = left_aop - right_aop
-            elif op == '*': result = left_aop * right_aop
-            elif op == '/': result = AoPValue.from_number(left_aop.to_numerical() // right_aop.to_numerical(), base=base)
-            else: raise ValueError(f"Unknown operator: {op}")
-    else:
-        raise TypeError(f"Unknown AST node type: {type(node)}")
-
-    log_eval(f"Result of '{node!r}' is {result!r}", _eval_depth)
-    if cache is not None:
-        if base_str not in cache: cache[base_str] = {}
-        pickled_obj = pickle.dumps(result)
-        b64_pickle = base64.b64encode(pickled_obj).decode('utf-8')
-        cache[base_str][node_repr] = {"raw_pickle": b64_pickle}
-
-    return result
+            raise AoPError(f"Unknown node type: {type(node).__name__}")
+        # --- NEW: Update sub-expression cache ---
+        if cache is not None:
+            if base_str not in cache: cache[base_str] = {}
+            # We only need to store the raw object for sub-expressions
+            pickled_obj = pickle.dumps(result)
+            b64_pickle = base64.b64encode(pickled_obj).decode('utf-8')
+            cache[base_str][node_repr] = {"raw_pickle": b64_pickle}
+            log_eval(f"Cached result for: {node_repr}", _eval_depth - 1)
+        return result
+    finally:
+        _eval_depth -= 1

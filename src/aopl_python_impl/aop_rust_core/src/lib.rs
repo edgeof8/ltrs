@@ -6,6 +6,7 @@
 mod aop_value;
 mod exponent_map;
 mod internal_methods;
+mod multinomial;
 mod operators;
 mod python_interface;
 
@@ -17,5 +18,6 @@ use pyo3::prelude::*;
 #[pymodule]
 fn aop_rust_core(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<AoPValue>()?;
+    // DO NOT add SymbolicCoefficient here.
     Ok(())
 }

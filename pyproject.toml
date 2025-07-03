@@ -15,7 +15,7 @@ version = "0.1.0"
 # This tells maturin that the Python package 'aopl_python_impl' is inside the 'src' directory.
 python-source = "src"
 # This tells maturin where to find the Rust crate to compile.
-manifest-path = "aop_rust_core/Cargo.toml"
+manifest-path = "src/aopl_python_impl/aop_rust_core/Cargo.toml"
 # This tells maturin the name of the Python module it should create.
 # It MUST match the one defined in your Rust lib.rs (`#[pymodule] fn aop_rust_core(...)`).
 module-name = "aopl_python_impl.aop_rust_core"

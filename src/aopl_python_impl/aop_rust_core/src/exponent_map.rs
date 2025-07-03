@@ -42,6 +42,15 @@ pub static EXPONENT_TO_LETTER_MAP: Lazy<HashMap<BigInt, char>> = Lazy::new(|| {
     map
 });
 
+// FIX: Create a single, lazily-initialized, sorted vector of exponents.
+static SORTED_EXPONENTS: Lazy<Vec<BigInt>> = Lazy::new(|| {
+    let mut values: Vec<BigInt> = LETTER_TO_EXPONENT_MAP.values().cloned().collect();
+    // Sort descending to greedily find the largest components first (e.g., Z before a)
+    values.sort_unstable_by(|a, b| b.cmp(a));
+    values.dedup();
+    values
+});
+
 pub fn int_to_key_rust(exp_num: &BigInt) -> String {
     if exp_num.is_zero() {
         return "0".to_string();
@@ -53,11 +62,8 @@ pub fn int_to_key_rust(exp_num: &BigInt) -> String {
     let mut parts = Vec::new();
     let mut remaining_exp = exp_num.clone();
 
-    let mut sorted_exp_values: Vec<BigInt> = LETTER_TO_EXPONENT_MAP.values().cloned().collect();
-    sorted_exp_values.sort_unstable_by(|a, b| b.cmp(a));
-    sorted_exp_values.dedup();
-
-    for val in &sorted_exp_values {
+    // Use the pre-sorted static vector
+    for val in &*SORTED_EXPONENTS {
         if val.is_zero() {
             continue;
         }
