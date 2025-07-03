@@ -4,7 +4,6 @@ from typing import Dict, Optional, Any, TYPE_CHECKING
 import logging
 from .definitions import LETTER_TO_EXPONENT_MAP
 import re
-import pickle
 
 if TYPE_CHECKING:
     from . import aop_rust_core as rust_core
@@ -21,72 +20,64 @@ except ImportError as e:
 class AoPValue:
     _rust_obj: Any
 
-    def __init__(self, poly: Optional[Dict[str, int]] = None, base: int = 10, coeff: Optional[Any] = None):
+    # Private constructor for internal wrapping
+    def __init__(self, rust_obj=None):
         if not rust_core:
             raise RuntimeError("Rust core is not enabled.")
-        # This constructor is primarily for creating new values from Python.
-        # The Rust core will handle reconstruction from state.
-        # Avoid direct type checking for SymbolicCoefficient to prevent Pylance errors.
-        # Ensure coeff is treated as a boolean for is_negative if needed, default to False.
-        final_coeff = False if coeff is None else coeff
-        self._rust_obj = rust_core.AoPValue(poly, base, final_coeff)
-
-    @classmethod
-    def from_number(cls, n: int, base: int = 10) -> 'AoPValue':
-        if rust_core is None:
-            raise RuntimeError("Rust core is not enabled.")
-        result = rust_core.AoPValue.from_number(n, base)
-        return cls._wrap_rust_obj(result)
+        if rust_obj:
+            self._rust_obj = rust_obj
+        else:
+            # Create a default empty rust object
+            self._rust_obj = rust_core.AoPValue()
 
     @classmethod
     def from_literal(cls, literal_str: str, base: int = 10) -> 'AoPValue':
-        if rust_core is None:
-            raise RuntimeError("Rust core is not enabled.")
-        # Use a safer approach to call from_literal if it exists.
-        try:
-            if hasattr(rust_core.AoPValue, 'from_literal'):
-                result = getattr(rust_core.AoPValue, 'from_literal')(literal_str, base)
-            else:
-                # Fallback to a default or alternative if needed.
-                result = rust_core.AoPValue({}, base, False)
-        except AttributeError:
-            result = rust_core.AoPValue({}, base, False)
-        return cls._wrap_rust_obj(result)
+        if not rust_core: raise RuntimeError("Rust core not loaded.")
+        # Call the Rust static method
+        rust_obj = rust_core.AoPValue.from_literal(literal_str, base)
+        # Wrap the returned Rust object in our Python class
+        return cls(rust_obj=rust_obj)
 
-    @staticmethod
-    def _wrap_rust_obj(rust_obj: Any) -> 'AoPValue':
-        """Wrap a Rust object in an AoPValue instance."""
-        instance = AoPValue()
-        instance._rust_obj = rust_obj
-        return instance
+    @classmethod
+    def from_number(cls, n: int, base: int = 10) -> 'AoPValue':
+        if not rust_core: raise RuntimeError("Rust core not loaded.")
+        rust_obj = rust_core.AoPValue.from_number(n, base)
+        return cls(rust_obj=rust_obj)
 
     def __add__(self, other: 'AoPValue') -> 'AoPValue':
-        return self._rust_obj.__add__(other)
+        result_rust_obj = self._rust_obj.__add__(other._rust_obj)
+        return AoPValue(rust_obj=result_rust_obj)
 
     def __sub__(self, other: 'AoPValue') -> 'AoPValue':
-        return self._rust_obj.__sub__(other)
+        result_rust_obj = self._rust_obj.__sub__(other._rust_obj)
+        return AoPValue(rust_obj=result_rust_obj)
 
     def __mul__(self, other: 'AoPValue') -> 'AoPValue':
-        return self._rust_obj.__mul__(other)
+        result_rust_obj = self._rust_obj.__mul__(other._rust_obj)
+        return AoPValue(rust_obj=result_rust_obj)
 
     def __pow__(self, other: 'AoPValue') -> 'AoPValue':
-        return self._rust_obj.power(other)
+        result_rust_obj = self._rust_obj.power(other._rust_obj)
+        return AoPValue(rust_obj=result_rust_obj)
 
     def to_numerical(self) -> int:
         return self._rust_obj.to_numerical()
 
     def __str__(self) -> str:
-        return str(self._rust_obj)
+        return self._rust_obj.__str__()
 
     def __repr__(self) -> str:
         return self._rust_obj.__repr__()
 
-    # The modern way to handle pickle, delegating to the Rust implementation.
+    # Delegate attribute access to the underlying rust object
+    def __getattr__(self, name):
+        return getattr(self._rust_obj, name)
+
+    # Pickle support
     def __getstate__(self):
         return self._rust_obj.__getstate__()
 
     def __setstate__(self, state):
-        """Restore state from pickling."""
-        # When unpickling, PyO3 creates the empty object shell for us,
-        # and then calls this method to populate it.
+        if not hasattr(self, '_rust_obj'):
+            self._rust_obj = rust_core.AoPValue()
         self._rust_obj.__setstate__(state)

@@ -82,25 +82,12 @@ fn from_bigint(n: &BigInt, base: u32) -> AoPValue {
 impl AoPValue {
     // --- CORRECTED: A SINGLE, UNIFIED CONSTRUCTOR ---
     #[new]
-    #[pyo3(signature = (poly_str_keys = None, base = 10, coeff = None))]
     fn __new__(
         poly_str_keys: Option<HashMap<String, BigInt>>,
-        base: u32,
+        base: Option<u32>,
         coeff: Option<BigInt>,
     ) -> Self {
-        // If no arguments are given, it's for pickle's __setstate__. Create a default.
-        if poly_str_keys.is_none() && coeff.is_none() {
-            let default_coeff = SymbolicCoefficientPy {
-                data: CoeffData::Literal(BigInt::from(0)),
-            };
-            return AoPValue {
-                coeff: default_coeff,
-                poly: HashMap::new(),
-                base: 10,
-            };
-        }
-
-        // Otherwise, it's a user-facing call.
+        let final_base = base.unwrap_or(10);
         let coeff_data = CoeffData::Literal(coeff.unwrap_or_else(BigInt::one));
         let final_coeff = SymbolicCoefficientPy { data: coeff_data };
         let poly = poly_str_keys
@@ -108,7 +95,67 @@ impl AoPValue {
             .into_iter()
             .filter_map(|(k, v)| k.parse::<BigInt>().ok().map(|exp| (exp, v)))
             .collect();
-        Self::_new_internal(final_coeff, poly, base)
+        Self::_new_internal(final_coeff, poly, final_base)
+    }
+
+    // --- Pickle Protocol Implementation ---
+
+    // 1. __getnewargs__: Tells pickle what to pass to __new__ when unpickling.
+    //    We want it to create a default object, so we return an empty tuple.
+    fn __getnewargs__(&self) -> PyResult<(Option<()>, Option<()>, Option<()>)> {
+        Ok((None, None, None))
+    }
+
+    #[staticmethod]
+    pub fn from_literal(literal_str: &str, base: u32) -> PyResult<Self> {
+        // This regex logic is moved from Python to Rust
+        let term_pattern = regex::Regex::new(r"(\d+)?([a-zA-Z])|(\d+)").unwrap();
+        let mut matches = Vec::new();
+        for cap in term_pattern.find_iter(literal_str) {
+            matches.push(term_pattern.captures(cap.as_str()).unwrap());
+        }
+
+        let mut poly = HashMap::new();
+        let mut main_coeff = BigInt::one();
+
+        if matches.len() == 1 {
+            let cap = &matches[0];
+            if let Some(letter_match) = cap.get(2) {
+                let letter = letter_match.as_str().chars().next().unwrap();
+                let coeff_str = cap.get(1).map_or("1", |m| m.as_str());
+                main_coeff = coeff_str.parse().unwrap();
+                let exp = super::exponent_map::LETTER_TO_EXPONENT_MAP
+                    .get(&letter)
+                    .unwrap()
+                    .clone();
+                poly.insert(exp, BigInt::one());
+
+                let coeff_data = CoeffData::Literal(main_coeff);
+                let final_coeff = SymbolicCoefficientPy { data: coeff_data };
+                return Ok(Self::_new_internal(final_coeff, poly, base));
+            }
+        }
+
+        // Fallback for multi-term
+        for cap in matches {
+            if let Some(letter_match) = cap.get(2) {
+                let letter = letter_match.as_str().chars().next().unwrap();
+                let coeff_str = cap.get(1).map_or("1", |m| m.as_str());
+                let coeff_val: BigInt = coeff_str.parse().unwrap();
+                let exp = super::exponent_map::LETTER_TO_EXPONENT_MAP
+                    .get(&letter)
+                    .unwrap()
+                    .clone();
+                *poly.entry(exp).or_default() += coeff_val;
+            } else if let Some(num_match) = cap.get(3) {
+                let num_val: BigInt = num_match.as_str().parse().unwrap();
+                *poly.entry(BigInt::zero()).or_default() += num_val;
+            }
+        }
+
+        let coeff_data = CoeffData::Literal(main_coeff);
+        let final_coeff = SymbolicCoefficientPy { data: coeff_data };
+        Ok(Self::_new_internal(final_coeff, poly, base))
     }
 
     #[staticmethod]
