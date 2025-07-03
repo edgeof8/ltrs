@@ -1,6 +1,6 @@
 // aop_rust_core/src/internal_methods.rs
 
-use super::aop_value::{AoPValue, SymbolicCoefficientPy};
+use super::aop_value::{AoPValue, CoeffData, SymbolicCoefficientPy};
 use num_bigint::BigInt;
 use rayon::prelude::*;
 use std::collections::HashMap;

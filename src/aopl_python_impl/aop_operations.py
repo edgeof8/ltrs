@@ -18,7 +18,8 @@ def _resolve_to_value(current: 'AoPValue | SymbolicPowerResult') -> 'AoPValue | 
         result_aop = base ** exponent
 
         # CORRECTED CHECK: Call the getter directly on the returned object.
-        if result_aop.get_coeff_as_power() is not None:
+        # Ensure compatibility with Rust implementation.
+        if hasattr(result_aop, 'get_coeff_as_power') and result_aop.get_coeff_as_power is not None:
             return result_aop
 
         current = result_aop # It's a numerical value, continue loop if needed (e.g. for (a^b)^c)

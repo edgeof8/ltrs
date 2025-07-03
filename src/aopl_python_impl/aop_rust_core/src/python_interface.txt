@@ -5,30 +5,13 @@ use super::exponent_map::int_to_key_rust;
 use super::multinomial::expand_multinomial;
 use num_bigint::{BigInt, Sign};
 use num_integer::Integer;
-use num_traits::{One, Signed, ToPrimitive, Zero}; // Added Zero back
+use num_traits::{One, Signed, ToPrimitive}; // Removed unused Zero
 use pyo3::prelude::*;
 use std::collections::HashMap;
 
-// --- NEW: Manual ToPyObject implementation ---
-// This tells PyO3 how to convert our Rust struct into a Python object.
-impl ToPyObject for SymbolicCoefficientPy {
-    fn to_object(&self, py: Python<'_>) -> PyObject {
-        // Create a new Python instance of the SymbolicCoefficientPy class
-        // and pass `self` (the Rust struct) to its constructor.
-        Py::new(py, self.clone()).unwrap().to_object(py)
-    }
-}
-
 #[pymethods]
 impl SymbolicCoefficientPy {
-    #[new]
-    fn __new__() -> Self {
-        SymbolicCoefficientPy {
-            data: CoeffData::Literal(BigInt::zero()),
-        }
-    }
-
-    // Correct: Get Python instance from the method signature
+    // Correct way to get Python instance inside a method
     fn __getstate__<'py>(&self, py: Python<'py>) -> PyResult<PyObject> {
         match &self.data {
             CoeffData::Literal(val) => Ok((1, val).to_object(py)),
@@ -36,8 +19,9 @@ impl SymbolicCoefficientPy {
         }
     }
 
-    // Correct: Get Python instance from the method signature
-    fn __setstate__(&mut self, state: PyObject, py: Python) -> PyResult<()> {
+    fn __setstate__(&mut self, state: PyObject) -> PyResult<()> {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
         if let Ok((tag, value)) = state.extract::<(i32, BigInt)>(py) {
             if tag == 1 {
                 self.data = CoeffData::Literal(value);
@@ -66,7 +50,7 @@ fn from_bigint(n: &BigInt, base: u32) -> AoPValue {
     let mut n_abs = n.abs();
     let base_bigint = BigInt::from(base);
     let mut poly = HashMap::new();
-    let mut exp = BigInt::zero(); // Correct: uses the Zero trait
+    let mut exp = BigInt::zero();
     while n_abs > BigInt::from(0) {
         let (new_n, remainder) = n_abs.div_mod_floor(&base_bigint);
         if remainder != BigInt::from(0) {
@@ -80,27 +64,13 @@ fn from_bigint(n: &BigInt, base: u32) -> AoPValue {
 
 #[pymethods]
 impl AoPValue {
-    // --- CORRECTED: A SINGLE, UNIFIED CONSTRUCTOR ---
     #[new]
     #[pyo3(signature = (poly_str_keys = None, base = 10, coeff = None))]
-    fn __new__(
+    pub fn new(
         poly_str_keys: Option<HashMap<String, BigInt>>,
         base: u32,
         coeff: Option<BigInt>,
     ) -> Self {
-        // If no arguments are given, it's for pickle's __setstate__. Create a default.
-        if poly_str_keys.is_none() && coeff.is_none() {
-            let default_coeff = SymbolicCoefficientPy {
-                data: CoeffData::Literal(BigInt::from(0)),
-            };
-            return AoPValue {
-                coeff: default_coeff,
-                poly: HashMap::new(),
-                base: 10,
-            };
-        }
-
-        // Otherwise, it's a user-facing call.
         let coeff_data = CoeffData::Literal(coeff.unwrap_or_else(BigInt::one));
         let final_coeff = SymbolicCoefficientPy { data: coeff_data };
         let poly = poly_str_keys
@@ -225,26 +195,5 @@ impl AoPValue {
             }
         };
         Ok(Self::_new_internal(new_coeff, result_poly, self.base))
-    }
-
-    #[getter]
-    pub fn get_coeff_as_power(&self) -> Option<(BigInt, BigInt)> {
-        match &self.coeff.data {
-            CoeffData::Power { base, exponent } => Some((base.clone(), exponent.clone())),
-            _ => None,
-        }
-    }
-
-    fn __getstate__<'py>(&self, py: Python<'py>) -> PyResult<PyObject> {
-        Ok((self.coeff.clone(), self.poly.clone(), self.base).to_object(py))
-    }
-
-    fn __setstate__(&mut self, state: PyObject, py: Python) -> PyResult<()> {
-        let (coeff, poly, base): (SymbolicCoefficientPy, HashMap<BigInt, BigInt>, u32) =
-            state.extract(py)?;
-        self.coeff = coeff;
-        self.poly = poly;
-        self.base = base;
-        Ok(())
     }
 }
