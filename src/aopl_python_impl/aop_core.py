@@ -1,12 +1,11 @@
-# aop_core.py - Simplified functional interface
-# This module provides a simple, function-based API that delegates
-# to an instance of the AoP_Calculator class from aop_calculator.py.
-# For more advanced usage or stateful calculations (like variables),
-# import and use AoP_Calculator directly from aop_calculator.py.
+# aopl_python_impl/aop_core.py
+#
+# This module provides a simplified, functional, and stateless API for the calculator.
+# It's designed for one-off calculations where maintaining state (like variables)
+# across multiple calls is not required. For stateful sessions, users should
+# instantiate and use the AoP_Calculator class directly.
 
 from .aop_calculator import AoP_Calculator
-# FIX: Removed unused imports for ValueTuple and a non-existent CalculatorInterface.
-from .definitions import OutputFormatMode
 
 # Create a single, module-level instance to be reused.
 _shared_aop_calculator: AoP_Calculator = AoP_Calculator()
@@ -27,17 +26,10 @@ def evaluate_expression(expression_str: str) -> str:
     # Clear any variables from previous calls to ensure stateless behavior for this API
     _shared_aop_calculator.variables.clear()
 
-    # FIX: The call to evaluate_expression was missing required arguments.
-    # This now provides default values for mode and precision, making the
-    # simple API functional again.
-    return _shared_aop_calculator.evaluate_expression(
-        expression=expression_str,
-        mode=OutputFormatMode.AUTO,
-        precision=10
-    )
-
-# evaluate_simple_word function was removed as it's redundant.
-# evaluate_expression can handle simple words.
+    # We only care about the result string here, not the AST.
+    result_str, _ = _shared_aop_calculator.evaluate_expression(
+        expression=expression_str, mode="num")
+    return result_str
 
 # Note: For any functions that might rely on or modify calculator state (like variables),
 # it's generally better to require the user to instantiate and use AoP_Calculator directly.

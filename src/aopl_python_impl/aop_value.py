@@ -1,9 +1,14 @@
 # aopl_python_impl/aop_value.py
+#
+# This module defines the `AoPValue` class, which is the Python interface
+# to the high-performance `AoPValue` struct defined in the Rust core.
+# This class acts as a handle, creating Rust objects and dispatching
+# all mathematical operations (+, *, **, etc.) to the compiled Rust code.
 from __future__ import annotations
 from typing import Dict, Optional, Any, TYPE_CHECKING
 import logging
-from .definitions import LETTER_TO_EXPONENT_MAP
-import re
+from .constants import LETTER_TO_EXPONENT_MAP # Import from constants
+import re # Keep this line
 
 if TYPE_CHECKING:
     from . import aop_rust_core as rust_core
@@ -24,7 +29,6 @@ class AoPValue:
         if not rust_core:
             raise RuntimeError("Rust core is not enabled.")
         final_coeff = coeff if coeff is not None else 1
-        # The Rust constructor was updated to take coeff.
         self._rust_obj = rust_core.AoPValue(poly, base, final_coeff)
 
     @classmethod
@@ -36,19 +40,23 @@ class AoPValue:
 
     @classmethod
     def from_literal(cls, literal_str: str, base: int = 10) -> 'AoPValue':
-        poly = {}
         term_pattern = re.compile(r'(\d+)?([a-zA-Z])|(\d+)')
         matches = list(term_pattern.finditer(literal_str))
 
-        if len(matches) == 1:
+        # If a literal consists of just ONE term with a letter (e.g., "2b", "c", "Z"),
+        # it's treated as a single scaled power, not an additive polynomial.
+        if len(matches) == 1 and matches[0].group(2): # group(2) is the letter part
             match = matches[0]
             coeff_str, letter, _ = match.groups()
-            if letter:
-                main_coeff = int(coeff_str) if coeff_str else 1
-                exp = LETTER_TO_EXPONENT_MAP.get(letter, 0)
-                poly[str(exp)] = 1
-                return cls(poly=poly, base=base, coeff=main_coeff)
 
+            main_coeff = int(coeff_str) if coeff_str else 1
+            exp = LETTER_TO_EXPONENT_MAP.get(letter, 0)
+            poly = {str(exp): 1} # The polynomial part is just base^exp
+            # Use keyword arguments to match the __init__ signature and satisfy Pylance.
+            return cls(poly=poly, base=base, coeff=main_coeff)
+
+        # Otherwise, the literal is an additive polynomial (e.g., "b2", "2c4a").
+        poly = {}
         for match in matches:
             coeff_str, letter, standalone_num = match.groups()
             if letter:
@@ -57,7 +65,6 @@ class AoPValue:
                 poly[str(exp)] = poly.get(str(exp), 0) + coeff_val
             elif standalone_num:
                 poly['0'] = poly.get('0', 0) + int(standalone_num)
-
         return cls(poly=poly, base=base, coeff=1)
 
     @staticmethod
@@ -65,7 +72,6 @@ class AoPValue:
         if not rust_core: raise RuntimeError("Rust core is not enabled, cannot format key.")
         return rust_core.AoPValue.int_to_key(exp_str)
 
-    # --- Start of explicit wrapper methods for Pylance ---
     def __add__(self, other: 'AoPValue') -> 'AoPValue':
         if not isinstance(other, AoPValue): raise TypeError(f"Unsupported operand type for +: '{type(other).__name__}'")
         new_instance = self.__class__.__new__(self.__class__)
@@ -94,6 +100,25 @@ class AoPValue:
         """Returns the coefficient as a power tuple (base, exponent) if it is a power, else None."""
         return self._rust_obj.get_coeff_as_power()
 
+    def get_decomposition_str(self) -> str:
+        """Generates a human-readable string of the polynomial decomposition."""
+        rust_poly = self._rust_obj.get_poly()
+        base = self._rust_obj.base
+        coeff = self._rust_obj.coeff
+
+        if not rust_poly:
+            return str(coeff)
+
+        # Sort terms by exponent descending for canonical output
+        sorted_terms = sorted(rust_poly.items(), key=lambda item: int(item[0]), reverse=True)
+
+        parts = [f"({v} * {base}^{k})" for k, v in sorted_terms]
+        poly_str = " + ".join(parts)
+
+        if coeff != 1:
+            return f"{coeff} * ({poly_str})"
+        return poly_str
+
     def to_numerical(self) -> int:
         return self._rust_obj.to_numerical()
 
@@ -104,7 +129,11 @@ class AoPValue:
         return self._rust_obj.__repr__()
 
     def __reduce__(self):
-        """Tells Python's pickle module how to serialize this object."""
+        """
+        Tells Python's `pickle` module how to serialize this object.
+        It returns a tuple: (the callable to use for unpickling, a tuple of args for that callable).
+        Here, we use the class itself as the callable and provide the constructor args.
+        """
         rust_poly_str_keys = self._rust_obj.get_poly()
         rust_base = self._rust_obj.base
         rust_coeff = self._rust_obj.coeff

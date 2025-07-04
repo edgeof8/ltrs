@@ -1,4 +1,8 @@
 # aopl_python_impl/aop_formatter.py
+#
+# This module is responsible for converting the internal `AoPValue` objects
+# into human-readable string representations, either in the symbolic "AoP"
+# notation or as a standard decimal string.
 from .aop_value import AoPValue
 from .definitions import SymbolicPowerResult
 from .aop_ast import ASTNode
@@ -21,31 +25,31 @@ def _format_aopvalue_to_aop_string(val: AoPValue) -> str:
     coeff = rust_obj.coeff
     poly = rust_obj.get_poly()
 
+    # A zero value is always just "0".
     if coeff == 0: return "0"
 
-    # Case 1: Pure power (coeff=1, single term with poly_coeff=1)
+    # Case 1: The value is a pure power of the base (e.g., base^20).
+    # This is a key feature of AoP, where a large number can be represented by a single letter.
     if coeff == 1 and len(poly) == 1:
         exp_str, poly_coeff = list(poly.items())[0]
         if poly_coeff == 1:
-            # This is the base^E case. We need to format E.
-            # Create an AoPValue representing the exponent E.
+            # The exponent E itself might be a complex number, so we represent it
+            # as an AoPValue and recursively format it.
             exponent_as_aop_val = AoPValue.from_number(int(exp_str), val._rust_obj.base)
-
-            # Now, recursively format this new AoPValue.
             formatted_exponent = format_as_aop(exponent_as_aop_val)
 
-            # If the formatted exponent is a simple number or single letter, we're good.
-            # If it's a complex expression, wrap it in parentheses.
+            # If the formatted exponent is a complex expression, wrap it in parentheses.
+            # 'a' is the canonical representation for the base in AoP notation (e.g., a^t).
             if ' ' in formatted_exponent or '+' in formatted_exponent or '*' in formatted_exponent:
                  return f"a^({formatted_exponent})"
             else:
                  return f"a^{formatted_exponent}"
 
-    # Fallback for all other cases (numbers, complex polynomials)
+    # Case 2: The value is a simple number (a coefficient with no polynomial part).
     if not poly:
         return str(coeff)
 
-    # Case 4: Full polynomial representation
+    # Case 3: Full polynomial representation (e.g., 2a+3b or 5*(c+d)).
     # Sort terms by exponent descending for canonical output
     sorted_terms = sorted(poly.items(), key=lambda item: int(item[0]), reverse=True)
     parts = []
@@ -64,6 +68,7 @@ def _format_aopvalue_to_aop_string(val: AoPValue) -> str:
     poly_str = "".join(parts).lstrip()
     if coeff == 1: return poly_str
     if coeff == -1: return f"-({poly_str})"
+    # If there's an overall coefficient, it multiplies the entire polynomial.
     return f"{coeff} * ({poly_str})"
 
 def format_as_decimal_string(val: AoPValue) -> str:

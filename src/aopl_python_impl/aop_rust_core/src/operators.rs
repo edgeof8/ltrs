@@ -2,24 +2,57 @@
 
 use super::aop_value::AoPValue;
 use num_bigint::BigInt;
-use num_traits::Zero;
+use num_traits::{One, Zero};
 use std::collections::HashMap;
 use std::ops::{Add, Mul, Neg, Sub};
 
 impl Add for &AoPValue {
     type Output = AoPValue;
     fn add(self, other: &AoPValue) -> AoPValue {
-        let self_num = self.to_numerical();
-        let other_num = other.to_numerical();
-        let sum = self_num + other_num;
-        AoPValue::from_numerical_internal(sum, self.base)
+        // Ensure bases are compatible for a meaningful operation.
+        if self.base != other.base {
+            // In a real application, you might return a Result<_, Error>
+            // For now, we'll panic as this represents a logical error.
+            panic!("Cannot add AoPValues with different bases.");
+        }
+
+        // Case 1: If both have a coefficient of 1, we can just merge the polynomials.
+        // This is the most common and efficient path for expressions like 'a + b'.
+        if self.coeff.is_one() && other.coeff.is_one() {
+            let mut new_poly = self.poly.clone();
+            for (exp, coeff) in &other.poly {
+                *new_poly.entry(exp.clone()).or_default() += coeff;
+            }
+            let mut result = AoPValue::_new_internal(BigInt::one(), new_poly, self.base);
+            result._simplify();
+            return result;
+        }
+
+        // Case 2: General case involving coefficients, e.g., 2*(a) + 3*(b).
+        // We must first "distribute" the coefficients into their respective polynomials.
+        // An AoPValue like `C * {exp: coeff}` is equivalent to `{exp: C * coeff}`
+        // if we set the outer coefficient to 1.
+        let mut new_poly = HashMap::new();
+
+        // Distribute self.coeff into self.poly
+        for (exp, p_coeff) in &self.poly {
+            *new_poly.entry(exp.clone()).or_default() += &self.coeff * p_coeff;
+        }
+        // Distribute other.coeff into other.poly
+        for (exp, p_coeff) in &other.poly {
+            *new_poly.entry(exp.clone()).or_default() += &other.coeff * p_coeff;
+        }
+
+        let mut result = AoPValue::_new_internal(BigInt::one(), new_poly, self.base);
+        result._simplify();
+        result
     }
 }
 
 impl Sub for &AoPValue {
     type Output = AoPValue;
     fn sub(self, other: &AoPValue) -> AoPValue {
-        self.add(&other.neg())
+        self + &other.neg()
     }
 }
 

@@ -1,14 +1,21 @@
 # aopl_python_impl/aop_calculator.py
-from .definitions import TOKEN_REGEX, AoPError, EXPONENT_TO_LETTER_MAP
+#
+# This module contains the main AoP_Calculator class, which serves as the primary
+# engine for the application. It manages state (like variables), handles caching,
+# and orchestrates the tokenizing, parsing, and evaluation pipeline.
+from __future__ import annotations
+from typing import Tuple, Optional
+from .definitions import AoPError
+from .constants import EXPONENT_TO_LETTER_MAP
 from .aop_parser import tokenize_expression, Parser
 from .aop_formatter import format_as_aop, format_as_decimal_string
 from .aop_operations import evaluate_ast, _resolve_to_value
 import logging, os, json, pickle, base64
 from .aop_logger import print_legend, log_eval_report_start, DebugTimer
 from .aop_value import AoPValue
+from .aop_ast import ASTNode
 from .definitions import SymbolicPowerResult
 
-# --- NEW: Define a new cache filename to avoid conflicts with the old format ---
 CACHE_FILENAME = 'precalculated_cache_v2.json'
 
 class AoP_Calculator:
@@ -16,8 +23,9 @@ class AoP_Calculator:
         self.base = base
         self.cache = self._load_cache()
         self.cache_dirty = False
+        self.variables = {}
 
-    def evaluate_expression(self, expression: str, mode: str = "num") -> str:
+    def evaluate_expression(self, expression: str, mode: str = "num") -> Tuple[str, Optional[ASTNode]]:
         # The logger functions will only print if the global flag is set
         print_legend(expression, self.base)
 
@@ -29,23 +37,32 @@ class AoP_Calculator:
             if self.cache and base_str in self.cache and expression in self.cache[base_str]:
                 cached_data = self.cache[base_str][expression]
                 if "raw_pickle" in cached_data:
-                    result_obj = pickle.loads(base64.b64decode(cached_data["raw_pickle"]))
+                    # On a full cache hit for the requested mode, return the cached result.
+                    # We will re-parse to get the AST for the explainer if needed.
                     if mode in cached_data:
-                        return cached_data[mode]
+                        cached_result = cached_data[mode]
+                        # Re-parsing is cheap compared to re-evaluating. We do it here
+                        # to ensure the AI explainer always has an AST to work with,
+                        # even when the calculation result comes from the cache.
+                        tokens = tokenize_expression(expression)
+                        parser = Parser(tokens)
+                        ast = parser.parse() # We need the AST for the explainer.
+                        timer.report()
+                        return cached_result, ast
             else:
                 result_obj = None
 
             if result_obj is None:
                 tokens = tokenize_expression(expression)
                 timer.lap("Tokenize")
-                if not tokens: return ""
+                if not tokens: return "", None
                 parser = Parser(tokens)
                 ast = parser.parse()
                 timer.lap("Parse AST")
-                if ast is None: return "" # Handle empty expressions
+                if ast is None: return "", None # Handle empty expressions
                 log_eval_report_start(repr(ast))
                 # Pass the cache object down to the AST evaluator
-                result_obj = evaluate_ast(ast, self.base, self.cache)
+                result_obj = evaluate_ast(ast, self.base, self.cache, self.variables)
                 timer.lap("Evaluate AST")
 
             # --- ALWAYS resolve the result to a final AoPValue ---
@@ -53,7 +70,7 @@ class AoP_Calculator:
             timer.lap("Resolve Value")
 
             if isinstance(final_aop_value, SymbolicPowerResult):
-                return "Error: Result is symbolic and cannot be represented."
+                return "Error: Result is symbolic and cannot be represented.", None
 
             if mode == "aop":
                 final_result_str = format_as_aop(final_aop_value, EXPONENT_TO_LETTER_MAP)
@@ -74,11 +91,11 @@ class AoP_Calculator:
                 self.cache_dirty = True
 
             timer.report()
-            return final_result_str
+            return final_result_str, ast
 
         except Exception as e:
             logging.error("Unexpected error in calculation", exc_info=True)
-            return f"Error: {type(e).__name__}: {e}"
+            return f"Error: {type(e).__name__}: {e}", None
 
     def _load_cache(self):
         cache_file = os.path.join('research', 'experiment_results', 'cache', CACHE_FILENAME)

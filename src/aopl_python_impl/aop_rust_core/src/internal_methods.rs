@@ -36,9 +36,8 @@ impl AoPValue {
                         let next_exp = exp.clone() + BigInt::one();
                         let entry = self.poly.entry(next_exp.clone()).or_default();
                         *entry += new_carry;
-                        if !sorted_exps.contains(&next_exp) {
-                            sorted_exps.push(next_exp);
-                            sorted_exps.sort_unstable();
+                        if let Err(pos) = sorted_exps.binary_search(&next_exp) {
+                            sorted_exps.insert(pos, next_exp);
                         }
                     }
                 }
@@ -49,7 +48,6 @@ impl AoPValue {
     }
 
     pub fn _handle_neg_coeffs(&mut self) {
-        // This logic remains largely the same as it operates on the polynomial's BigInts
         if self.poly.values().all(|c| !c.is_negative()) {
             return;
         }
@@ -58,13 +56,11 @@ impl AoPValue {
         let base_bigint = BigInt::from(self.base);
         let one = BigInt::one();
         for exp in sorted_exps {
-            if let Some(coeff_val) = self.poly.get(&exp) {
-                if coeff_val.is_negative() {
-                    let coeff_val = coeff_val.clone();
-                    let borrows_needed = (coeff_val.abs() + &base_bigint - &one) / &base_bigint;
-                    *self.poly.entry(exp.clone()).or_default() += &borrows_needed * &base_bigint;
-                    *self.poly.entry(exp.clone() + BigInt::one()).or_default() -= borrows_needed;
-                }
+            if let Some(coeff_val) = self.poly.get(&exp).filter(|c| c.is_negative()) {
+                let coeff_val = coeff_val.clone();
+                let borrows_needed = (coeff_val.abs() + &base_bigint - &one) / &base_bigint;
+                *self.poly.entry(exp.clone()).or_default() += &borrows_needed * &base_bigint;
+                *self.poly.entry(exp.clone() + &one).or_default() -= borrows_needed;
             }
         }
         self.poly.retain(|_, v| !v.is_zero());

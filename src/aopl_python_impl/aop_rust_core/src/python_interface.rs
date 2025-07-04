@@ -10,12 +10,11 @@ use std::collections::HashMap;
 use std::ops::Neg;
 
 impl AoPValue {
-    // New internal helper to create an AoPValue from a plain BigInt
     pub fn from_numerical_internal(n: BigInt, base: u32) -> AoPValue {
         if n.is_zero() {
             return AoPValue::_new_internal(BigInt::zero(), HashMap::new(), base);
         }
-        if n.abs() < BigInt::from(base) && n.abs() > BigInt::zero() {
+        if n.abs() < BigInt::from(base) {
             return AoPValue::_new_internal(n, HashMap::new(), base);
         }
         let coeff = if n.is_negative() {
@@ -77,7 +76,7 @@ impl AoPValue {
         Ok(AoPValue::from_numerical_internal(n_bigint, base))
     }
 
-    // to_numerical is now a Python-facing method
+    #[pyo3(name = "to_numerical")]
     pub fn py_to_numerical(&self) -> BigInt {
         self.to_numerical()
     }
@@ -99,8 +98,23 @@ impl AoPValue {
         if self.poly.is_empty() {
             return format!("AoP({})", self.coeff);
         }
-        // ... (rest of repr) ...
-        format!("AoP({}{{{:?}}})", coeff_part, self.poly)
+        let mut parts: Vec<_> = self.poly.iter().collect();
+        parts.sort_by_key(|(e, _)| (*e).clone());
+        parts.reverse();
+        let poly_str = parts
+            .iter()
+            .map(|(e, c)| {
+                let key = int_to_key_rust(e);
+                if **c == BigInt::one() {
+                    key
+                } else {
+                    format!("{}*{}", c, key)
+                }
+            })
+            .collect::<Vec<_>>()
+            .join(" + ");
+
+        format!("AoP({}{})", coeff_part, poly_str)
     }
 
     pub fn __add__(&self, other: &Self) -> Self {
@@ -121,22 +135,14 @@ impl AoPValue {
     }
 
     pub fn power(&self, exp_val: &Self) -> PyResult<Self> {
-        // --- START OF PURE SYMBOLIC PATH ---
-        // Case 1: Base is a pure power, e.g., (base^E1)^E2. This handles z^z.
+        // --- PURE SYMBOLIC PATH ---
         if self.coeff.is_one() && self.poly.len() == 1 {
             if let Some((base_exp, poly_coeff)) = self.poly.iter().next() {
                 if poly_coeff.is_one() {
-                    // Base is base^E1. New exponent is E1 * E2.
-                    // Create an AoPValue for the number E1.
                     let e1_as_aop = AoPValue::from_numerical_internal(base_exp.clone(), self.base);
-
-                    // The new exponent is a standard AoP multiplication.
                     let new_exp_aop = &e1_as_aop * exp_val;
-
-                    // The result is a new pure power whose exponent is the numerical value of new_exp_aop.
                     let final_exponent = new_exp_aop.to_numerical();
                     let final_poly = HashMap::from([(final_exponent, BigInt::one())]);
-
                     return Ok(AoPValue::_new_internal(
                         BigInt::one(),
                         final_poly,
@@ -145,9 +151,8 @@ impl AoPValue {
                 }
             }
         }
-        // --- END OF PURE SYMBOLIC PATH ---
 
-        // --- Fallback for all other cases, e.g., (C*P)^E ---
+        // --- FALLBACK PATH ---
         let n = exp_val.to_numerical();
         if n.is_zero() {
             return Ok(AoPValue::from_numerical_internal(BigInt::one(), self.base));
@@ -155,13 +160,11 @@ impl AoPValue {
         if n.is_one() {
             return Ok(self.clone());
         }
-
         if n < BigInt::zero() {
             return Err(pyo3::exceptions::PyValueError::new_err(
                 "Negative exponents are not supported.",
             ));
         }
-
         let n_u32 = match n.to_u32() {
             Some(val) => val,
             None => {
@@ -172,7 +175,6 @@ impl AoPValue {
         };
 
         let new_coeff = self.coeff.pow(n_u32);
-
         let result_poly = if !self.poly.is_empty() {
             crate::multinomial::expand_multinomial(&self.poly, n_u32)
         } else {

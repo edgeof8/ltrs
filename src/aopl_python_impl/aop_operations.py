@@ -1,13 +1,24 @@
 # aopl_python_impl/aop_operations.py
-from .aop_ast import ASTNode, NumberNode, IdentifierNode, BinaryOpNode, UnaryOpNode, AopLiteralNode
-from .definitions import LETTER_TO_EXPONENT_MAP, AoPError, SymbolicPowerResult, Token
+#
+# This module contains the core recursive function, `evaluate_ast`, which
+# walks the Abstract Syntax Tree and performs the actual calculations.
+# It handles operator logic, variable lookups/assignments, and caching of
+# sub-expression results.
+from typing import Dict, Any, Union, Optional
+from .aop_ast import ASTNode, NumberNode, IdentifierNode, BinaryOpNode, UnaryOpNode, AopLiteralNode, VariableNode
+from .definitions import AoPError, SymbolicPowerResult, Token
+from .constants import LETTER_TO_EXPONENT_MAP
 from .aop_value import AoPValue
 import logging, pickle, base64, re
 from .aop_logger import log_eval, Colors, log_pow
 
 _eval_depth = 0
 
-def _resolve_to_value(current: 'AoPValue | SymbolicPowerResult') -> 'AoPValue | SymbolicPowerResult':
+def _resolve_to_value(current: Union[AoPValue, SymbolicPowerResult]) -> Union[AoPValue, SymbolicPowerResult]:
+    """
+    Recursively resolves a potentially nested SymbolicPowerResult.
+    This is the "lazy evaluation" engine, turning symbolic powers into concrete AoPValues.
+    """
     while isinstance(current, SymbolicPowerResult):
         log_pow(f"Resolving SymbolicPower: {current!r}", _eval_depth)
         base = _resolve_to_value(current.base)
@@ -16,23 +27,20 @@ def _resolve_to_value(current: 'AoPValue | SymbolicPowerResult') -> 'AoPValue | 
             return SymbolicPowerResult(base, exponent)
         # Perform the power operation
         result_aop = base ** exponent
-
-        # CORRECTED CHECK: Call the getter directly on the returned object.
-        # Ensure compatibility with Rust implementation.
-        if hasattr(result_aop, 'get_coeff_as_power') and result_aop.get_coeff_as_power is not None:
-            return result_aop
-
-        current = result_aop # It's a numerical value, continue loop if needed (e.g. for (a^b)^c)
+        # The result of the power op could itself be another symbolic power if the exponent
+        # was symbolic (e.g. (a^b)^c -> a^(b*c)). The loop continues until a final value is reached.
+        current = result_aop
 
     return current
 
-def evaluate_ast(node: ASTNode, base: int, cache: dict | None = None) -> 'AoPValue | SymbolicPowerResult':
+def evaluate_ast(node: ASTNode, base: int, cache: Optional[dict] = None, variables: Optional[Dict[str, Any]] = None) -> Union[AoPValue, SymbolicPowerResult]:
+    # Ensure variables is a dictionary, even if None is passed.
+    if variables is None:
+        variables = {}
     global _eval_depth
-    # --- NEW: Sub-expression cache check ---
-    # We create a unique key for each node in the AST.
     node_repr = repr(node)
     base_str = str(base)
-    if cache and base_str in cache and node_repr in cache[base_str]:
+    if cache is not None and base_str in cache and node_repr in cache[base_str]:
         cached_data = cache[base_str][node_repr]
         if "raw_pickle" in cached_data:
             log_eval(f"Cache HIT for sub-expression: {node_repr}", _eval_depth)
@@ -48,46 +56,62 @@ def evaluate_ast(node: ASTNode, base: int, cache: dict | None = None) -> 'AoPVal
             result = AoPValue.from_literal(node.name, base)
         elif isinstance(node, AopLiteralNode):
             result = AoPValue.from_literal(node.value, base)
+        elif isinstance(node, VariableNode):
+            var_name = node.name
+            if var_name not in variables:
+                raise NameError(f"Variable '{var_name}' is not defined.")
+            # The result is the value stored in the variable dictionary
+            result = variables[var_name]
         elif isinstance(node, UnaryOpNode):
-            operand = _resolve_to_value(evaluate_ast(node.right, base, cache))
+            operand = _resolve_to_value(evaluate_ast(node.right, base, cache, variables))
             if not isinstance(operand, AoPValue): raise TypeError(f"Cannot apply unary '{node.op.value}' to a non-numeric value")
             if node.op.value == '-':
                 result = AoPValue.from_number(0, base) - operand
             else: # Unary '+'
                 result = operand
         elif isinstance(node, BinaryOpNode):
-            # --- This is the type guard for Pylance ---
-            # It confirms to the static analyzer that 'node' is a BinaryOpNode here.
-            if not isinstance(node, BinaryOpNode):
-                # This branch is logically unreachable but satisfies the type checker.
-                raise AoPError("Internal error: Node type mismatch.")
-
             log_eval(f"Node: {node.to_str()}", _eval_depth - 1)
 
-            left = evaluate_ast(node.left, base, cache)
-            right = evaluate_ast(node.right, base, cache)
             op = node.op.value
-            if op in ('^', '**'):
-                # Power operation is lazy, it does not resolve its operands here
-                result = SymbolicPowerResult(left, right)
+            # Handle assignment separately as it has special logic
+            # It modifies state (the variables dict) and has right-to-left associativity.
+            if op == '=':
+                if not isinstance(node.left, VariableNode):
+                    raise SyntaxError("Assignment target must be a variable (e.g., $x).")
+                var_name = node.left.name
+                value_to_assign = evaluate_ast(node.right, base, cache, variables)
+                resolved_value = _resolve_to_value(value_to_assign)
+                variables[var_name] = resolved_value
+                result = resolved_value # Assignment expressions return the assigned value
             else:
-                left_aop = _resolve_to_value(left)
-                if not isinstance(left_aop, AoPValue): raise TypeError(f"Left operand for '{op}' could not be resolved to a value: {left_aop!r}")
-                right_aop = _resolve_to_value(right)
-                if not isinstance(right_aop, AoPValue): raise TypeError(f"Right operand for '{op}' could not be resolved to a value: {right_aop!r}")
-                if op == '+': result = left_aop + right_aop
-                elif op == '-': result = left_aop - right_aop
-                elif op == '*': result = left_aop * right_aop
-                elif op == '/':
-                    if right_aop.to_numerical() == 0:
-                        raise AoPError("Division by zero")
-                    result = AoPValue.from_number(left_aop.to_numerical() // right_aop.to_numerical(), base)
+                left = evaluate_ast(node.left, base, cache, variables)
+                right = evaluate_ast(node.right, base, cache, variables)
+                if op in ('^', '**'):
+                    # Power operation is lazy, it does not resolve its operands here
+                    result = SymbolicPowerResult(left, right)
                 else:
-                    raise AoPError(f"Unsupported operator: {op}")
+                    left_aop = _resolve_to_value(left)
+                    if not isinstance(left_aop, AoPValue): raise TypeError(f"Left operand for '{op}' could not be resolved to a value: {left_aop!r}")
+                    right_aop = _resolve_to_value(right)
+                    if not isinstance(right_aop, AoPValue): raise TypeError(f"Right operand for '{op}' could not be resolved to a value: {right_aop!r}")
+                    if op == '+': result = left_aop + right_aop
+                    elif op == '-': result = left_aop - right_aop
+                    elif op == '*': result = left_aop * right_aop
+                    elif op == '/':
+                        if right_aop.to_numerical() == 0:
+                            raise AoPError("Division by zero.")
+                        # Full symbolic polynomial division is not implemented.
+                        # To avoid misleading results from integer division, we raise an error.
+                        raise NotImplementedError("Symbolic division is not supported in this version.")
+                    elif op == '==':
+                        # Compare numerical values for equality, return 1 or 0
+                        is_equal = left_aop.to_numerical() == right_aop.to_numerical()
+                        result = AoPValue.from_number(1 if is_equal else 0, base)
+                    else:
+                        raise AoPError(f"Unsupported operator: {op}")
             log_eval(f"Result -> {result!r}", _eval_depth - 1)
         else:
             raise AoPError(f"Unknown node type: {type(node).__name__}")
-        # --- NEW: Update sub-expression cache ---
         if cache is not None:
             if base_str not in cache: cache[base_str] = {}
             # We only need to store the raw object for sub-expressions

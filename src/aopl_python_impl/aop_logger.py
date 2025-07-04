@@ -1,8 +1,15 @@
 # aopl_python_impl/aop_logger.py
+#
+# This module provides all the functionality for the detailed, colorized
+# debug trace (`--debug` flag). It includes helpers for printing formatted
+# headers, logging evaluation steps, and reporting performance metrics.
 import logging
+import sys
 import shutil
 import re
 import time
+from io import StringIO
+from contextlib import contextmanager
 
 try:
     import psutil
@@ -16,6 +23,17 @@ def enable_explainer():
     """Turns on the explainer output."""
     global _EXPLAIN_MODE_ENABLED
     _EXPLAIN_MODE_ENABLED = True
+
+@contextmanager
+def capture_logs():
+    """A context manager to capture printed log output into a string buffer."""
+    old_stdout = sys.stdout
+    log_capture_buffer = StringIO()
+    sys.stdout = log_capture_buffer
+    try:
+        yield log_capture_buffer
+    finally:
+        sys.stdout = old_stdout
 
 class Colors:
     CYAN = '\033[36m'

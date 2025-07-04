@@ -8,8 +8,8 @@ use std::collections::HashMap;
 #[derive(Debug, Clone)]
 pub struct AoPValue {
     #[pyo3(get, set)]
-    pub coeff: BigInt, // The coefficient is a simple BigInt
-    #[pyo3(set)]
+    pub coeff: BigInt,
+    #[pyo3(set)] // The getter is manual, so we only need the setter here.
     pub poly: HashMap<BigInt, BigInt>,
     #[pyo3(get, set)]
     pub base: u32,

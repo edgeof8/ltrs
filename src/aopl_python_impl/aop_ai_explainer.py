@@ -1,94 +1,119 @@
+# aopl_python_impl/aop_ai_explainer.py
+#
+# This module serves as the AI-powered explanation engine for the AoP calculator.
+# It uses an AST-aware approach, building a detailed technical prompt by traversing
+# the expression's syntax tree, then sends this to an AI to generate a coherent explanation.
+
 import os
 import requests
 import json
+from typing import Optional
+from .aop_ast import ASTNode
+from .aop_prompt_builder import PromptBuilderVisitor
 
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "mistral")  # Default to 'mistral' if not set
-DEFAULT_MODEL = "deepseek/deepseek-chat-v3-0324:free"
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 OLLAMA_URL = "http://localhost:11434/api/chat"
 
-def get_explanation(expression: str, result: str, base: int, model: str = DEFAULT_MODEL) -> str:
+class AIConversation:
+    """Manages the state of a conversation with the AI explainer."""
+    def __init__(self, system_prompt: str, model: str):
+        self.model = model
+        self.history = [{"role": "system", "content": system_prompt.strip()}]
+
+    def ask(self, user_prompt: str) -> str:
+        """Sends a user prompt to the AI and returns the response."""
+        self.history.append({"role": "user", "content": user_prompt.strip()})
+
+        max_tokens = 4096
+        try:
+            if OPENROUTER_API_KEY:
+                headers = {
+                    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "https://github.com/placeholder-username/letter-powers",
+                    "X-Title": "AoP Ltrs Calculator AI Explainer",
+                }
+                payload = {"model": self.model, "messages": self.history, "temperature": 0.2, "max_tokens": max_tokens}
+                response = requests.post(OPENROUTER_URL, headers=headers, json=payload, timeout=60)
+            else:  # Use Ollama
+                payload = {"model": OLLAMA_MODEL, "messages": self.history, "temperature": 0.2}
+                response = requests.post(OLLAMA_URL, json=payload, timeout=60)
+
+            response.raise_for_status()
+            response_data = response.json()
+
+            if "choices" in response_data and response_data["choices"]:
+                ai_response = response_data['choices'][0]['message']['content'].strip()
+                self.history.append({"role": "assistant", "content": ai_response})
+                return ai_response
+            if "message" in response_data and "content" in response_data["message"]:
+                ai_response = response_data['message']['content'].strip()
+                self.history.append({"role": "assistant", "content": ai_response})
+                return ai_response
+            return f"Error: Unexpected response format: {response_data}"
+        except requests.exceptions.RequestException as e:
+            return f"Error: AI service connection failed: {e}"
+        except Exception as e:
+            return f"Error during AI call: {type(e).__name__}: {e}"
+
+
+def get_ai_explanation_and_session(expression: str, result: str, base: int, ast: ASTNode) -> tuple[Optional[AIConversation], Optional[str]]:
+    """
+    Starts a new AI explanation session by building the initial prompt and getting the first response.
+    Returns a conversation object and the initial explanation text.
+    This uses a two-model approach: an "instructor" for the initial output and a "chatbot" for follow-ups.
+    """
     if not OPENROUTER_API_KEY and not OLLAMA_MODEL:
-        return ("Error: No AI backend is configured. Please set either OPENROUTER_API_KEY or OLLAMA_MODEL.")
+        return None, "Error: No AI backend is configured. Please set either OPENROUTER_API_KEY or OLLAMA_MODEL."
 
-    system_prompt = f"""
-You are an expert mathematician and computer scientist assisting a user of a special calculator called "The Alphabet of Powers" (AoP).
-Your task is to provide a clear, concise, and insightful explanation for the result of a given calculation.
+    # Use a powerful model for both instruction and chat to ensure quality.
+    instructor_model = "deepseek/deepseek-chat-v3-0324:free"
+    chatbot_model = "deepseek/deepseek-chat-v3-0324:free" # Using a powerful chat model for follow-ups
 
-The AoP system works as follows:
-- The base of the system is currently {base}.
-- Letters 'a' through 'y' represent powers from base¹ to base²⁵.
-- Letters 'A' through 'Y' represent powers from base²⁶ to base⁵⁰.
-  - Example (base 10): a = 10^1, b = 10^2, ..., y = 10^25, A = 10^26, ..., Y = 10^50.
-- Words are multiplicative: 'cat' means c * a * t. In base 10, that's 10^3 * 10^1 * 10^20 = 10^24, which is 'x'.
-- Standard math operators (+, -, *, /, ^) and functions (sin, cos, tan, sqrt, log, ln, etc.) are supported.
-- Special constants like #pi (π), #e (Euler’s number), #phi (φ), #tau (τ), #sqrt2 are recognized.
-- 'AlphaZone(...)' means the number exceeds the representable letter range (i.e., exponent > 50).
-- 'Unity(1)' means the result is 1 (i.e., base^0).
-- Numerical output may be used for non-letterable or simpler results.
+    # 1. Use the PromptBuilderVisitor to generate a comprehensive, context-rich system prompt.
+    builder = PromptBuilderVisitor(base=base)
+    instructor_system_prompt = builder.build_prompt(ast)
 
-Your explanation should:
-1. Confirm the result plainly if it’s not obvious.
-2. Explain the AoP simplification process: how words are interpreted, how powers combine, etc.
-3. Offer insight or context for very large or small values.
-4. Be encouraging, clear, and educational. Explain jargon where used.
-5. If the expression is simple, keep your explanation short. For complex cases, break it down step-by-step.
+    # 2. Create an "instructor" session to get the high-quality initial explanation.
+    instructor_session = AIConversation(instructor_system_prompt, instructor_model)
+
+    # 3. The user prompt simply asks the AI to perform its task.
+    instructor_user_prompt = f"The expression to explain is `{expression}`. The final result was `{result}`. Please provide the explanation."
+    initial_explanation = instructor_session.ask(instructor_user_prompt)
+
+    # 4. Create the final "chatbot" session for the user, pre-loading it with the context.
+    # The system prompt for the chatbot is simpler, focused on conversation.
+    chat_system_prompt = f"You are a helpful AI assistant for the 'Alphabet of Powers' (AoP) calculator. An initial technical explanation of the user's calculation (`{expression}`) has been provided. Your job is to answer the user's follow-up questions clearly and concisely based on the conversation history."
+    final_conversation = AIConversation(chat_system_prompt, chatbot_model)
+    # Manually set the history to include the initial exchange.
+    final_conversation.history = instructor_session.history
+
+    return final_conversation, initial_explanation
+
+
+def start_help_session() -> Optional[AIConversation]:
+    """
+    Starts a new AI conversation session for general help about the calculator.
+    """
+    if not OPENROUTER_API_KEY and not OLLAMA_MODEL:
+        print("Error: No AI backend is configured. Please set either OPENROUTER_API_KEY or OLLAMA_MODEL.")
+        return None
+
+    # This system prompt defines the "Help" persona for the AI.
+    help_system_prompt = """
+You are "AoP Helper," a friendly and knowledgeable assistant for the "Alphabet of Powers" (AoP) command-line calculator.
+Your purpose is to answer user questions about how to use the software, its syntax, its features, and the mathematical concepts behind it.
+
+Key Features to be aware of:
+- **Notation:** `a`=base^1, `b`=base^2, `Z`=base^100.
+- **Literals:** `2c3a` is an additive polynomial: `(2*base^3) + (3*base^1)`.
+- **Variables:** Defined with `$`, e.g., `$x = a+b`.
+- **Operators:** `+`, `-`, `*`, `^`, `==`.
+- **CLI Flags:** `--base`, `--mode`, `--debug`, `--explain`, `--ai-help`.
+- **Symbolic Power:** The core concept is that `a^c` (base^1 to the power of 3) becomes `base^3`, which is `c`.
 """
-
-
-    user_prompt = f"The user entered the expression: `{expression}`\nThe calculator, with base {base}, returned the result: `{result}`\nPlease provide your explanation."
-
-    messages = [
-        {"role": "system", "content": system_prompt.strip()},
-        {"role": "user", "content": user_prompt.strip()}
-    ]
-
-    try:
-        if OPENROUTER_API_KEY:
-            headers = {
-                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-                "Content-Type": "application/json",
-                "HTTP-Referer": "https://github.com/placeholder-username/letter-powers",
-                "X-Title": "AoP Ltrs Calculator AI Explainer"
-            }
-            payload = {
-                "model": model,
-                "messages": messages,
-                "temperature": 0.7,
-                "max_tokens": 500
-            }
-            response = requests.post(OPENROUTER_URL, headers=headers, json=payload, timeout=25)
-
-        else:  # Use Ollama
-            payload = {
-                "model": OLLAMA_MODEL,
-                "messages": messages,
-                "temperature": 0.7
-            }
-            response = requests.post(OLLAMA_URL, json=payload, timeout=25)
-
-        response.raise_for_status()
-        response_data = response.json()
-
-        # OpenRouter format
-        if 'choices' in response_data and response_data['choices']:
-            return "\n🤖 AI Explanation:\n" + response_data['choices'][0]['message']['content'].strip()
-
-        # Ollama format
-        if 'message' in response_data and 'content' in response_data['message']:
-            return "\n🤖 AI Explanation:\n" + response_data['message']['content'].strip()
-
-        return f"Error: Unexpected response format: {response_data}"
-
-    except requests.exceptions.Timeout:
-        return "Error: The request to the AI service timed out."
-    except requests.exceptions.HTTPError as http_err:
-        return f"Error: AI service returned an HTTP error: {http_err} - Response: {response.text}"
-    except requests.exceptions.RequestException as req_err:
-        return f"Error: Could not connect to the AI service. ({req_err})"
-    except KeyError:
-        return f"Error: Malformed response: {response.json()}"
-    except Exception as e:
-        return f"Unexpected error: {type(e).__name__}: {e}"
+    chatbot_model = "deepseek/deepseek-chat-v3-0324:free"
+    return AIConversation(help_system_prompt, chatbot_model)

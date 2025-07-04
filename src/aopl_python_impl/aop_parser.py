@@ -1,17 +1,26 @@
 # aopl_python_impl/aop_parser.py
+#
+# This module handles the first two stages of interpreting a user's expression:
+# 1. Tokenizer: Scans the raw string and breaks it into a list of meaningful tokens
+#    (e.g., literals, operators, variables).
+# 2. Parser: Takes the list of tokens and constructs an Abstract Syntax Tree (AST).
 import logging, re
 from typing import List
-from .definitions import Token, AoPError, OPERATORS
-from .aop_ast import ASTNode, NumberNode, IdentifierNode, BinaryOpNode, UnaryOpNode
+from .definitions import Token, AoPError
+from .constants import OPERATORS
+from .aop_ast import ASTNode, NumberNode, IdentifierNode, BinaryOpNode, UnaryOpNode, VariableNode
 
 def tokenize_expression(expression: str) -> List[Token]:
     """
     A stateful tokenizer that understands the 'additive by default' grammar.
     It correctly tokenizes sequences like '2b3c' into a single AopLiteralNode.
     """
-    # This regex will now handle explicit operators and parentheses.
-    # We will handle literals (numbers, words) manually.
-    token_regex = re.compile(r"(\*\*|==|[+\-*/^()])")
+    # This regex identifies all tokens of interest.
+    # - \$[a-zA-Z_][a-zA-Z0-9_]* : Finds variables, e.g., $x, $my_var
+    # - \*\*                       : Finds power operator '**'
+    # - ==?                        : Finds equality '==' and assignment '=' (Note: '=' is handled separately below)
+    # - [+\-*/^()]                 : Finds single-character operators and parentheses
+    token_regex = re.compile(r"(\$[a-zA-Z_][a-zA-Z0-9_]*|\*\*|==?|[+\-*/^()])")
     raw_parts = [p.strip() for p in token_regex.split(expression) if p.strip()]
     tokens = []
     pos = 0
@@ -19,7 +28,9 @@ def tokenize_expression(expression: str) -> List[Token]:
         start_pos = expression.find(part, pos)
         end_pos = start_pos + len(part)
         pos = end_pos
-        if part in OPERATORS:
+        if part.startswith('$'):
+            tokens.append(Token('VARIABLE', part, start_pos, end_pos))
+        elif part in OPERATORS or part == '=':
             tokens.append(Token('OPERATOR', part, start_pos, end_pos))
         elif part == '(':
             tokens.append(Token('LPAREN', part, start_pos, end_pos))
@@ -81,6 +92,9 @@ class Parser:
             from .aop_ast import AopLiteralNode
             self.advance()
             return AopLiteralNode(token)
+        elif token.kind == 'VARIABLE':
+            self.advance()
+            return VariableNode(token)
         elif token.value == '(':
             self.advance()
             node = self.parse(0)
