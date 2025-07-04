@@ -20,6 +20,9 @@ LETTER_TO_EXPONENT_MAP['z'] = 100 # 'z' is an alias for 'Z' for convenience.
 # We exclude 'z' to ensure 'Z' is the canonical representation for 100.
 EXPONENT_TO_LETTER_MAP = {v: k for k, v in LETTER_TO_EXPONENT_MAP.items() if k != 'z'}
 
+# --- Tokenizer Regex ---
+TOKEN_REGEX = re.compile(r"(\*\*|==?|[+\-*/^()])")
+
 # --- Operator Definitions ---
 # Defines the supported operators, their precedence, and their associativity.
 # This dictionary is the core of the parser's logic for handling order of operations.

@@ -7,7 +7,7 @@
 import logging, re
 from typing import List
 from .definitions import Token, AoPError
-from .constants import OPERATORS
+from .constants import OPERATORS, TOKEN_REGEX
 from .aop_ast import ASTNode, NumberNode, IdentifierNode, BinaryOpNode, UnaryOpNode, VariableNode
 
 def tokenize_expression(expression: str) -> List[Token]:

@@ -56,6 +56,7 @@ class AoPValue:
             return cls(poly=poly, base=base, coeff=main_coeff)
 
         # Otherwise, the literal is an additive polynomial (e.g., "b2", "2c4a").
+        # The main coefficient is 1, and each term contributes to the poly map.
         poly = {}
         for match in matches:
             coeff_str, letter, standalone_num = match.groups()

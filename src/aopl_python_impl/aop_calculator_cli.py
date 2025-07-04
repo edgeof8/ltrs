@@ -1,17 +1,17 @@
 # aopl_python_impl/aop_calculator_cli.py
 #
-# This script serves as the command-line interface (CLI) for the AoP Calculator.
-# It handles argument parsing, orchestrates the calculation, and manages output,
-# including file writing and triggering the AI explainer.
+# This script provides two modes of operation:
+# 1. Direct Command-Line Execution: `ltrs "expression"` for single calculations.
+# 2. Interactive REPL Mode: `ltrs` to start a persistent session.
 import argparse
 import sys
 import logging
-import threading
+from typing import Optional
 from .aop_calculator import AoP_Calculator
 # Import the new setup function
 from .aop_logger import enable_explainer, capture_logs
 # Import the AI session functions
-from .aop_ai_explainer import get_ai_explanation_and_session, start_help_session
+from .aop_ai_explainer import get_ai_explanation_and_session
 
 # Import rich for beautiful terminal output. It's an optional dependency.
 try:
@@ -20,26 +20,110 @@ try:
 except ImportError:
     Console, Markdown = None, None
 
-def interactive_ai_session(conversation):
-    """Handles the interactive Q&A loop with the user."""
-    console = Console() if Console else None
-    print("\n" + "="*40)
-    print("Entering interactive explanation mode.")
-    print("Ask a question, or type 'exit' or 'quit' to end.")
-    print("="*40)
+def handle_repl_command(line: str, calc: AoP_Calculator, console):
+    """Processes a single line of input from the REPL."""
+    line = line.strip()
+    if not line:
+        return
+
+    # Meta-commands start with '!'
+    if line.startswith('!'):
+        parts = line.split()
+        command = parts[0].lower()
+        if command == '!help':
+            print("Meta-commands: !base <num>, !mode <num|aop>, !explain <expr>, !debug <expr>, !exit, !quit")
+        elif command == '!base':
+            try:
+                new_base = int(parts[1])
+                calc.base = new_base
+                print(f"Calculation base set to {new_base}.")
+            except (IndexError, ValueError):
+                print("Usage: !base <integer>")
+        elif command == '!mode':
+            try:
+                new_mode = parts[1].lower()
+                if new_mode not in ['num', 'aop']:
+                    raise ValueError()
+                # We can store the mode on the calculator or handle it per call
+                print(f"Default output mode set to '{new_mode}'.") # For now, just a message.
+            except (IndexError, ValueError):
+                print("Usage: !mode <num|aop>")
+        elif command in ['!exit', '!quit']:
+            raise EOFError # Signal to exit the loop
+        elif command in ['!explain', '!debug']:
+            expression = " ".join(parts[1:])
+            if not expression:
+                print(f"Usage: {command} <expression>")
+                return
+
+            is_debug = command == '!debug'
+            enable_explainer() # AI explainer needs the logger enabled
+            with capture_logs() as log_buffer:
+                result, ast = calc.evaluate_expression(expression)
+            debug_log = log_buffer.getvalue()
+
+            if is_debug:
+                print(debug_log, end="")
+
+            print(result)
+
+            if command == '!explain' and ast:
+                conversation, initial_explanation = get_ai_explanation_and_session(expression, result, calc.base, ast)
+                if console and initial_explanation and Markdown:
+                    console.print(Markdown("--- \n" + initial_explanation.strip(), style="monokai"))
+                elif initial_explanation:
+                    print("\n🤖 AI Explanation:\n" + initial_explanation)
+                else:
+                    print("Error: No AI explanation received.")
+        else:
+            print(f"Unknown command: {command}. Type !help for options.")
+    else:
+        # Regular expression evaluation
+        _, ast = calc.evaluate_expression(line)
+        # The result of assignments is handled by the evaluator, but we might want to print it.
+        # For now, let's assume the user does `$x` on a new line to see the value.
+        # To print results of every line, we'd need to adjust `evaluate_expression`.
+        # This simple REPL focuses on the stateful variable aspect.
+        # Let's get the value of the last expression to print it.
+        result, _ = calc.evaluate_expression(line, mode="num")
+        print(result)
+
+
+def start_interactive_session(conversation):
+    """Starts an interactive session with the AI conversation."""
+    print("\nStarting interactive AI session. Type 'exit' or 'quit' to end.")
     while True:
         try:
-            question = input("\n[You] > ")
-            if question.lower() in ['exit', 'quit']:
+            user_input = input("You: ")
+            if user_input.lower() in ['exit', 'quit']:
+                print("Ending interactive session.")
                 break
-            response = conversation.ask(question)
-            if console and Markdown:
-                # Strip leading/trailing whitespace from the AI response before rendering.
-                console.print(Markdown(response.strip(), style="monokai"))
-            else:
-                print(f"\n[AI]  > {response}")
-        except (KeyboardInterrupt, EOFError):
+            response = conversation.ask(user_input)
+            print(f"AI: {response}")
+        except (EOFError, KeyboardInterrupt):
+            print("\nEnding interactive session.")
             break
+        except Exception as e:
+            print(f"Error during interaction: {e}")
+
+def start_repl():
+    """Starts the interactive REPL session."""
+    print(f"Welcome to the Alphabet of Powers (AoP) Calculator.")
+    print("Type an expression, or `!help` for meta-commands. `!exit` or Ctrl+C to quit.")
+
+    # Create a single, persistent calculator for the session
+    calc = AoP_Calculator()
+    console = Console() if Console else None
+
+    while True:
+        try:
+            line = input(f"aopl(b{calc.base})> ")
+            handle_repl_command(line, calc, console)
+        except (EOFError, KeyboardInterrupt):
+            print("\nExiting.")
+            break
+        except Exception as e:
+            logging.error(f"An error occurred: {e}", exc_info=False)
 
 def main():
     parser = argparse.ArgumentParser(description="AoP Calculator - Calculate expressions in various bases.")
@@ -57,24 +141,7 @@ def main():
 
     # --- AI Help Mode ---
     if args.ai_help:
-        print("Starting AI Help session...")
-        if console is None and Console:
-            console = Console()
-        elif Console is None:
-            print("Rich library not found. For a better experience, please run: pip install rich")
-
-        conversation = start_help_session()
-        if conversation:
-            print("Hello! I'm AoP Helper. Ask me anything about the calculator, or type 'exit' to quit.")
-            while True:
-                question = input("\n[You] > ")
-                if question.lower() in ['exit', 'quit']:
-                    break
-                response = conversation.ask(question)
-                if console and Markdown:
-                    console.print(Markdown(response, style="monokai"))
-                else:
-                    print(f"\n[AI]  > {response}")
+        print("AI Help session is not supported in this version. Use --explain with an expression for AI assistance.")
         return
 
     # If no expression is provided and we're not in help mode, show help.
@@ -113,30 +180,35 @@ def main():
             # If writing to file, we might not want to do the interactive session.
             # For now, we allow both. If we exit here, --explain wouldn't work with -o.
 
-        # Handle explanation mode.
+        # If --explain is used, print the result, get the explanation, and start the interactive session.
         if args.explain and ast:
             # If not writing to a file, print the result to the console.
             if not args.output:
                 print(result)
 
-            conversation, initial_explanation = get_ai_explanation_and_session(args.expression, result, args.base, ast)
-
-            if console and Markdown:
-                if initial_explanation:
-                    # Strip leading/trailing whitespace from the AI response before rendering.
-                    console.print(Markdown("--- \n" + initial_explanation.strip(), style="monokai"))
-                else:
-                    print("Error: No AI explanation received.")
+            if console:
+                # Use a status spinner while waiting for the AI if console is available
+                with console.status("[yellow]🤖 AI is thinking...[/yellow]", spinner="dots") as status:
+                    conversation, initial_explanation = get_ai_explanation_and_session(args.expression, result, args.base, ast)
+                    # After getting the response, update the status before printing the final message
+                    status.update("[green]✓ AI explanation received.[/green]")
             else:
-                if initial_explanation:
-                    print("\n🤖 AI Explanation:\n" + initial_explanation)
-                else:
-                    print("Error: No AI explanation received.")
+                print("Waiting for AI response...")
+                conversation, initial_explanation = get_ai_explanation_and_session(args.expression, result, args.base, ast)
+
+            if console and Markdown and initial_explanation:
+                # Strip leading/trailing whitespace from the AI response before rendering.
+                console.print(Markdown("--- \n" + initial_explanation.strip(), style="monokai"))
+            elif initial_explanation:
+                print("\n🤖 AI Explanation:\n" + initial_explanation)
+            else:
+                print("Error: No AI explanation received.")
 
             if conversation:
-                interactive_ai_session(conversation)
+                start_interactive_session(conversation)
+            return
 
-        # If not explaining and not writing to a file, print the result.
+        # If not in explain mode, handle standard output.
         elif not args.output:
             print(result)
 
