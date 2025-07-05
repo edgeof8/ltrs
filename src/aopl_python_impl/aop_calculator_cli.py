@@ -141,7 +141,14 @@ def main():
 
     # --- AI Help Mode ---
     if args.ai_help:
-        print("AI Help session is not supported in this version. Use --explain with an expression for AI assistance.")
+        # This block is now functional. It calls the necessary functions.
+        from .aop_ai_explainer import start_help_session  # Keep import local to avoid circular deps if called elsewhere
+        print("Starting AI help session...")
+        conversation = start_help_session()
+        if conversation:
+            start_interactive_session(conversation)
+        else:
+            print("Could not start AI help session. Please check your configuration.")
         return
 
     # If no expression is provided and we're not in help mode, show help.

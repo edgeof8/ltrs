@@ -1,17 +1,199 @@
+import sys
+from pathlib import Path
+
+# --- Add project root to sys.path ---
+# This allows the script to be run directly and find the aopl_python_impl module.
+project_root = Path(__file__).resolve().parent
+src_path = project_root / "src"
+if str(src_path) not in sys.path:
+    sys.path.insert(0, str(src_path))
+# ------------------------------------
+
 # main.py
 import sys
 import json
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                                QLabel, QLineEdit, QMenuBar, QFileDialog, QToolBar, QButtonGroup,
-                               QGraphicsView, QStatusBar, QGraphicsTextItem)
-from PySide6.QtGui import QBrush, QPainter, QIntValidator, QKeySequence, QColor, QPainterPath, QAction
+                               QGraphicsView, QStatusBar, QGraphicsTextItem, QGraphicsRectItem, QGraphicsItem)
+from PySide6.QtGui import QBrush, QPainter, QIntValidator, QKeySequence, QColor, QPainterPath, QAction, QPen, QTransform, QFont
 from PySide6.QtCore import Qt, QRectF, Signal, QPointF
 from aopl_python_impl.aop_calculator import AoP_Calculator
 from cosmic_scene import CosmicScene
-from gui_items import CalculationNode, TextNoteItem, LineItem, PenStrokeItem, ResizableTextItem
+from gui_items.calculation_node import CalculationNode
+from gui_items.text_note_item import TextNoteItem
+from gui_items.line_item import LineItem
+from gui_items.pen_stroke_item import PenStrokeItem
+from gui_items.base_item import ResizableTextItem
+from gui_items.plot_node import PlotNode
 from config import (WINDOW_TITLE, WINDOW_WIDTH, WINDOW_HEIGHT, COLOR_BACKGROUND,
                     COLOR_NODE_BACKGROUND, COLOR_TEXT_INPUT, COLOR_TEXT_RESULT,
                     DrawingToolMode)
+import os
+import importlib
+import sys
+from pathlib import Path
+
+def load_plugins(scene):
+    """
+    Loads plugins from the plugins/ directory and registers their commands into the scene's command_handlers.
+    """
+    plugins_dir = Path(__file__).parent / "plugins"
+    if not plugins_dir.exists():
+        print(f"Plugins directory {plugins_dir} not found. Skipping plugin loading.")
+        return
+
+    sys.path.append(str(plugins_dir))
+    loaded_commands = 0
+
+    for plugin_file in plugins_dir.glob("*.py"):
+        if plugin_file.name.startswith("__"):
+            continue
+        plugin_name = plugin_file.stem
+        try:
+            plugin_module = importlib.import_module(plugin_name)
+            if hasattr(plugin_module, "register"):
+                plugin_commands = plugin_module.register()
+                if isinstance(plugin_commands, dict):
+                    for cmd, handler in plugin_commands.items():
+                        if cmd in scene.command_handlers:
+                            print(f"Warning: Plugin {plugin_name} overwrites existing command {cmd}")
+                        scene.command_handlers[cmd] = handler
+                        loaded_commands += 1
+                    print(f"Loaded plugin {plugin_name} with commands: {list(plugin_commands.keys())}")
+                else:
+                    print(f"Error: Plugin {plugin_name} register() did not return a dictionary.")
+            else:
+                print(f"Error: Plugin {plugin_name} has no register() function.")
+        except Exception as e:
+            print(f"Error loading plugin {plugin_name}: {e}")
+
+    sys.path.remove(str(plugins_dir))
+    print(f"Plugin loading complete. Loaded {loaded_commands} commands from {len(list(plugins_dir.glob('*.py')))} plugin files.")
+
+class GroupBoundingBox(QGraphicsRectItem):
+    def __init__(self, scene, selected_items, parent=None):
+        self.selected_items = selected_items
+        self.scene = scene
+        bounding_rect = self.calculate_bounding_rect()
+        super().__init__(bounding_rect, parent)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
+        self.setPen(QPen(QColor(COLOR_TEXT_RESULT), 1, Qt.PenStyle.DashLine))
+        self.setBrush(QBrush(Qt.BrushStyle.NoBrush))
+        self.resize_handles = []
+        self._resize_handle_size = 8.0
+        self._is_resizing = False
+        self._resize_handle_active = None
+        self._original_mouse_pos_scene = QPointF()
+        self._original_rect_scene = QRectF()
+        self.create_resize_handles()
+
+    def calculate_bounding_rect(self):
+        if not self.selected_items:
+            return QRectF(0, 0, 0, 0)
+        rect = self.selected_items[0].sceneBoundingRect()
+        for item in self.selected_items[1:]:
+            rect = rect.united(item.sceneBoundingRect())
+        return rect.adjusted(-10, -10, 10, 10)
+
+    def create_resize_handles(self):
+        rect = self.rect()
+        s = self._resize_handle_size
+        handle_positions = {
+            "top_left": QRectF(rect.left(), rect.top(), s, s),
+            "top_right": QRectF(rect.right() - s, rect.top(), s, s),
+            "bottom_left": QRectF(rect.left(), rect.bottom() - s, s, s),
+            "bottom_right": QRectF(rect.right() - s, rect.bottom() - s, s, s)
+        }
+        for name, handle_rect in handle_positions.items():
+            handle = QGraphicsRectItem(handle_rect, self)
+            handle.setBrush(QBrush(COLOR_TEXT_RESULT))
+            handle.setPen(Qt.PenStyle.NoPen)
+            self.resize_handles.append((name, handle))
+
+    def update_resize_handles(self):
+        rect = self.rect()
+        s = self._resize_handle_size
+        handle_positions = {
+            "top_left": QRectF(rect.left(), rect.top(), s, s),
+            "top_right": QRectF(rect.right() - s, rect.top(), s, s),
+            "bottom_left": QRectF(rect.left(), rect.bottom() - s, s, s),
+            "bottom_right": QRectF(rect.right() - s, rect.bottom() - s, s, s)
+        }
+        for name, handle in self.resize_handles:
+            handle.setRect(handle_positions[name])
+
+    def mousePressEvent(self, event):
+        pos_in_item = event.pos()
+        for name, handle in self.resize_handles:
+            if handle.rect().contains(pos_in_item):
+                self._is_resizing = True
+                self._resize_handle_active = name
+                self._original_mouse_pos_scene = event.scenePos()
+                self._original_rect_scene = self.sceneBoundingRect()
+                event.accept()
+                return
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if self._is_resizing and self._resize_handle_active:
+            delta_scene = event.scenePos() - self._original_mouse_pos_scene
+            new_scene_rect = QRectF(self._original_rect_scene)
+            handle = self._resize_handle_active
+            if "bottom" in handle:
+                new_scene_rect.setBottom(self._original_rect_scene.bottom() + delta_scene.y())
+            if "right" in handle:
+                new_scene_rect.setRight(self._original_rect_scene.right() + delta_scene.x())
+            if "top" in handle:
+                new_scene_rect.setTop(self._original_rect_scene.top() + delta_scene.y())
+            if "left" in handle:
+                new_scene_rect.setLeft(self._original_rect_scene.left() + delta_scene.x())
+            if new_scene_rect.width() < 20:
+                if "left" in handle:
+                    new_scene_rect.setLeft(new_scene_rect.right() - 20)
+                else:
+                    new_scene_rect.setWidth(20)
+            if new_scene_rect.height() < 20:
+                if "top" in handle:
+                    new_scene_rect.setTop(new_scene_rect.bottom() - 20)
+                else:
+                    new_scene_rect.setHeight(20)
+            self.setRect(new_scene_rect)
+            self.update_resize_handles()
+            self.apply_scaling(new_scene_rect)
+            event.accept()
+            return
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if self._is_resizing:
+            self._is_resizing = False
+            self._resize_handle_active = None
+            event.accept()
+            return
+        super().mouseReleaseEvent(event)
+
+    def apply_scaling(self, new_rect):
+        original_rect = self._original_rect_scene
+        scale_x = new_rect.width() / original_rect.width() if original_rect.width() != 0 else 1
+        scale_y = new_rect.height() / original_rect.height() if original_rect.height() != 0 else 1
+        anchor = original_rect.center()
+        for item in self.selected_items:
+            item_rect = item.sceneBoundingRect()
+            transform = QTransform()
+            transform.translate(anchor.x(), anchor.y())
+            transform.scale(scale_x, scale_y)
+            transform.translate(-anchor.x(), -anchor.y())
+            new_pos = transform.map(item.pos())
+            item.setPos(new_pos)
+            if isinstance(item, ResizableTextItem):
+                new_font_size = item._original_font_size * scale_y
+                font = QFont(item.font().family(), int(new_font_size))
+                item.setFont(font)
+                item.current_font_size = int(new_font_size)
+                item.document().adjustSize()
+                item.prepareGeometryChange()
+                item.update()
 
 class CosmicView(QGraphicsView):
     scenePosChanged = Signal(QPointF)
@@ -20,10 +202,25 @@ class CosmicView(QGraphicsView):
     def __init__(self, scene, parent=None):
         super().__init__(scene, parent)
         self.setRenderHint(QPainter.RenderHint.Antialiasing)
-        self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
-        self.setResizeAnchor(QGraphicsView.AnchorUnderMouse)
+        self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
+        self.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
         self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
         self.panning = False
+        self.group_bounding_box = None
+        self.scene().selectionChanged.connect(self.update_group_bounding_box)
+
+    def update_group_bounding_box(self):
+        selected_items = self.scene().selectedItems()
+        if len(selected_items) > 1:
+            if self.group_bounding_box:
+                if self.group_bounding_box in self.scene().items():
+                    self.scene().removeItem(self.group_bounding_box)
+            self.group_bounding_box = GroupBoundingBox(self.scene(), selected_items)
+            self.scene().addItem(self.group_bounding_box)
+        else:
+            if self.group_bounding_box and self.group_bounding_box in self.scene().items():
+                self.scene().removeItem(self.group_bounding_box)
+            self.group_bounding_box = None
 
     def wheelEvent(self, event):
         if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
@@ -34,18 +231,18 @@ class CosmicView(QGraphicsView):
             super().wheelEvent(event)
 
     def mousePressEvent(self, event):
-        is_panning_key = event.button() == Qt.MiddleButton or \
-                         (event.button() == Qt.LeftButton and QApplication.keyboardModifiers() & Qt.KeyboardModifier.ControlModifier)
+        is_panning_key = event.button() == Qt.MouseButton.MiddleButton or \
+                         (event.button() == Qt.MouseButton.LeftButton and QApplication.keyboardModifiers() & Qt.KeyboardModifier.ControlModifier)
 
         if is_panning_key:
             self.panning = True
             self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
-            self.setCursor(Qt.CursorShape.GrabbingHandCursor)
+            self.setCursor(Qt.CursorShape.OpenHandCursor)
 
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        # FIX: Use event.position() instead of event.pos() to resolve deprecation warning.
+        # FIX: Use event.position() instead of event.pos()
         scene_pos = self.mapToScene(event.position().toPoint())
         self.scenePosChanged.emit(scene_pos)
         super().mouseMoveEvent(event)
@@ -74,6 +271,7 @@ class CosmicScratchpadWindow(QMainWindow):
         layout.setSpacing(0)
 
         self.scene = CosmicScene(self)
+        load_plugins(self.scene)
         self.view = CosmicView(self.scene, self)
         self.scene.window = self
         self.current_drawing_tool = DrawingToolMode.CALCULATE
@@ -151,7 +349,7 @@ class CosmicScratchpadWindow(QMainWindow):
 
             button = toolbar.widgetForAction(action)
             if button:
-                self.tool_button_group.addButton(button)
+                self.tool_button_group.addButton(button) # type: ignore
 
             if is_checked: self.set_drawing_tool(mode)
 
@@ -207,8 +405,11 @@ class CosmicScratchpadWindow(QMainWindow):
         open_action = QAction("&Open...", self); open_action.setShortcut(QKeySequence.StandardKey.Open); open_action.triggered.connect(self.open_file)
         save_action = QAction("&Save", self); save_action.setShortcut(QKeySequence.StandardKey.Save); save_action.triggered.connect(self.save_file)
         save_as_action = QAction("Save &As...", self); save_as_action.setShortcut(QKeySequence.StandardKey.SaveAs); save_as_action.triggered.connect(self.save_as_file)
+        export_action = QAction("Export as Python Script...", self); export_action.triggered.connect(self.export_as_python_script)
+        share_action = QAction("Share to Cosmic Library...", self); share_action.triggered.connect(self.share_to_library)
+        browse_action = QAction("Browse Cosmic Library...", self); browse_action.triggered.connect(self.browse_library)
         exit_action = QAction("E&xit", self); exit_action.setShortcut(QKeySequence.StandardKey.Quit); exit_action.triggered.connect(self.close)
-        file_menu.addAction(new_action); file_menu.addAction(open_action); file_menu.addAction(save_action); file_menu.addAction(save_as_action); file_menu.addSeparator(); file_menu.addAction(exit_action)
+        file_menu.addAction(new_action); file_menu.addAction(open_action); file_menu.addAction(save_action); file_menu.addAction(save_as_action); file_menu.addAction(export_action); file_menu.addSeparator(); file_menu.addAction(exit_action)
         edit_menu = menu_bar.addMenu("&Edit")
         undo_action = QAction("&Undo", self); undo_action.setShortcut(QKeySequence.StandardKey.Undo); undo_action.triggered.connect(self.edit_undo)
         redo_action = QAction("&Redo", self); redo_action.setShortcut(QKeySequence.StandardKey.Redo); redo_action.triggered.connect(self.edit_redo)
@@ -220,12 +421,61 @@ class CosmicScratchpadWindow(QMainWindow):
 
     def new_file(self):
         self.scene.clear()
-        self.scene.calculator = AoP_Calculator(base=10, load_default_vars=True)
+        self.scene.calculator = AoP_Calculator(base=10)
         self.scene.node_definitions = {}
         self.scene.dependencies = {}
         self.base_input.setText("10")
         self.current_file_path = None
         self.setWindowTitle(WINDOW_TITLE)
+
+    def browse_library(self):
+        from library_browser import LibraryBrowserDialog
+        dialog = LibraryBrowserDialog(self)
+        dialog.exec()
+
+    def load_scene_from_data(self, data):
+        self.new_file()
+        self.scene.calculator.base = data.get("base", 10)
+        self.base_input.setText(str(self.scene.calculator.base))
+        nodes_to_process = []
+        for node_data in data.get("nodes", []):
+            node = CalculationNode(self.scene, self.scene.calculator)
+            expr = node_data.get("expression", "")
+            node.expression_str = expr
+            node.setPlainText(expr)
+            node.setPos(node_data.get("pos_x", 0), node_data.get("pos_y", 0))
+            # Restore size if saved
+            if "width" in node_data and "height" in node_data:
+                node.document().setTextWidth(node_data["width"] - 2 * node.document().documentMargin())
+                node._user_has_resized = True
+                node._update_wrap_mode_based_on_state()
+            self.scene.addItem(node)
+            nodes_to_process.append(node)
+
+        for item_data in data.get("drawing_items", []):
+            item_type = item_data.get("type")
+            if item_type == "line": self.scene.addItem(LineItem(item_data.get("x1",0), item_data.get("y1",0), item_data.get("x2",0), item_data.get("y2",0)))
+            elif item_type == "text_note":
+                note = TextNoteItem(item_data.get("text", ""))
+                note.setPos(item_data.get("pos_x",0), item_data.get("pos_y",0))
+                if "width" in item_data and "height" in item_data:
+                    note.document().setTextWidth(item_data["width"] - 2 * note.document().documentMargin())
+                    note._user_has_resized = True
+                    note._update_wrap_mode_based_on_state()
+                self.scene.addItem(note)
+            elif item_type == "pen_stroke":
+                stroke = PenStrokeItem(); path_obj = QPainterPath()
+                for pt_data in item_data.get("points", []):
+                    if pt_data.get("type_val") == QPainterPath.ElementType.MoveToElement: path_obj.moveTo(float(pt_data.get("x", 0)), float(pt_data.get("y", 0)))
+                    elif pt_data.get("type_val") == QPainterPath.ElementType.LineToElement: path_obj.lineTo(float(pt_data.get("x", 0)), float(pt_data.get("y", 0)))
+                stroke.setPath(path_obj); self.scene.addItem(stroke)
+
+        self.current_file_path = None
+        self.setWindowTitle(f"{WINDOW_TITLE} - [Downloaded Scratchpad]")
+
+        # Recalculate everything
+        for node in nodes_to_process: self.scene.update_node_dependencies(node)
+        for node in nodes_to_process: node.update_node()
 
     def open_file(self):
         path, _ = QFileDialog.getOpenFileName(self, "Open Cosmic Scratchpad File", "", "Cosmic Files (*.cosmic);;All Files (*)")
@@ -264,8 +514,8 @@ class CosmicScratchpadWindow(QMainWindow):
                 elif item_type == "pen_stroke":
                     stroke = PenStrokeItem(); path_obj = QPainterPath()
                     for pt_data in item_data.get("points", []):
-                        if pt_data.get("type_val") == int(QPainterPath.ElementType.MoveToElement): path_obj.moveTo(float(pt_data.get("x", 0)), float(pt_data.get("y", 0)))
-                        elif pt_data.get("type_val") == int(QPainterPath.ElementType.LineToElement): path_obj.lineTo(float(pt_data.get("x", 0)), float(pt_data.get("y", 0)))
+                        if pt_data.get("type_val") == QPainterPath.ElementType.MoveToElement: path_obj.moveTo(float(pt_data.get("x", 0)), float(pt_data.get("y", 0)))
+                        elif pt_data.get("type_val") == QPainterPath.ElementType.LineToElement: path_obj.lineTo(float(pt_data.get("x", 0)), float(pt_data.get("y", 0)))
                     stroke.setPath(path_obj); self.scene.addItem(stroke)
 
             self.current_file_path = path
@@ -288,7 +538,7 @@ class CosmicScratchpadWindow(QMainWindow):
 
     def get_focused_text_item(self) -> 'QGraphicsTextItem | None':
         focused_item = self.scene.focusItem()
-        return focused_item if isinstance(focused_item, ResizableTextItem) else None
+        return focused_item if isinstance(focused_item, ResizableTextItem) else None # type: ignore
 
     def edit_undo(self):
         item = self.get_focused_text_item()
@@ -301,25 +551,143 @@ class CosmicScratchpadWindow(QMainWindow):
     def edit_cut(self):
         item = self.get_focused_text_item()
         if item and item.textInteractionFlags() & Qt.TextInteractionFlag.TextEditable:
-            item.cut()
-            if isinstance(item, CalculationNode): item.update_node()
+            item.cut() # type: ignore
+            if isinstance(item, CalculationNode): item.update_node_and_propagate()
 
     def edit_copy(self):
         item = self.get_focused_text_item()
         if item and item.textInteractionFlags() & Qt.TextInteractionFlag.TextSelectableByMouse:
-            item.copy()
+            item.copy() # type: ignore
 
     def edit_paste(self):
         item = self.get_focused_text_item()
         if item and item.textInteractionFlags() & Qt.TextInteractionFlag.TextEditable:
-            item.paste()
-            if isinstance(item, CalculationNode): item.update_node()
+            item.paste() # type: ignore
+            if isinstance(item, CalculationNode): item.update_node_and_propagate()
+
+    def export_as_python_script(self):
+        path, _ = QFileDialog.getSaveFileName(self, "Export as Python Script", "", "Python Files (*.py);;All Files (*)")
+        if path:
+            script_content = self.scene.generate_python_script()
+            try:
+                with open(path, 'w', encoding='utf-8') as f:
+                    f.write(script_content)
+                self.status_bar.showMessage(f"Exported script to {path}", 5000)
+            except Exception as e:
+                self.status_bar.showMessage(f"Error exporting script: {e}", 5000)
+
+    def share_to_library(self):
+        import requests
+        from PySide6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QTextEdit, QPushButton
+        import tempfile
+        import json
+
+        class ShareDialog(QDialog):
+            def __init__(self, parent=None):
+                super().__init__(parent)
+                self.setWindowTitle("Share to Cosmic Library")
+                layout = QVBoxLayout(self)
+
+                # Title
+                title_layout = QHBoxLayout()
+                title_label = QLabel("Title:")
+                self.title_input = QLineEdit()
+                title_layout.addWidget(title_label)
+                title_layout.addWidget(self.title_input)
+                layout.addLayout(title_layout)
+
+                # Author
+                author_layout = QHBoxLayout()
+                author_label = QLabel("Author:")
+                self.author_input = QLineEdit()
+                author_layout.addWidget(author_label)
+                author_layout.addWidget(self.author_input)
+                layout.addLayout(author_layout)
+
+                # Description
+                desc_layout = QHBoxLayout()
+                desc_label = QLabel("Description:")
+                self.desc_input = QTextEdit()
+                self.desc_input.setFixedHeight(100)
+                desc_layout.addWidget(desc_label)
+                desc_layout.addWidget(self.desc_input)
+                layout.addLayout(desc_layout)
+
+                # Buttons
+                button_layout = QHBoxLayout()
+                ok_button = QPushButton("Share")
+                cancel_button = QPushButton("Cancel")
+                ok_button.clicked.connect(self.accept)
+                cancel_button.clicked.connect(self.reject)
+                button_layout.addStretch()
+                button_layout.addWidget(ok_button)
+                button_layout.addWidget(cancel_button)
+                layout.addLayout(button_layout)
+
+        dialog = ShareDialog(self)
+        if dialog.exec():
+            title = dialog.title_input.text()
+            author = dialog.author_input.text()
+            description = dialog.desc_input.toPlainText()
+
+            if not title or not author:
+                self.status_bar.showMessage("Error: Title and Author are required.", 5000)
+                return
+
+            # Prepare the scratchpad data
+            data = {"version": "0.3", "base": self.scene.calculator.base, "nodes": [], "drawing_items": []}
+            for item in self.scene.items():
+                if isinstance(item, CalculationNode):
+                    data["nodes"].append({
+                        "type": "calculation", "expression": item.expression_str, # type: ignore
+                        "pos_x": item.pos().x(), "pos_y": item.pos().y(),
+                        "width": item.boundingRect().width(), "height": item.boundingRect().height()
+                    })
+                elif isinstance(item, LineItem):
+                    line = item.line() # type: ignore
+                    data["drawing_items"].append({"type": "line", "x1": line.x1(), "y1": line.y1(), "x2": line.x2(), "y2": line.y2()})
+                elif isinstance(item, TextNoteItem):
+                    data["drawing_items"].append({
+                        "type": "text_note", "text": item.toPlainText(), # type: ignore
+                        "pos_x": item.pos().x(), "pos_y": item.pos().y(),
+                        "width": item.boundingRect().width(), "height": item.boundingRect().height()
+                    })
+                elif isinstance(item, PenStrokeItem):
+                    points = []
+                    for i in range(item.path().elementCount()): # type: ignore
+                        el = item.path().elementAt(i) # type: ignore
+                        points.append({"x": el.x(), "y": el.y(), "type_val": el.type})
+                    data["drawing_items"].append({"type": "pen_stroke", "points": points})
+
+            try:
+                # Create a temporary file to store the scratchpad data
+                with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.cosmic') as temp_file:
+                    json.dump(data, temp_file, indent=2)
+                    temp_file_path = temp_file.name
+
+                # Upload to the server
+                with open(temp_file_path, 'rb') as f:
+                    files = {'file': f}
+                    data = {'title': title, 'author': author, 'description': description}
+                    response = requests.post('http://localhost:8000/upload', files=files, data=data)
+
+                # Clean up temporary file
+                os.unlink(temp_file_path)
+
+                if response.status_code == 200:
+                    self.status_bar.showMessage("Successfully shared to Cosmic Library.", 5000)
+                else:
+                    self.status_bar.showMessage(f"Error sharing to library: {response.text}", 5000)
+            except Exception as e:
+                self.status_bar.showMessage(f"Error sharing to library: {str(e)}", 5000)
+        else:
+            self.status_bar.showMessage("Sharing cancelled.", 5000)
 
     def edit_delete_selected(self):
         focused_item = self.get_focused_text_item()
         if focused_item and focused_item.textCursor().hasSelection():
             focused_item.textCursor().removeSelectedText()
-            if isinstance(focused_item, CalculationNode): focused_item.update_node()
+            if isinstance(focused_item, CalculationNode): focused_item.update_node_and_propagate()
         else:
             self.scene.keyPressEvent(QKeySequence(QKeySequence.StandardKey.Delete))
 
@@ -328,47 +696,25 @@ class CosmicScratchpadWindow(QMainWindow):
         for item in self.scene.items():
             if isinstance(item, CalculationNode):
                 data["nodes"].append({
-                    "type": "calculation", "expression": item.expression_str,
+                    "type": "calculation", "expression": item.expression_str, # type: ignore
                     "pos_x": item.pos().x(), "pos_y": item.pos().y(),
                     "width": item.boundingRect().width(), "height": item.boundingRect().height()
                 })
             elif isinstance(item, LineItem):
-                line = item.line()
+                line = item.line() # type: ignore
                 data["drawing_items"].append({"type": "line", "x1": line.x1(), "y1": line.y1(), "x2": line.x2(), "y2": line.y2()})
             elif isinstance(item, TextNoteItem):
                 data["drawing_items"].append({
-                    "type": "text_note", "text": item.toPlainText(),
+                    "type": "text_note", "text": item.toPlainText(), # type: ignore
                     "pos_x": item.pos().x(), "pos_y": item.pos().y(),
                     "width": item.boundingRect().width(), "height": item.boundingRect().height()
                 })
             elif isinstance(item, PenStrokeItem):
                 points = []
-                for i in range(item.path().elementCount()):
-                    el = item.path().elementAt(i)
-                    points.append({"x": el.x, "y": el.y, "type_val": int(el.type)})
+                for i in range(item.path().elementCount()): # type: ignore
+                    el = item.path().elementAt(i) # type: ignore
+                    points.append({"x": el.x(), "y": el.y(), "type_val": el.type})
                 data["drawing_items"].append({"type": "pen_stroke", "points": points})
         try:
             with open(path, 'w') as f: json.dump(data, f, indent=2)
         except Exception as e: print(f"Error saving file: {e}")
-
-# Monkey-patching for compatibility - RESTORED
-def rpn_from_expression(self, expression):
-    from aopl_python_impl.aop_parser import tokenize_expression, infix_to_rpn
-    tokens = tokenize_expression(expression, self.token_regex)
-    return infix_to_rpn(tokens, self.operators_map)
-
-def evaluate_rpn_only(self, rpn):
-    from aopl_python_impl.aop_parser import evaluate_rpn
-    from aopl_python_impl.aop_operations import simplify_value
-    from aopl_python_impl.aop_term_handler import get_term_value
-    result = evaluate_rpn(rpn, self.variables, get_term_value, self.base)
-    return simplify_value(result, self.base)
-
-if __name__ == '__main__':
-    # Use setattr to avoid direct attribute assignment issues - RESTORED
-    setattr(AoP_Calculator, '_rpn_from_expression', rpn_from_expression)
-    setattr(AoP_Calculator, '_evaluate_rpn', evaluate_rpn_only)
-    app = QApplication(sys.argv)
-    window = CosmicScratchpadWindow()
-    window.show()
-    sys.exit(app.exec())
