@@ -23,6 +23,8 @@ from aopl_python_impl.constants import LETTER_TO_EXPONENT_MAP
 from aopl_python_impl import aop_ai_explainer
 from aopl_python_impl.aop_formatter import format_as_decimal_string
 from config import DrawingToolMode, VARIABLE_REGEX
+from dependency_manager import DependencyGraphManager
+from evaluation_manager import EvaluationManager
 
 if TYPE_CHECKING:
     from gui_items.calculation_node import CalculationNode
@@ -37,8 +39,8 @@ class CosmicScene(QGraphicsScene):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.calculator = AoP_Calculator(base=10) # Removed load_default_vars
-        self.node_definitions = {}
-        self.dependencies = {}
+        self.graph_manager = DependencyGraphManager()
+        self.evaluation_manager = EvaluationManager(self)
         self.window: 'CosmicScratchpadWindow | None' = None
         self.drawing_toolbar: 'QToolBar | None' = None
         self.current_drawing_tool: DrawingToolMode = DrawingToolMode.CALCULATE
@@ -300,7 +302,7 @@ class CosmicScene(QGraphicsScene):
         self.addItem(plot_node)
         plot_node.setPos(node.pos().x() + 50, node.pos().y() + 50)
         node.set_display(f"Plot created for {expression}", False)
-        self.update_node_dependencies(plot_node)
+        self.graph_manager.update_dependencies_for_node(plot_node)
 
     def show_context_menu(self, event):
         """
@@ -545,140 +547,28 @@ class CosmicScene(QGraphicsScene):
             for item in self.selectedItems():
                 if isinstance(item, CalculationNode):
                     # Find any nodes that depend on a variable this node defines
-                    if item.defined_variable and item.defined_variable in self.dependencies: # type: ignore
-                        dependents = list(self.dependencies[item.defined_variable]) # type: ignore
+                    if item.defined_variable and item.defined_variable in self.graph_manager.dependencies: # type: ignore
+                        dependents = list(self.graph_manager.dependencies[item.defined_variable]) # type: ignore
                         for dep_node in dependents:
-                            dep_node.update_node_and_propagate() # Re-evaluate to show error
+                            if isinstance(dep_node, CalculationNode):
+                                dep_node.update_node_and_propagate() # Re-evaluate to show error
                     # Remove the variable from the calculator and our tracking
                     if item.defined_variable in self.calculator.variables: # type: ignore
                         del self.calculator.variables[item.defined_variable] # type: ignore
-                    if item in self.node_definitions:
-                        del self.node_definitions[item]
+                    if item in self.graph_manager.node_definitions:
+                        del self.graph_manager.node_definitions[item]
 
                 self.removeItem(item)
             return
         super().keyPressEvent(event)
 
     def update_and_propagate(self, start_node, propagate: bool = True):
-        # The expression_str is already set by the node's event handlers.
-        # We just need to use it.
+        self.graph_manager.update_dependencies_for_node(start_node)
+        self.evaluation_manager.process_node_update(start_node, propagate)
 
-        # 1. Get the expression from the node's state
-        expr_for_evaluation = start_node.expression_str
+    # Method update_node_dependencies moved to DependencyGraphManager
 
-        if not expr_for_evaluation:
-            start_node.set_display("", False)
-            return
-
-        # 2. Update dependencies and determine if this node defines a variable
-        self.update_node_dependencies(start_node)
-        primary_var_name_for_node = start_node.defined_variable
-
-        # 3. Handle special commands
-        first_line_of_expr = expr_for_evaluation.split('\n', 1)[0].strip()
-        if first_line_of_expr.startswith("/"):
-            command_parts = first_line_of_expr.split(maxsplit=1)
-            cmd = command_parts[0].lower()
-
-            handler = self.command_handlers.get(cmd)
-            if handler:
-                context = {
-                    'full_expr': expr_for_evaluation,
-                    'first_line_args': command_parts[1].split() if len(command_parts) > 1 else [],
-                    'first_line_str': command_parts[1] if len(command_parts) > 1 else ""
-                }
-                handler(context, start_node, self.calculator)
-            else:
-                start_node.set_display(f"Error: Unknown command '{cmd}'.", True)
-            return # Commands do not propagate
-
-        # 4. Regular script evaluation
-        script_result_str = self.evaluate_script(expr_for_evaluation)
-        script_is_error = script_result_str.startswith("Error:")
-
-        if not script_is_error:
-            self.last_evaluated_calc_node = start_node
-
-        if "==" in expr_for_evaluation and not script_is_error:
-            if script_result_str == "1": script_result_str = "True"
-            elif script_result_str == "0": script_result_str = "False"
-
-        if primary_var_name_for_node:
-            if script_is_error and primary_var_name_for_node in self.calculator.variables:
-                del self.calculator.variables[primary_var_name_for_node]
-
-        start_node.set_display(script_result_str, script_is_error)
-
-        # 5. Propagation (only if requested)
-        if propagate and primary_var_name_for_node and not script_is_error:
-            if primary_var_name_for_node in self.dependencies:
-                for dependent_node in list(self.dependencies[primary_var_name_for_node]):
-                    if dependent_node != start_node:
-                        if isinstance(dependent_node, PlotNode):
-                            dependent_node.redraw_plot()
-                        else:
-                            self.update_and_propagate(dependent_node, propagate=True)
-
-    def update_node_dependencies(self, node):
-        if node in self.node_definitions:
-            old_var_name = self.node_definitions.pop(node)
-            if old_var_name in self.calculator.variables: del self.calculator.variables[old_var_name]
-
-        if node.dependencies:
-            for var in node.dependencies:
-                if var in self.dependencies: self.dependencies[var].discard(node)
-
-        if isinstance(node, CalculationNode):
-            match = re.match(r"^\s*(\$[a-zA-Z_]\w*)\s*=", node.expression_str)
-            if match:
-                node.defined_variable = match.group(1)
-                self.node_definitions[node] = node.defined_variable
-            else:
-                node.defined_variable = None
-            node.dependencies = set(VARIABLE_REGEX.findall(node.expression_str))
-        elif isinstance(node, PlotNode):
-            node.defined_variable = None
-            node.dependencies = set(VARIABLE_REGEX.findall(node.expression) + VARIABLE_REGEX.findall(node.start_val) + VARIABLE_REGEX.findall(node.end_val))
-
-        for var in node.dependencies:
-            var_name = f"${var}"
-            if var_name not in self.dependencies: self.dependencies[var_name] = set()
-            self.dependencies[var_name].add(node)
-
-    def evaluate_script(self, script_string: str) -> str:
-        """
-        Evaluates a multi-line script, isolating its execution state.
-        Variables are only committed to the main calculator if the entire script succeeds.
-        """
-        statements = [s.strip() for s in script_string.split('\n') if s.strip()]
-        if not statements:
-            return ""
-
-        # Create a temporary, isolated state for the script's execution
-        temp_calculator = AoP_Calculator(base=self.calculator.base) # Removed load_default_vars
-        temp_calculator.variables = self.calculator.variables.copy()
-
-        final_result_str = ""
-        for statement_text in statements:
-            try:
-                # Use the main calculator's evaluate_expression, but with the temp state
-                result_str, _ = temp_calculator.evaluate_expression(
-                    expression=statement_text,
-                    mode="auto"
-                )
-                if result_str.startswith("Error:"):
-                    return result_str  # Abort on the first error
-
-                final_result_str = result_str  # The result of the script is the result of the last line
-
-            except Exception as e:
-                # This catches deeper errors within the evaluation logic
-                return f"Error: {type(e).__name__}: {str(e)}"
-
-        # If we got here, the entire script ran without errors.
-        # Commit the changes from the temporary state to the main calculator.
-        self.calculator.variables = temp_calculator.variables
-        return final_result_str
+    # Method evaluate_script moved to EvaluationManager
 
     def generate_python_script(self) -> str:
         """
@@ -708,7 +598,7 @@ class CosmicScene(QGraphicsScene):
         graph = {node: set() for node in calc_nodes}
 
         # Create a reverse mapping from variable name to the node that defines it
-        var_to_def_node = {v: k for k, v in self.node_definitions.items()}
+        var_to_def_node = {v: k for k, v in self.graph_manager.node_definitions.items()}
 
         # Populate the graph based on dependencies (correct direction: source -> dependent)
         for node in calc_nodes:

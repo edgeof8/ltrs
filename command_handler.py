@@ -1,5 +1,6 @@
 # command_handler.py
-import typing
+from __future__ import annotations
+from typing import TYPE_CHECKING
 import re
 from PySide6.QtWidgets import QInputDialog, QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QCheckBox, QPushButton, QApplication
 from PySide6.QtGui import QPen
@@ -12,8 +13,9 @@ from gui_items.plot_node import PlotNode
 from config import VARIABLE_REGEX
 from cosmic_scene import CosmicScene
 
-if typing.TYPE_CHECKING:
+if TYPE_CHECKING:
     from main import CosmicScratchpadWindow
+    from gui_items.calculation_node import CalculationNode
 
 class CommandHandler:
     def __init__(self, scene: CosmicScene):
@@ -120,7 +122,7 @@ class CommandHandler:
         node.set_display("All user variables cleared.", False)
         for item in self.scene.items():
             if isinstance(item, CalculationNode) and item != node:
-                item.update_node_and_propagate()
+                item.update_node_and_propagate()  # type: ignore
 
     def _handle_delvar(self, context, node, calculator=None):
         args = context['first_line_args']
@@ -132,8 +134,8 @@ class CommandHandler:
             if var_name in calc.variables:
                 del calc.variables[var_name]
                 command_output = f"{var_name} cleared."
-                if var_name in self.scene.dependencies:
-                    for dependent_node in list(self.scene.dependencies[var_name]):
+                if var_name in self.scene.graph_manager.dependencies:
+                    for dependent_node in list(self.scene.graph_manager.dependencies[var_name]):
                         if dependent_node != node:
                             self.scene.update_and_propagate(dependent_node)
                 node.set_display(command_output, False)
@@ -144,8 +146,7 @@ class CommandHandler:
 
     def _handle_reset(self, context, node, calculator=None):
         self.scene.calculator = AoP_Calculator(base=10)
-        self.scene.node_definitions = {}
-        self.scene.dependencies = {}
+        self.scene.graph_manager.clear()
         window = self.scene.views()[0].window()
         if isinstance(window, CosmicScratchpadWindow):
             window.base_input.setText("10")
@@ -154,7 +155,7 @@ class CommandHandler:
         node.set_display(command_output, False)
         for item in self.scene.items():
             if isinstance(item, CalculationNode) and item != node:
-                item.update_node_and_propagate()
+                item.update_node_and_propagate()  # type: ignore
 
     def _handle_explain(self, context, node, calculator=None):
         first_line_str = context['first_line_str']
@@ -329,6 +330,6 @@ class CommandHandler:
         self.scene.addItem(plot_node)
         plot_node.setPos(node.pos().x() + 50, node.pos().y() + 50)
         node.set_display(f"Plot created for {expression}", False)
-        self.scene.update_node_dependencies(plot_node)
+        self.scene.graph_manager.update_dependencies_for_node(plot_node)
 
     # --- COMMAND HANDLERS END ---
