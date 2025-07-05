@@ -1,9 +1,14 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
 from PySide6.QtWidgets import QApplication, QWidget
 from PySide6.QtGui import QFont, QColor, QBrush, QKeyEvent, QPainter
 from PySide6.QtCore import Qt
 from config import (FONT_FAMILY, FONT_SIZE, COLOR_NODE_BACKGROUND, COLOR_TEXT_INPUT,
                     COLOR_TEXT_RESULT, COLOR_TEXT_ERROR)
 from gui_items.base_item import ResizableTextItem
+
+if TYPE_CHECKING:
+    from cosmic_scene import CosmicScene
 
 class CalculationNode(ResizableTextItem):
     def __init__(self, scene, calculator):
@@ -17,6 +22,9 @@ class CalculationNode(ResizableTextItem):
         self.setDefaultTextColor(COLOR_TEXT_INPUT)
         self.setTextInteractionFlags(Qt.TextInteractionFlag.TextEditorInteraction | Qt.TextInteractionFlag.TextSelectableByMouse)
         self.document().setDocumentMargin(8)
+
+    def scene(self) -> 'CosmicScene':
+        return super().scene()  # type: ignore
 
     def cut(self):
         self.copy()

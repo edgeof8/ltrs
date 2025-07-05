@@ -1,6 +1,0 @@
-Skipped line 1: #pi
-Skipped line 2: #e
-Skipped line 3: #pi * #e
-Skipped line 4: #j
-Skipped line 5: #j^2
-Skipped line 6: #sqrt2

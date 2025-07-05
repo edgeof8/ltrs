@@ -1,11 +1,18 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
 from PySide6.QtWidgets import QGraphicsItem
-from PySide6.QtGui import QFont, QColor, QBrush, QPainter, QPixmap
+from PySide6.QtGui import QFont, QColor, QBrush, QPainter, QPixmap, QPen
 from PySide6.QtCore import Qt, QRectF, QPointF
+from PySide6.QtWidgets import QGraphicsSceneMouseEvent, QGraphicsSceneHoverEvent
 from config import FONT_FAMILY, FONT_SIZE, COLOR_NODE_BACKGROUND, COLOR_TEXT_INPUT, COLOR_TEXT_RESULT
 import matplotlib.pyplot as plt
 import numpy as np
 import io
 from aopl_python_impl.aop_calculator import AoP_Calculator
+from plot_utils import generate_plot_pixmap
+
+if TYPE_CHECKING:
+    from cosmic_scene import CosmicScene
 
 class PlotNode(QGraphicsItem):
     def __init__(self, scene, calculator, expression, variable, start_val, end_val, steps=200, log_x=False, log_y=False, parent=None):
@@ -35,6 +42,9 @@ class PlotNode(QGraphicsItem):
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
         self.setAcceptHoverEvents(True)
         self.redraw_plot()
+
+    def scene(self) -> 'CosmicScene':
+        return super().scene()  # type: ignore
 
     def boundingRect(self):
         return QRectF(0, 0, self.width, self.height)
@@ -134,71 +144,17 @@ class PlotNode(QGraphicsItem):
         super().mouseReleaseEvent(event)
 
     def redraw_plot(self):
-        try:
-            # import matplotlib.pyplot as plt
-            # import numpy as np
-            # import io
-            # from PySide6.QtGui import QPixmap
-            # from aopl_python_impl.aop_calculator import AoP_Calculator
-
-            temp_calc = AoP_Calculator(base=self.calculator.base)
-            temp_calc.variables = self.calculator.variables.copy()
-
-            start_num = float(temp_calc.evaluate_expression(self.start_val, "num")[0])
-            end_num = float(temp_calc.evaluate_expression(self.end_val, "num")[0])
-
-            if start_num >= end_num:
-                return
-            if self.log_x and start_num <= 0:
-                return
-
-            if self.log_x:
-                x_values = np.logspace(np.log10(start_num), np.log10(end_num), self.steps)
-            else:
-                x_values = np.linspace(start_num, end_num, self.steps)
-
-            y_values = []
-            plot_var_key = f"${self.variable}"
-            original_plot_var_value = temp_calc.variables.get(plot_var_key)
-
-            for x_val in x_values:
-                temp_calc.variables[plot_var_key] = temp_calc.evaluate_expression(str(int(x_val)), "num")[0]
-                try:
-                    result_str, _ = temp_calc.evaluate_expression(self.expression, "num")
-                    y_num = float(result_str)
-                    if self.log_y and y_num <= 0:
-                        y_values.append(np.nan)
-                    else:
-                        y_values.append(y_num)
-                except Exception:
-                    y_values.append(np.nan)
-
-            if original_plot_var_value is not None:
-                temp_calc.variables[plot_var_key] = original_plot_var_value
-            elif plot_var_key in temp_calc.variables:
-                del temp_calc.variables[plot_var_key]
-
-            y_values_np = np.array(y_values, dtype=float)
-            plt.figure(figsize=(self.width/100, self.height/100-0.3))
-            plot_func = plt.plot
-            if self.log_x and self.log_y:
-                plot_func = plt.loglog
-            elif self.log_x:
-                plot_func = plt.semilogx
-            elif self.log_y:
-                plot_func = plt.semilogy
-
-            plot_func(x_values, y_values_np)
-            plt.grid(True, which="both", ls="-")
-            buf = io.BytesIO()
-            plt.savefig(buf, format='png')
-            buf.seek(0)
-            self.pixmap = QPixmap()
-            self.pixmap.loadFromData(buf.getvalue())
-            plt.close()
-            self.prepareGeometryChange()
-            self.update()
-        except ImportError:
-            self.pixmap = None
-            self.prepareGeometryChange()
-            self.update()
+        self.pixmap = generate_plot_pixmap(
+            self.calculator,
+            self.expression,
+            self.variable,
+            self.start_val,
+            self.end_val,
+            self.steps,
+            self.log_x,
+            self.log_y,
+            int(self.width),
+            int(self.height)
+        )
+        self.prepareGeometryChange()
+        self.update()

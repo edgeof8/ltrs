@@ -19,6 +19,7 @@ from PySide6.QtGui import QBrush, QPainter, QIntValidator, QKeySequence, QColor,
 from PySide6.QtCore import Qt, QRectF, Signal, QPointF
 from aopl_python_impl.aop_calculator import AoP_Calculator
 from cosmic_scene import CosmicScene
+from io_manager import IOManager
 from gui_items.calculation_node import CalculationNode
 from gui_items.text_note_item import TextNoteItem
 from gui_items.line_item import LineItem
@@ -276,6 +277,8 @@ class CosmicScratchpadWindow(QMainWindow):
         self.scene.window = self
         self.current_drawing_tool = DrawingToolMode.CALCULATE
 
+        self.io_manager = IOManager(self)
+
         self.status_bar = self.statusBar()
         self.status_bar.setStyleSheet(f"QStatusBar {{ color: {COLOR_TEXT_INPUT.name()}; background-color: {COLOR_NODE_BACKGROUND.name()}; }}")
         self.status_bar.showMessage("Ready", 3000)
@@ -402,11 +405,11 @@ class CosmicScratchpadWindow(QMainWindow):
         """)
         file_menu = menu_bar.addMenu("&File")
         new_action = QAction("&New", self); new_action.setShortcut(QKeySequence.StandardKey.New); new_action.triggered.connect(self.new_file)
-        open_action = QAction("&Open...", self); open_action.setShortcut(QKeySequence.StandardKey.Open); open_action.triggered.connect(self.open_file)
-        save_action = QAction("&Save", self); save_action.setShortcut(QKeySequence.StandardKey.Save); save_action.triggered.connect(self.save_file)
-        save_as_action = QAction("Save &As...", self); save_as_action.setShortcut(QKeySequence.StandardKey.SaveAs); save_as_action.triggered.connect(self.save_as_file)
-        export_action = QAction("Export as Python Script...", self); export_action.triggered.connect(self.export_as_python_script)
-        share_action = QAction("Share to Cosmic Library...", self); share_action.triggered.connect(self.share_to_library)
+        open_action = QAction("&Open...", self); open_action.setShortcut(QKeySequence.StandardKey.Open); open_action.triggered.connect(self.io_manager.open_file)
+        save_action = QAction("&Save", self); save_action.setShortcut(QKeySequence.StandardKey.Save); save_action.triggered.connect(self.io_manager.save_file)
+        save_as_action = QAction("Save &As...", self); save_as_action.setShortcut(QKeySequence.StandardKey.SaveAs); save_as_action.triggered.connect(self.io_manager.save_as_file)
+        export_action = QAction("Export as Python Script...", self); export_action.triggered.connect(self.io_manager.export_as_python_script)
+        share_action = QAction("Share to Cosmic Library...", self); share_action.triggered.connect(self.io_manager.share_to_library)
         browse_action = QAction("Browse Cosmic Library...", self); browse_action.triggered.connect(self.browse_library)
         exit_action = QAction("E&xit", self); exit_action.setShortcut(QKeySequence.StandardKey.Quit); exit_action.triggered.connect(self.close)
         file_menu.addAction(new_action); file_menu.addAction(open_action); file_menu.addAction(save_action); file_menu.addAction(save_as_action); file_menu.addAction(export_action); file_menu.addSeparator(); file_menu.addAction(exit_action)
@@ -432,109 +435,6 @@ class CosmicScratchpadWindow(QMainWindow):
         from library_browser import LibraryBrowserDialog
         dialog = LibraryBrowserDialog(self)
         dialog.exec()
-
-    def load_scene_from_data(self, data):
-        self.new_file()
-        self.scene.calculator.base = data.get("base", 10)
-        self.base_input.setText(str(self.scene.calculator.base))
-        nodes_to_process = []
-        for node_data in data.get("nodes", []):
-            node = CalculationNode(self.scene, self.scene.calculator)
-            expr = node_data.get("expression", "")
-            node.expression_str = expr
-            node.setPlainText(expr)
-            node.setPos(node_data.get("pos_x", 0), node_data.get("pos_y", 0))
-            # Restore size if saved
-            if "width" in node_data and "height" in node_data:
-                node.document().setTextWidth(node_data["width"] - 2 * node.document().documentMargin())
-                node._user_has_resized = True
-                node._update_wrap_mode_based_on_state()
-            self.scene.addItem(node)
-            nodes_to_process.append(node)
-
-        for item_data in data.get("drawing_items", []):
-            item_type = item_data.get("type")
-            if item_type == "line": self.scene.addItem(LineItem(item_data.get("x1",0), item_data.get("y1",0), item_data.get("x2",0), item_data.get("y2",0)))
-            elif item_type == "text_note":
-                note = TextNoteItem(item_data.get("text", ""))
-                note.setPos(item_data.get("pos_x",0), item_data.get("pos_y",0))
-                if "width" in item_data and "height" in item_data:
-                    note.document().setTextWidth(item_data["width"] - 2 * note.document().documentMargin())
-                    note._user_has_resized = True
-                    note._update_wrap_mode_based_on_state()
-                self.scene.addItem(note)
-            elif item_type == "pen_stroke":
-                stroke = PenStrokeItem(); path_obj = QPainterPath()
-                for pt_data in item_data.get("points", []):
-                    if pt_data.get("type_val") == QPainterPath.ElementType.MoveToElement: path_obj.moveTo(float(pt_data.get("x", 0)), float(pt_data.get("y", 0)))
-                    elif pt_data.get("type_val") == QPainterPath.ElementType.LineToElement: path_obj.lineTo(float(pt_data.get("x", 0)), float(pt_data.get("y", 0)))
-                stroke.setPath(path_obj); self.scene.addItem(stroke)
-
-        self.current_file_path = None
-        self.setWindowTitle(f"{WINDOW_TITLE} - [Downloaded Scratchpad]")
-
-        # Recalculate everything
-        for node in nodes_to_process: self.scene.update_node_dependencies(node)
-        for node in nodes_to_process: node.update_node()
-
-    def open_file(self):
-        path, _ = QFileDialog.getOpenFileName(self, "Open Cosmic Scratchpad File", "", "Cosmic Files (*.cosmic);;All Files (*)")
-        if not path: return
-        try:
-            with open(path, 'r') as f: data = json.load(f)
-            self.new_file()
-            self.scene.calculator.base = data.get("base", 10)
-            self.base_input.setText(str(self.scene.calculator.base))
-            nodes_to_process = []
-            for node_data in data.get("nodes", []):
-                node = CalculationNode(self.scene, self.scene.calculator)
-                expr = node_data.get("expression", "")
-                node.expression_str = expr
-                node.setPlainText(expr)
-                node.setPos(node_data.get("pos_x", 0), node_data.get("pos_y", 0))
-                # Restore size if saved
-                if "width" in node_data and "height" in node_data:
-                    node.document().setTextWidth(node_data["width"] - 2 * node.document().documentMargin())
-                    node._user_has_resized = True
-                    node._update_wrap_mode_based_on_state()
-                self.scene.addItem(node)
-                nodes_to_process.append(node)
-
-            for item_data in data.get("drawing_items", []):
-                item_type = item_data.get("type")
-                if item_type == "line": self.scene.addItem(LineItem(item_data.get("x1",0), item_data.get("y1",0), item_data.get("x2",0), item_data.get("y2",0)))
-                elif item_type == "text_note":
-                    note = TextNoteItem(item_data.get("text", ""))
-                    note.setPos(item_data.get("pos_x",0), item_data.get("pos_y",0))
-                    if "width" in item_data and "height" in item_data:
-                        note.document().setTextWidth(item_data["width"] - 2 * note.document().documentMargin())
-                        note._user_has_resized = True
-                        note._update_wrap_mode_based_on_state()
-                    self.scene.addItem(note)
-                elif item_type == "pen_stroke":
-                    stroke = PenStrokeItem(); path_obj = QPainterPath()
-                    for pt_data in item_data.get("points", []):
-                        if pt_data.get("type_val") == QPainterPath.ElementType.MoveToElement: path_obj.moveTo(float(pt_data.get("x", 0)), float(pt_data.get("y", 0)))
-                        elif pt_data.get("type_val") == QPainterPath.ElementType.LineToElement: path_obj.lineTo(float(pt_data.get("x", 0)), float(pt_data.get("y", 0)))
-                    stroke.setPath(path_obj); self.scene.addItem(stroke)
-
-            self.current_file_path = path
-            self.setWindowTitle(f"{WINDOW_TITLE} - {path}")
-
-            # Recalculate everything
-            for node in nodes_to_process: self.scene.update_node_dependencies(node)
-            for node in nodes_to_process: node.update_node()
-
-        except Exception as e:
-            print(f"Error opening file: {e}")
-
-    def save_file(self):
-        if self.current_file_path: self.perform_save(self.current_file_path)
-        else: self.save_as_file()
-
-    def save_as_file(self):
-        path, _ = QFileDialog.getSaveFileName(self, "Save Cosmic Scratchpad File", "", "Cosmic Files (*.cosmic);;All Files (*)")
-        if path: self.perform_save(path); self.current_file_path = path; self.setWindowTitle(f"{WINDOW_TITLE} - {path}")
 
     def get_focused_text_item(self) -> 'QGraphicsTextItem | None':
         focused_item = self.scene.focusItem()
@@ -565,124 +465,6 @@ class CosmicScratchpadWindow(QMainWindow):
             item.paste() # type: ignore
             if isinstance(item, CalculationNode): item.update_node_and_propagate()
 
-    def export_as_python_script(self):
-        path, _ = QFileDialog.getSaveFileName(self, "Export as Python Script", "", "Python Files (*.py);;All Files (*)")
-        if path:
-            script_content = self.scene.generate_python_script()
-            try:
-                with open(path, 'w', encoding='utf-8') as f:
-                    f.write(script_content)
-                self.status_bar.showMessage(f"Exported script to {path}", 5000)
-            except Exception as e:
-                self.status_bar.showMessage(f"Error exporting script: {e}", 5000)
-
-    def share_to_library(self):
-        import requests
-        from PySide6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QTextEdit, QPushButton
-        import tempfile
-        import json
-
-        class ShareDialog(QDialog):
-            def __init__(self, parent=None):
-                super().__init__(parent)
-                self.setWindowTitle("Share to Cosmic Library")
-                layout = QVBoxLayout(self)
-
-                # Title
-                title_layout = QHBoxLayout()
-                title_label = QLabel("Title:")
-                self.title_input = QLineEdit()
-                title_layout.addWidget(title_label)
-                title_layout.addWidget(self.title_input)
-                layout.addLayout(title_layout)
-
-                # Author
-                author_layout = QHBoxLayout()
-                author_label = QLabel("Author:")
-                self.author_input = QLineEdit()
-                author_layout.addWidget(author_label)
-                author_layout.addWidget(self.author_input)
-                layout.addLayout(author_layout)
-
-                # Description
-                desc_layout = QHBoxLayout()
-                desc_label = QLabel("Description:")
-                self.desc_input = QTextEdit()
-                self.desc_input.setFixedHeight(100)
-                desc_layout.addWidget(desc_label)
-                desc_layout.addWidget(self.desc_input)
-                layout.addLayout(desc_layout)
-
-                # Buttons
-                button_layout = QHBoxLayout()
-                ok_button = QPushButton("Share")
-                cancel_button = QPushButton("Cancel")
-                ok_button.clicked.connect(self.accept)
-                cancel_button.clicked.connect(self.reject)
-                button_layout.addStretch()
-                button_layout.addWidget(ok_button)
-                button_layout.addWidget(cancel_button)
-                layout.addLayout(button_layout)
-
-        dialog = ShareDialog(self)
-        if dialog.exec():
-            title = dialog.title_input.text()
-            author = dialog.author_input.text()
-            description = dialog.desc_input.toPlainText()
-
-            if not title or not author:
-                self.status_bar.showMessage("Error: Title and Author are required.", 5000)
-                return
-
-            # Prepare the scratchpad data
-            data = {"version": "0.3", "base": self.scene.calculator.base, "nodes": [], "drawing_items": []}
-            for item in self.scene.items():
-                if isinstance(item, CalculationNode):
-                    data["nodes"].append({
-                        "type": "calculation", "expression": item.expression_str, # type: ignore
-                        "pos_x": item.pos().x(), "pos_y": item.pos().y(),
-                        "width": item.boundingRect().width(), "height": item.boundingRect().height()
-                    })
-                elif isinstance(item, LineItem):
-                    line = item.line() # type: ignore
-                    data["drawing_items"].append({"type": "line", "x1": line.x1(), "y1": line.y1(), "x2": line.x2(), "y2": line.y2()})
-                elif isinstance(item, TextNoteItem):
-                    data["drawing_items"].append({
-                        "type": "text_note", "text": item.toPlainText(), # type: ignore
-                        "pos_x": item.pos().x(), "pos_y": item.pos().y(),
-                        "width": item.boundingRect().width(), "height": item.boundingRect().height()
-                    })
-                elif isinstance(item, PenStrokeItem):
-                    points = []
-                    for i in range(item.path().elementCount()): # type: ignore
-                        el = item.path().elementAt(i) # type: ignore
-                        points.append({"x": el.x(), "y": el.y(), "type_val": el.type})
-                    data["drawing_items"].append({"type": "pen_stroke", "points": points})
-
-            try:
-                # Create a temporary file to store the scratchpad data
-                with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.cosmic') as temp_file:
-                    json.dump(data, temp_file, indent=2)
-                    temp_file_path = temp_file.name
-
-                # Upload to the server
-                with open(temp_file_path, 'rb') as f:
-                    files = {'file': f}
-                    data = {'title': title, 'author': author, 'description': description}
-                    response = requests.post('http://localhost:8000/upload', files=files, data=data)
-
-                # Clean up temporary file
-                os.unlink(temp_file_path)
-
-                if response.status_code == 200:
-                    self.status_bar.showMessage("Successfully shared to Cosmic Library.", 5000)
-                else:
-                    self.status_bar.showMessage(f"Error sharing to library: {response.text}", 5000)
-            except Exception as e:
-                self.status_bar.showMessage(f"Error sharing to library: {str(e)}", 5000)
-        else:
-            self.status_bar.showMessage("Sharing cancelled.", 5000)
-
     def edit_delete_selected(self):
         focused_item = self.get_focused_text_item()
         if focused_item and focused_item.textCursor().hasSelection():
@@ -690,31 +472,3 @@ class CosmicScratchpadWindow(QMainWindow):
             if isinstance(focused_item, CalculationNode): focused_item.update_node_and_propagate()
         else:
             self.scene.keyPressEvent(QKeySequence(QKeySequence.StandardKey.Delete))
-
-    def perform_save(self, path):
-        data = {"version": "0.3", "base": self.scene.calculator.base, "nodes": [], "drawing_items": []}
-        for item in self.scene.items():
-            if isinstance(item, CalculationNode):
-                data["nodes"].append({
-                    "type": "calculation", "expression": item.expression_str, # type: ignore
-                    "pos_x": item.pos().x(), "pos_y": item.pos().y(),
-                    "width": item.boundingRect().width(), "height": item.boundingRect().height()
-                })
-            elif isinstance(item, LineItem):
-                line = item.line() # type: ignore
-                data["drawing_items"].append({"type": "line", "x1": line.x1(), "y1": line.y1(), "x2": line.x2(), "y2": line.y2()})
-            elif isinstance(item, TextNoteItem):
-                data["drawing_items"].append({
-                    "type": "text_note", "text": item.toPlainText(), # type: ignore
-                    "pos_x": item.pos().x(), "pos_y": item.pos().y(),
-                    "width": item.boundingRect().width(), "height": item.boundingRect().height()
-                })
-            elif isinstance(item, PenStrokeItem):
-                points = []
-                for i in range(item.path().elementCount()): # type: ignore
-                    el = item.path().elementAt(i) # type: ignore
-                    points.append({"x": el.x(), "y": el.y(), "type_val": el.type})
-                data["drawing_items"].append({"type": "pen_stroke", "points": points})
-        try:
-            with open(path, 'w') as f: json.dump(data, f, indent=2)
-        except Exception as e: print(f"Error saving file: {e}")

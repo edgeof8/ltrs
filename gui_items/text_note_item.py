@@ -1,3 +1,5 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
 from PySide6.QtWidgets import QApplication, QWidget
 from PySide6.QtGui import QFont, QColor, QBrush, QPen, QPainter, QKeyEvent
 from PySide6.QtCore import Qt
@@ -5,12 +7,18 @@ from config import (FONT_FAMILY, FONT_SIZE, COLOR_NODE_BACKGROUND, COLOR_TEXT_RE
                     DEFAULT_TEXTNOTE_COLOR)
 from gui_items.base_item import ResizableTextItem
 
+if TYPE_CHECKING:
+    from cosmic_scene import CosmicScene
+
 class TextNoteItem(ResizableTextItem):
     def __init__(self, text="", parent=None):
         super().__init__(parent)
         self.setPlainText(text); self.setFont(QFont(FONT_FAMILY, FONT_SIZE - 1)); self.setDefaultTextColor(DEFAULT_TEXTNOTE_COLOR)
         self.setTextInteractionFlags(Qt.TextInteractionFlag.TextEditorInteraction | Qt.TextInteractionFlag.TextSelectableByMouse); self.document().setDocumentMargin(6)
         self._min_node_height = (FONT_SIZE - 1) + 16; self.current_font_size = FONT_SIZE - 1
+
+    def scene(self) -> 'CosmicScene':
+        return super().scene()  # type: ignore
 
     def cut(self):
         self.copy()

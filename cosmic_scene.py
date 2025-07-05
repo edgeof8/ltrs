@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import sys
 from pathlib import Path
 
@@ -10,24 +12,25 @@ if str(src_path) not in sys.path:
 # ------------------------------------
 
 # cosmic_scene.py
-import typing
+from typing import TYPE_CHECKING
 import re
 from PySide6.QtWidgets import QGraphicsScene, QToolBar, QApplication, QMenu, QInputDialog, QGraphicsLineItem, QGraphicsItem
 from PySide6.QtGui import QPainterPath, QTextOption, QAction, QPen
 from PySide6.QtCore import Qt
 from aopl_python_impl.aop_calculator import AoP_Calculator
+from dialogs import PlotConfigDialog
 from aopl_python_impl.constants import LETTER_TO_EXPONENT_MAP
 from aopl_python_impl import aop_ai_explainer
 from aopl_python_impl.aop_formatter import format_as_decimal_string
-from gui_items.calculation_node import CalculationNode
-from gui_items.line_item import LineItem
-from gui_items.text_note_item import TextNoteItem
-from gui_items.pen_stroke_item import PenStrokeItem
-from gui_items.plot_node import PlotNode
-from gui_items.base_item import ResizableTextItem
 from config import DrawingToolMode, VARIABLE_REGEX
 
-if typing.TYPE_CHECKING:
+if TYPE_CHECKING:
+    from gui_items.calculation_node import CalculationNode
+    from gui_items.line_item import LineItem
+    from gui_items.text_note_item import TextNoteItem
+    from gui_items.pen_stroke_item import PenStrokeItem
+    from gui_items.plot_node import PlotNode
+    from gui_items.base_item import ResizableTextItem
     from main import CosmicScratchpadWindow
 
 class CosmicScene(QGraphicsScene):
@@ -104,7 +107,7 @@ class CosmicScene(QGraphicsScene):
             window = self.views()[0].window()
             if isinstance(window, CosmicScratchpadWindow):
                 # This call handles its own output displays
-                window.trigger_base_change_and_full_recalc(args[0], command_node=node)
+                window.trigger_base_change_and_full_recalc(args[0], command_node=node)  # type: ignore
             else:
                 node.set_display("Error: Could not trigger base update via window.", True)
         else:
@@ -167,8 +170,8 @@ class CosmicScene(QGraphicsScene):
         self.dependencies = {}
         window = self.views()[0].window()
         if isinstance(window, CosmicScratchpadWindow):
-            window.base_input.setText("10")
-            window.trigger_base_change_and_full_recalc("10", command_node=None)
+            window.base_input.setText("10")  # type: ignore
+            window.trigger_base_change_and_full_recalc("10", command_node=None)  # type: ignore
         command_output = "Calculator state reset. Base set to 10. Variables cleared."
         node.set_display(command_output, False)
         for item in self.items():
@@ -259,70 +262,6 @@ class CosmicScene(QGraphicsScene):
                 start_val = parts[from_idx + 1]
                 end_val = parts[to_idx + 1]
         else:
-            from PySide6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QCheckBox, QPushButton
-            class PlotConfigDialog(QDialog):
-                def __init__(self, parent=None):
-                    super().__init__(parent)
-                    self.setWindowTitle("Plot Configuration")
-                    layout = QVBoxLayout(self)
-
-                    # Expression
-                    expr_layout = QHBoxLayout()
-                    expr_label = QLabel("Expression:")
-                    self.expr_input = QLineEdit()
-                    expr_layout.addWidget(expr_label)
-                    expr_layout.addWidget(self.expr_input)
-                    layout.addLayout(expr_layout)
-
-                    # Variable
-                    var_layout = QHBoxLayout()
-                    var_label = QLabel("Variable:")
-                    self.var_input = QLineEdit()
-                    var_layout.addWidget(var_label)
-                    var_layout.addWidget(self.var_input)
-                    layout.addLayout(var_layout)
-
-                    # Start Value
-                    start_layout = QHBoxLayout()
-                    start_label = QLabel("Start Value:")
-                    self.start_input = QLineEdit("1")
-                    start_layout.addWidget(start_label)
-                    start_layout.addWidget(self.start_input)
-                    layout.addLayout(start_layout)
-
-                    # End Value
-                    end_layout = QHBoxLayout()
-                    end_label = QLabel("End Value:")
-                    self.end_input = QLineEdit("100")
-                    end_layout.addWidget(end_label)
-                    end_layout.addWidget(self.end_input)
-                    layout.addLayout(end_layout)
-
-                    # Steps
-                    steps_layout = QHBoxLayout()
-                    steps_label = QLabel("Steps:")
-                    self.steps_input = QLineEdit("200")
-                    steps_layout.addWidget(steps_label)
-                    steps_layout.addWidget(self.steps_input)
-                    layout.addLayout(steps_layout)
-
-                    # Logarithmic options
-                    self.log_x_check = QCheckBox("Logarithmic X-axis")
-                    self.log_y_check = QCheckBox("Logarithmic Y-axis")
-                    layout.addWidget(self.log_x_check)
-                    layout.addWidget(self.log_y_check)
-
-                    # Buttons
-                    button_layout = QHBoxLayout()
-                    ok_button = QPushButton("OK")
-                    cancel_button = QPushButton("Cancel")
-                    ok_button.clicked.connect(self.accept)
-                    cancel_button.clicked.connect(self.reject)
-                    button_layout.addStretch()
-                    button_layout.addWidget(ok_button)
-                    button_layout.addWidget(cancel_button)
-                    layout.addLayout(button_layout)
-
             dialog = PlotConfigDialog()
             if dialog.exec():
                 expression = dialog.expr_input.text()

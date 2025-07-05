@@ -1,4 +1,0 @@
-# FGH Expressions to Evaluate (format: alpha,n)
-2,3
-2,4
-3,2
