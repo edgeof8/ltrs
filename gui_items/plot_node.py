@@ -17,7 +17,6 @@ if TYPE_CHECKING:
 class PlotNode(QGraphicsItem):
     def __init__(self, scene, calculator, expression, variable, start_val, end_val, steps=200, log_x=False, log_y=False, parent=None):
         super().__init__(parent)
-        self.scene = scene
         self.calculator = calculator
         self.expression = expression
         self.variable = variable

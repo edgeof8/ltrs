@@ -1,12 +1,13 @@
 # evaluation_manager.py
+from __future__ import annotations
 from typing import TYPE_CHECKING
 from aopl_python_impl.aop_calculator import AoP_Calculator
 from PySide6.QtWidgets import QApplication
+from gui_items.calculation_node import CalculationNode
+from gui_items.plot_node import PlotNode
 
 if TYPE_CHECKING:
     from cosmic_scene import CosmicScene
-    from gui_items.calculation_node import CalculationNode
-    from gui_items.plot_node import PlotNode
 
 class EvaluationManager:
     def __init__(self, scene: 'CosmicScene'):

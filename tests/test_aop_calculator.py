@@ -24,5 +24,17 @@ class TestAoPCalculator(unittest.TestCase):
         result = self.calculator.evaluate_expression("(a + b) * c") # Changed calculate to evaluate_expression
         self.assertEqual(result, "110*c") # (10+100)*10^3 = 110 * 10^3 = 110c
 
+    def test_trailing_equals_evaluates_left_hand_side(self):
+        a_eq, _ = self.calculator.evaluate_expression("a=")
+        a_spaced, _ = self.calculator.evaluate_expression("a =")
+        three_e3, _ = self.calculator.evaluate_expression("3e3 =")
+        a_plain, _ = self.calculator.evaluate_expression("a")
+        three_e3_plain, _ = self.calculator.evaluate_expression("3e3")
+        self.assertEqual(a_eq, a_plain)
+        self.assertEqual(a_spaced, a_plain)
+        self.assertEqual(three_e3, three_e3_plain)
+        self.assertFalse(a_eq.startswith("Error:"))
+        self.assertFalse(three_e3.startswith("Error:"))
+
 if __name__ == '__main__':
     unittest.main()

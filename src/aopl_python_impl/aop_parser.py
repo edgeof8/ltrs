@@ -60,6 +60,9 @@ class Parser:
             return None
 
         if not self.current_token:
+            # Nested parse of a missing operand (e.g. trailing '=').
+            if precedence > 0:
+                return None
             raise AoPError("Unexpected end of expression.")
 
         left = self.atom()
@@ -78,6 +81,9 @@ class Parser:
                 right = self.parse(op_info['precedence'] + 1)
 
             if right is None:
+                # Trailing '=' is a calculator "equals" marker: evaluate the left-hand side.
+                if op_token.value == '=':
+                    break
                 raise SyntaxError("Incomplete expression: missing right operand")
             left = BinaryOpNode(left, op_token, right)
 

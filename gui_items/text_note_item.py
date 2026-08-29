@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
-from PySide6.QtWidgets import QApplication, QWidget
+from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QFont, QColor, QBrush, QPen, QPainter, QKeyEvent
 from PySide6.QtCore import Qt
 from config import (FONT_FAMILY, FONT_SIZE, COLOR_NODE_BACKGROUND, COLOR_TEXT_RESULT,
@@ -41,7 +41,7 @@ class TextNoteItem(ResizableTextItem):
             painter.setBrush(QColor(COLOR_NODE_BACKGROUND).lighter(105)); painter.setPen(QPen(COLOR_TEXT_RESULT, 0.5, Qt.PenStyle.DotLine)); painter.drawRoundedRect(self.boundingRect().adjusted(-2, -2, 2, 2), 3, 3)
         elif current_text.strip():
             painter.setBrush(QBrush(COLOR_NODE_BACKGROUND)); painter.setPen(Qt.PenStyle.NoPen); painter.drawRoundedRect(self.boundingRect(), 3, 3)
-        super().paint(painter, option, widget or QWidget())
+        super().paint(painter, option, widget)
 
     def focusOutEvent(self, event):
         super().focusOutEvent(event)

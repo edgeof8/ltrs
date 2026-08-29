@@ -74,7 +74,6 @@ def load_plugins(scene):
 class GroupBoundingBox(QGraphicsRectItem):
     def __init__(self, scene, selected_items, parent=None):
         self.selected_items = selected_items
-        self.scene = scene
         bounding_rect = self.calculate_bounding_rect()
         super().__init__(bounding_rect, parent)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable)
@@ -472,3 +471,11 @@ class CosmicScratchpadWindow(QMainWindow):
             if isinstance(focused_item, CalculationNode): focused_item.update_node_and_propagate()
         else:
             self.scene.keyPressEvent(QKeySequence(QKeySequence.StandardKey.Delete))
+
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    window = CosmicScratchpadWindow()
+    window.show()
+    sys.exit(app.exec())
+

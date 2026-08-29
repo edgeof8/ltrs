@@ -1,11 +1,10 @@
 # dependency_manager.py
-from typing import TYPE_CHECKING, Set, Dict
+from __future__ import annotations
+from typing import Set, Dict
 import re
 from config import VARIABLE_REGEX
-
-if TYPE_CHECKING:
-    from gui_items.calculation_node import CalculationNode
-    from gui_items.plot_node import PlotNode
+from gui_items.calculation_node import CalculationNode
+from gui_items.plot_node import PlotNode
 
 class DependencyGraphManager:
     def __init__(self):

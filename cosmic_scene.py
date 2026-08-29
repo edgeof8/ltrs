@@ -25,14 +25,14 @@ from aopl_python_impl.aop_formatter import format_as_decimal_string
 from config import DrawingToolMode, VARIABLE_REGEX
 from dependency_manager import DependencyGraphManager
 from evaluation_manager import EvaluationManager
+from gui_items.calculation_node import CalculationNode
+from gui_items.line_item import LineItem
+from gui_items.text_note_item import TextNoteItem
+from gui_items.pen_stroke_item import PenStrokeItem
+from gui_items.plot_node import PlotNode
+from gui_items.base_item import ResizableTextItem
 
 if TYPE_CHECKING:
-    from gui_items.calculation_node import CalculationNode
-    from gui_items.line_item import LineItem
-    from gui_items.text_note_item import TextNoteItem
-    from gui_items.pen_stroke_item import PenStrokeItem
-    from gui_items.plot_node import PlotNode
-    from gui_items.base_item import ResizableTextItem
     from main import CosmicScratchpadWindow
 
 class CosmicScene(QGraphicsScene):
@@ -106,6 +106,7 @@ class CosmicScene(QGraphicsScene):
     def _handle_setbase(self, context, node, calculator=None):
         args = context['first_line_args']
         if args and args[0].isdigit():
+            from main import CosmicScratchpadWindow
             window = self.views()[0].window()
             if isinstance(window, CosmicScratchpadWindow):
                 # This call handles its own output displays
@@ -170,6 +171,7 @@ class CosmicScene(QGraphicsScene):
         self.calculator = AoP_Calculator(base=10) # Removed load_default_vars
         self.node_definitions = {}
         self.dependencies = {}
+        from main import CosmicScratchpadWindow
         window = self.views()[0].window()
         if isinstance(window, CosmicScratchpadWindow):
             window.base_input.setText("10")  # type: ignore

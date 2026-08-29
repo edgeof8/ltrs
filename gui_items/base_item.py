@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import (QGraphicsTextItem, QApplication, QMenu,
                                QGraphicsLineItem, QGraphicsPathItem, QGraphicsItem,
-                               QStyleOptionGraphicsItem, QWidget, QGraphicsSceneMouseEvent,
+                               QGraphicsSceneMouseEvent,
                                QGraphicsSceneHoverEvent)
 from PySide6.QtGui import (QFont, QColor, QBrush, QTextCursor, QPen, QPainterPath, QPainter,
                            QTextOption, QKeyEvent, QFontMetrics)
@@ -58,7 +58,7 @@ class ResizableTextItem(QGraphicsTextItem):
         self.document().setTextWidth(available_width); self.document().adjustSize(); self.prepareGeometryChange(); self.update()
 
     def paint(self, painter, option, widget=None):
-        super().paint(painter, option, widget or QWidget())
+        super().paint(painter, option, widget)
         if self.isSelected():
             painter.setBrush(QBrush(QColor(COLOR_TEXT_RESULT).lighter(110))); painter.setPen(Qt.PenStyle.NoPen)
             for handle_rect in self.get_resize_handles_rects().values(): painter.drawEllipse(handle_rect)

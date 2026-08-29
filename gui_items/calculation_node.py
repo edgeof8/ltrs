@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
-from PySide6.QtWidgets import QApplication, QWidget
+from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QFont, QColor, QBrush, QKeyEvent, QPainter
 from PySide6.QtCore import Qt
 from config import (FONT_FAMILY, FONT_SIZE, COLOR_NODE_BACKGROUND, COLOR_TEXT_INPUT,
@@ -13,7 +13,6 @@ if TYPE_CHECKING:
 class CalculationNode(ResizableTextItem):
     def __init__(self, scene, calculator):
         super().__init__()
-        self.scene = scene
         self.calculator = calculator
         self.expression_str = ""
         self.defined_variable: str | None = None
@@ -28,8 +27,9 @@ class CalculationNode(ResizableTextItem):
 
     def cut(self):
         self.copy()
-        if self.scene() and hasattr(self.scene(), 'removeItem'):
-            self.scene().removeItem(self)  # type: ignore
+        scene = self.scene()
+        if scene and hasattr(scene, 'removeItem'):
+            scene.removeItem(self)  # type: ignore
 
     def copy(self):
         clipboard = QApplication.clipboard()
@@ -61,8 +61,9 @@ class CalculationNode(ResizableTextItem):
         cursor = self.textCursor()
         cursor.clearSelection()
         self.setTextCursor(cursor)
-        if self.scene and hasattr(self.scene, 'removeItem') and not self.toPlainText().strip():
-            self.scene.removeItem(self)  # type: ignore
+        scene = self.scene()
+        if scene and hasattr(scene, 'removeItem') and not self.toPlainText().strip():
+            scene.removeItem(self)  # type: ignore
             return
         self.update_node_and_propagate()
 
@@ -79,15 +80,16 @@ class CalculationNode(ResizableTextItem):
 
     def update_node_and_propagate(self):
         self.expression_str = self.toPlainText().strip()
-        if self.scene and hasattr(self.scene, 'update_and_propagate'):
-            self.scene.update_and_propagate(self)  # type: ignore
+        scene = self.scene()
+        if scene and hasattr(scene, 'update_and_propagate'):
+            scene.update_and_propagate(self)  # type: ignore
 
     def paint(self, painter, option, widget=None):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setBrush(QBrush(COLOR_NODE_BACKGROUND))
         painter.setPen(Qt.PenStyle.NoPen)
         painter.drawRoundedRect(self.boundingRect(), 5, 5)
-        super().paint(painter, option, widget or QWidget())
+        super().paint(painter, option, widget)
 
     def set_display(self, result_str: str, is_error: bool, is_command_output: bool = False):
         if self.hasFocus():
