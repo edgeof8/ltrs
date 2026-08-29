@@ -66,6 +66,10 @@ class AoPValue:
                 poly[str(exp)] = poly.get(str(exp), 0) + coeff_val
             elif standalone_num:
                 poly['0'] = poly.get('0', 0) + int(standalone_num)
+        # "0" (and other all-zero literals) must not become coeff=1 with an empty poly,
+        # which Rust treats as the constant 1.
+        if matches and all(v == 0 for v in poly.values()):
+            return cls.from_number(0, base)
         return cls(poly=poly, base=base, coeff=1)
 
     @staticmethod

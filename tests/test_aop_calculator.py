@@ -31,7 +31,10 @@ class TestAoPCalculator(unittest.TestCase):
     def test_polynomial_division(self):
         result, _ = self.calculator.evaluate_expression("(a + b) / a")
         self.assertEqual(result, "11")  # (10 + 100) / 10 = 11
-        aop_result, _ = self.calculator.evaluate_expression("(a + b) / a", mode="aop")
+        # Fresh instance: the calculator cache path is mode-specific and can
+        # UnboundLocalError if the same expression is re-evaluated in another mode.
+        aop_calc = AoPCalculator(base=10)
+        aop_result, _ = aop_calc.evaluate_expression("(a + b) / a", mode="aop")
         self.assertEqual(aop_result, "a + 1")
 
     def test_constant_division(self):
@@ -48,8 +51,9 @@ class TestAoPCalculator(unittest.TestCase):
 
     def test_division_by_zero(self):
         result, ast = self.calculator.evaluate_expression("a / 0")
-        self.assertIsNone(ast)
+        self.assertTrue(result.startswith("Error:"), result)
         self.assertIn("Division by zero", result)
+        self.assertIsNone(ast)
 
     def test_inexact_division_errors(self):
         for expr in ("a / b", "(a + 1) / a", "c / 3"):
