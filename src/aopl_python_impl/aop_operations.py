@@ -98,11 +98,10 @@ def evaluate_ast(node: ASTNode, base: int, cache: Optional[dict] = None, variabl
                     elif op == '-': result = left_aop - right_aop
                     elif op == '*': result = left_aop * right_aop
                     elif op == '/':
-                        if right_aop.to_numerical() == 0:
-                            raise AoPError("Division by zero.")
-                        # Full symbolic polynomial division is not implemented.
-                        # To avoid misleading results from integer division, we raise an error.
-                        raise NotImplementedError("Symbolic division is not supported in this version.")
+                        try:
+                            result = left_aop / right_aop
+                        except ValueError as e:
+                            raise AoPError(str(e)) from e
                     elif op == '==':
                         # Compare numerical values for equality, return 1 or 0
                         is_equal = left_aop.to_numerical() == right_aop.to_numerical()

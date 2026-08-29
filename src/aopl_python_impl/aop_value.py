@@ -91,6 +91,12 @@ class AoPValue:
         new_instance._rust_obj = self._rust_obj.__mul__(other._rust_obj)
         return new_instance
 
+    def __truediv__(self, other: 'AoPValue') -> 'AoPValue':
+        if not isinstance(other, AoPValue): raise TypeError(f"Unsupported operand type for /: '{type(other).__name__}'")
+        new_instance = self.__class__.__new__(self.__class__)
+        new_instance._rust_obj = self._rust_obj.__truediv__(other._rust_obj)
+        return new_instance
+
     def __pow__(self, other: 'AoPValue') -> 'AoPValue':
         if not isinstance(other, AoPValue): raise TypeError(f"Unsupported operand type for **: '{type(other).__name__}'")
         new_instance = self.__class__.__new__(self.__class__)

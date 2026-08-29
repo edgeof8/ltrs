@@ -24,6 +24,40 @@ class TestAoPCalculator(unittest.TestCase):
         result = self.calculator.evaluate_expression("(a + b) * c") # Changed calculate to evaluate_expression
         self.assertEqual(result, "110*c") # (10+100)*10^3 = 110 * 10^3 = 110c
 
+    def test_basic_division(self):
+        result, _ = self.calculator.evaluate_expression("c / a")
+        self.assertEqual(result, "100")  # c/a = 10^3 / 10^1 = 10^2
+
+    def test_polynomial_division(self):
+        result, _ = self.calculator.evaluate_expression("(a + b) / a")
+        self.assertEqual(result, "11")  # (10 + 100) / 10 = 11
+        aop_result, _ = self.calculator.evaluate_expression("(a + b) / a", mode="aop")
+        self.assertEqual(aop_result, "a + 1")
+
+    def test_constant_division(self):
+        result, _ = self.calculator.evaluate_expression("6 / 2")
+        self.assertEqual(result, "3")
+
+    def test_division_cancels_multiplication(self):
+        result, _ = self.calculator.evaluate_expression("(a * b) / a")
+        self.assertEqual(result, "100")  # b
+
+    def test_division_left_associative(self):
+        result, _ = self.calculator.evaluate_expression("c / a / a")
+        self.assertEqual(result, "10")  # (c/a)/a = b/a = a
+
+    def test_division_by_zero(self):
+        result, ast = self.calculator.evaluate_expression("a / 0")
+        self.assertIsNone(ast)
+        self.assertIn("Division by zero", result)
+
+    def test_inexact_division_errors(self):
+        for expr in ("a / b", "(a + 1) / a", "c / 3"):
+            result, ast = self.calculator.evaluate_expression(expr)
+            self.assertIsNone(ast, msg=expr)
+            self.assertTrue(result.startswith("Error:"), msg=expr)
+            self.assertIn("does not divide", result, msg=expr)
+
     def test_trailing_equals_evaluates_left_hand_side(self):
         a_eq, _ = self.calculator.evaluate_expression("a=")
         a_spaced, _ = self.calculator.evaluate_expression("a =")

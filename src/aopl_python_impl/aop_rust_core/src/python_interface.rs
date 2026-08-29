@@ -126,8 +126,28 @@ impl AoPValue {
     pub fn __mul__(&self, other: &Self) -> Self {
         self * other
     }
+    pub fn __truediv__(&self, other: &Self) -> PyResult<Self> {
+        self.divide(other)
+    }
     pub fn __neg__(&self) -> Self {
         self.neg()
+    }
+
+    pub fn divide(&self, other: &Self) -> PyResult<Self> {
+        match self.divide_poly(other) {
+            Ok(value) => Ok(value),
+            Err(crate::internal_methods::PolyDivError::DivisionByZero) => Err(
+                pyo3::exceptions::PyValueError::new_err("Division by zero."),
+            ),
+            Err(crate::internal_methods::PolyDivError::DoesNotDivide) => Err(
+                pyo3::exceptions::PyValueError::new_err("Polynomial does not divide evenly."),
+            ),
+            Err(crate::internal_methods::PolyDivError::DifferentBases) => {
+                Err(pyo3::exceptions::PyValueError::new_err(
+                    "Cannot divide AoPValues with different bases.",
+                ))
+            }
+        }
     }
 
     fn __pow__(&self, other: &Self, _modulo: Option<&PyAny>) -> PyResult<Self> {
