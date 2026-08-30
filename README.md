@@ -49,8 +49,12 @@ The AoP system provides a novel, compact way to represent and manipulate numbers
 - **Uppercase `A-Y`**: `A` = `base^26`, `B` = `base^27`, ..., `Y` = `base^50`.
 - **Special Letter `z`**: `z` = `base^100` (and `Z` is an alias).
 
-Words are formed by multiplication, with exponents adding together:
-- **`cab`** (base 10) => `c*a*b` => `10^3 * 10^1 * 10^2` => `10^(3+1+2)` => `10^6`, which simplifies to **`f`**.
+**Adjacent letters add** (they are not multiplied). A word is a sparse polynomial: each letter is one term.
+
+- **`ba`** (base 10) => `b + a` => `10^2 + 10^1` => **`110`**.
+- **`cab`** (base 10) => `c + a + b` => `10^3 + 10^1 + 10^2` => **`1110`**.
+- **`a * b`** is still multiplication: `10^1 * 10^2` => `10^3` => **`c`**.
+- A coefficient glued to a **single** letter scales that power: **`2b`** => `2 * b` => `2 * 10^2` => **`200`**. In a multi-letter literal, digits attach to the following letter: **`2c4a`** => `2*c + 4*a`.
 
 The engine can represent numbers as polynomials in this system, providing a unique "fingerprint" of their structure. For example, `2^10 = 1024` is represented as `c + 2a + 4` (`10^3 + 2*10^1 + 4`).
 
@@ -60,16 +64,23 @@ Underpinning the Cosmic Scratchpad is a robust command-line engine that can also
 
 **Engine Features:**
 
-*   **Symbolic Core:** Represents all numbers as sparse polynomials (`AoPValue`), enabling arbitrary-precision arithmetic.
+*   **Symbolic Core:** Represents all numbers as sparse polynomials (`AoPValue`) in the Rust core, enabling arbitrary-precision arithmetic.
 *   **Elegant Formatting:** Results are displayed in their most compact AoP form (e.g., `10^100` is `z`).
 *   **Arbitrary Base:** Explore AoP in any integer base via the `--base` flag.
-*   **Full Operator Support**: `+`, `-`, `*`, `/`, `^` (power), with correct order of operations.
-*   **Implicit Multiplication:** Understands natural algebraic syntax like `2b` (2\*b) and `a(b+c)`.
+*   **Full Operator Support**: `+`, `-`, `*`, `/`, `^` (power), with correct order of operations. A trailing `=` evaluates the left-hand side (`a=` is the same as `a`).
+*   **Exact Division:** `/` is exact sparse polynomial division in \(\mathbb{Z}[X]\) (where \(X\) is the calculator base). If that form does not divide evenly — for example `10 / 2`, because `10` is stored as the monomial \(X\) — the engine falls back to exact integer division and re-encodes the quotient as an AoP polynomial. Inexact cases (`11 / 2`, `a / b`) and divide-by-zero raise an error; results are never truncated.
+*   **Literals vs operators:** Letter juxtaposition is addition (`ba` = `b+a`). Use `*` (or parentheses) for multiplication: `a*b`, `a(b+c)`. A leading coefficient on a one-letter term scales it (`2b` = `2*b`).
 
 **Command-Line Usage & Examples:**
 ```bash
 # Assuming 'ltrs' alias is set up for the CLI script
 # (See Installation section)
+
+# Juxtaposition adds; * multiplies
+$ ltrs ba
+110
+$ ltrs "a*b"
+c
 
 # Calculate 2 to the power of 1000
 $ ltrs 2^c
@@ -84,13 +95,21 @@ $ ltrs a^k --base 2 --mode aop
 a^(2c + 4a + 8)
 # Explanation: In base 2, 'a' is 2. 'k' is 11. 2^11 = 2048.
 # The number 2048 is then formatted as 2*10^3 + 4*10^1 + 8, or 2c+4a+8.
+
+# Exact polynomial division (monomials cancel)
+$ ltrs "c / a"
+100
+
+# Carried constants still divide exactly via the integer fallback
+$ ltrs "10 / 2"
+5
 ```
 
 ## Installation
 
 1.  **Clone the Repository:**
     ```bash
-    git clone https://github.com/your-username/ltrs.git
+    git clone https://github.com/edgeof8/ltrs.git
     cd ltrs
     ```
 
@@ -138,7 +157,8 @@ The project is organized into a primary GUI application and a core symbolic engi
     -   `README.md`: **This file.**
 -   `/src/aopl_python_impl/`
     -   `aop_calculator.py`: The main calculator class that ties the engine together.
-    -   `aop_value.py`: The core `AoPValue` class for sparse polynomial arithmetic.
+    -   `aop_value.py`: Python handle for the Rust `AoPValue` (add, sub, mul, exact division, power).
+    -   `aop_rust_core/`: Rust crate that implements sparse polynomial arithmetic, including exact `/`.
     -   `aop_parser.py` & `aop_operations.py`: The parser and evaluation engine.
     -   `aop_formatter.py`: Logic for formatting results into `num` or `aop` strings.
     -   `aop_calculator_cli.py`: The entry point for the command-line tool.
