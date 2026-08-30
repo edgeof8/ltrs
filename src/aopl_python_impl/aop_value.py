@@ -66,6 +66,10 @@ class AoPValue:
                 poly[str(exp)] = poly.get(str(exp), 0) + coeff_val
             elif standalone_num:
                 poly['0'] = poly.get('0', 0) + int(standalone_num)
+        # "0" (and other all-zero literals) must not become coeff=1 with an empty poly,
+        # which Rust treats as the constant 1.
+        if matches and all(v == 0 for v in poly.values()):
+            return cls.from_number(0, base)
         return cls(poly=poly, base=base, coeff=1)
 
     @staticmethod
@@ -89,6 +93,12 @@ class AoPValue:
         if not isinstance(other, AoPValue): raise TypeError(f"Unsupported operand type for *: '{type(other).__name__}'")
         new_instance = self.__class__.__new__(self.__class__)
         new_instance._rust_obj = self._rust_obj.__mul__(other._rust_obj)
+        return new_instance
+
+    def __truediv__(self, other: 'AoPValue') -> 'AoPValue':
+        if not isinstance(other, AoPValue): raise TypeError(f"Unsupported operand type for /: '{type(other).__name__}'")
+        new_instance = self.__class__.__new__(self.__class__)
+        new_instance._rust_obj = self._rust_obj.__truediv__(other._rust_obj)
         return new_instance
 
     def __pow__(self, other: 'AoPValue') -> 'AoPValue':
