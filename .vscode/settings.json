@@ -4,5 +4,7 @@
     ],
     "python.autoComplete.extraPaths": [
         "./src"
-    ]
+    ],
+    "files.encoding": "utf8",
+    "files.autoGuessEncoding": false
 }
