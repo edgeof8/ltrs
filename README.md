@@ -152,7 +152,8 @@ The project is organized into a primary GUI application and a core symbolic engi
 -   `/` (Root Directory)
     -   `main.py`: Entry point for the Cosmic Scratchpad GUI.
     -   `cosmic_scene.py`: Manages all items, interactions, and command logic on the canvas.
-    -   `gui_items.py`: Defines the custom QGraphicsItem classes for nodes, lines, etc.
+    -   `command_handler.py`: Slash-command implementations used by the scratchpad.
+    -   `gui_items/`: Custom QGraphicsItem classes for nodes, lines, notes, and plots.
     -   `config.py`: Contains configuration constants for the GUI.
     -   `README.md`: **This file.**
 -   `/src/aopl_python_impl/`

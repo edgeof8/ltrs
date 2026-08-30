@@ -138,3 +138,8 @@ cython_debug/
 research/s
 expressions.txt
 results.txt
+
+# Build artifacts and accidental source dumps
+*.pdb
+src/aopl_python_impl/aop_rust_core/src/*.txt
+src/aopl_python_impl/aop_rust_core/benches/*Copy*

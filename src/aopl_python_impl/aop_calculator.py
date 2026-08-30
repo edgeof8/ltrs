@@ -33,24 +33,17 @@ class AoP_Calculator:
             timer = DebugTimer(enabled=True)
             timer.lap("Cache Check")
             base_str = str(self.base)
+            result_obj = None
 
             if self.cache and base_str in self.cache and expression in self.cache[base_str]:
                 cached_data = self.cache[base_str][expression]
-                if "raw_pickle" in cached_data:
-                    # On a full cache hit for the requested mode, return the cached result.
-                    # We will re-parse to get the AST for the explainer if needed.
-                    if mode in cached_data:
-                        cached_result = cached_data[mode]
-                        # Re-parsing is cheap compared to re-evaluating. We do it here
-                        # to ensure the AI explainer always has an AST to work with,
-                        # even when the calculation result comes from the cache.
-                        tokens = tokenize_expression(expression)
-                        parser = Parser(tokens)
-                        ast = parser.parse() # We need the AST for the explainer.
-                        timer.report()
-                        return cached_result, ast
-            else:
-                result_obj = None
+                if "raw_pickle" in cached_data and mode in cached_data:
+                    cached_result = cached_data[mode]
+                    tokens = tokenize_expression(expression)
+                    parser = Parser(tokens)
+                    ast = parser.parse()
+                    timer.report()
+                    return cached_result, ast
 
             if result_obj is None:
                 tokens = tokenize_expression(expression)
@@ -93,6 +86,8 @@ class AoP_Calculator:
             timer.report()
             return final_result_str, ast
 
+        except AoPError as e:
+            return f"Error: {e}", None
         except Exception as e:
             logging.error("Unexpected error in calculation", exc_info=True)
             return f"Error: {type(e).__name__}: {e}", None

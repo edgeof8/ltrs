@@ -10,8 +10,6 @@ from typing import Optional
 from .aop_calculator import AoP_Calculator
 # Import the new setup function
 from .aop_logger import enable_explainer, capture_logs
-# Import the AI session functions
-from .aop_ai_explainer import get_ai_explanation_and_session
 
 # Import rich for beautiful terminal output. It's an optional dependency.
 try:
@@ -68,6 +66,7 @@ def handle_repl_command(line: str, calc: AoP_Calculator, console):
             print(result)
 
             if command == '!explain' and ast:
+                from .aop_ai_explainer import get_ai_explanation_and_session
                 conversation, initial_explanation = get_ai_explanation_and_session(expression, result, calc.base, ast)
                 if console and initial_explanation and Markdown:
                     console.print(Markdown("--- \n" + initial_explanation.strip(), style="monokai"))
@@ -189,6 +188,7 @@ def main():
 
         # If --explain is used, print the result, get the explanation, and start the interactive session.
         if args.explain and ast:
+            from .aop_ai_explainer import get_ai_explanation_and_session
             # If not writing to a file, print the result to the console.
             if not args.output:
                 print(result)

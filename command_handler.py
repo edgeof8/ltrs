@@ -1,24 +1,23 @@
 # command_handler.py
 from __future__ import annotations
 from typing import TYPE_CHECKING
-import re
-from PySide6.QtWidgets import QInputDialog, QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QCheckBox, QPushButton, QApplication
-from PySide6.QtGui import QPen
-from PySide6.QtCore import Qt
+
+from PySide6.QtWidgets import QApplication
 from aopl_python_impl.aop_calculator import AoP_Calculator
 from aopl_python_impl.constants import LETTER_TO_EXPONENT_MAP
 from aopl_python_impl import aop_ai_explainer
 from aopl_python_impl.aop_formatter import format_as_decimal_string
+from gui_items.calculation_node import CalculationNode
 from gui_items.plot_node import PlotNode
-from config import VARIABLE_REGEX
-from cosmic_scene import CosmicScene
+from dialogs import PlotConfigDialog
 
 if TYPE_CHECKING:
+    from cosmic_scene import CosmicScene
     from main import CosmicScratchpadWindow
-    from gui_items.calculation_node import CalculationNode
+
 
 class CommandHandler:
-    def __init__(self, scene: CosmicScene):
+    def __init__(self, scene: 'CosmicScene'):
         self.scene = scene
         self.command_handlers = {
             "/vars": self._handle_vars,
@@ -54,8 +53,6 @@ class CommandHandler:
             print(f"Warning: Overwriting existing command {command}")
         self.command_handlers[command] = handler
 
-    # --- COMMAND HANDLERS START ---
-
     def _handle_vars(self, context, node, calculator=None):
         var_list_str = "Variables:\n"
         calc = calculator if calculator else self.scene.calculator
@@ -65,28 +62,29 @@ class CommandHandler:
                 var_list_str += f"  {var_name} = {val_str_direct}\n"
         else:
             var_list_str += "  (none defined)"
-        command_output = var_list_str.strip()
-        node.set_display(command_output, False, is_command_output=True)
+        node.set_display(var_list_str.strip(), False, is_command_output=True)
 
     def _handle_help(self, context, node, calculator=None):
-        command_output = "Available commands:\n"
-        command_output += "  /vars - Show variables\n"
-        command_output += "  /base - Show current base\n"
-        command_output += "  /setbase <num> - Set calculator base\n"
-        command_output += "  /constants - List #constants\n"
-        command_output += "  /letters - List AoP letter mappings\n"
-        command_output += "  /delvar <var> - Delete a variable\n"
-        command_output += "  /reset - Reset calculator state\n"
-        command_output += "  /explain [expr|last] - AI explanation\n"
-        command_output += "  /help - Show this help"
+        command_output = (
+            "Available commands:\n"
+            "  /vars - Show variables\n"
+            "  /base - Show current base\n"
+            "  /setbase <num> - Set calculator base\n"
+            "  /constants - List #constants\n"
+            "  /letters - List AoP letter mappings\n"
+            "  /delvar <var> - Delete a variable\n"
+            "  /reset - Reset calculator state\n"
+            "  /explain [expr|last] - AI explanation\n"
+            "  /help - Show this help"
+        )
         node.set_display(command_output, False, is_command_output=True)
 
     def _handle_base(self, context, node, calculator=None):
         base = calculator.base if calculator else self.scene.calculator.base
-        command_output = f"Current base: {base}"
-        node.set_display(command_output, False)
+        node.set_display(f"Current base: {base}", False)
 
     def _handle_setbase(self, context, node, calculator=None):
+        from main import CosmicScratchpadWindow
         args = context['first_line_args']
         if args and args[0].isdigit():
             window = self.scene.views()[0].window()
@@ -122,40 +120,39 @@ class CommandHandler:
         node.set_display("All user variables cleared.", False)
         for item in self.scene.items():
             if isinstance(item, CalculationNode) and item != node:
-                item.update_node_and_propagate()  # type: ignore
+                item.update_node_and_propagate()
 
     def _handle_delvar(self, context, node, calculator=None):
         args = context['first_line_args']
-        if args:
-            var_name = args[0]
-            if not var_name.startswith("$"):
-                var_name = f"${var_name}"
-            calc = calculator if calculator else self.scene.calculator
-            if var_name in calc.variables:
-                del calc.variables[var_name]
-                command_output = f"{var_name} cleared."
-                if var_name in self.scene.graph_manager.dependencies:
-                    for dependent_node in list(self.scene.graph_manager.dependencies[var_name]):
-                        if dependent_node != node:
-                            self.scene.update_and_propagate(dependent_node)
-                node.set_display(command_output, False)
-            else:
-                node.set_display(f"Error: Variable {var_name} not found.", True)
-        else:
+        if not args:
             node.set_display("Error: Usage /delvar <variable_name>", True)
+            return
+        var_name = args[0]
+        if not var_name.startswith("$"):
+            var_name = f"${var_name}"
+        calc = calculator if calculator else self.scene.calculator
+        if var_name not in calc.variables:
+            node.set_display(f"Error: Variable {var_name} not found.", True)
+            return
+        del calc.variables[var_name]
+        if var_name in self.scene.graph_manager.dependencies:
+            for dependent_node in list(self.scene.graph_manager.dependencies[var_name]):
+                if dependent_node != node:
+                    self.scene.update_and_propagate(dependent_node)
+        node.set_display(f"{var_name} cleared.", False)
 
     def _handle_reset(self, context, node, calculator=None):
+        from main import CosmicScratchpadWindow
         self.scene.calculator = AoP_Calculator(base=10)
         self.scene.graph_manager.clear()
         window = self.scene.views()[0].window()
         if isinstance(window, CosmicScratchpadWindow):
             window.base_input.setText("10")
             window.trigger_base_change_and_full_recalc("10", command_node=None)
-        command_output = "Calculator state reset. Base set to 10. Variables cleared."
-        node.set_display(command_output, False)
+        node.set_display("Calculator state reset. Base set to 10. Variables cleared.", False)
         for item in self.scene.items():
             if isinstance(item, CalculationNode) and item != node:
-                item.update_node_and_propagate()  # type: ignore
+                item.update_node_and_propagate()
 
     def _handle_explain(self, context, node, calculator=None):
         first_line_str = context['first_line_str']
@@ -163,7 +160,6 @@ class CommandHandler:
         command_output = ""
         is_error_output = False
         ai_target_expr_str = None
-        ai_target_result_str = None
 
         if first_line_str.lower() == "last":
             if self.scene.last_evaluated_calc_node and self.scene.last_evaluated_calc_node.scene:
@@ -190,7 +186,7 @@ class CommandHandler:
                 is_error_output = True
 
         if ai_target_expr_str and not command_output:
-            node.set_display("🤖 AI is thinking...", False, is_command_output=True)
+            node.set_display("AI is thinking...", False, is_command_output=True)
             QApplication.processEvents()
             calc_to_use = calculator if calculator else self.scene.calculator
             temp_calc = AoP_Calculator(base=calc_to_use.base)
@@ -205,7 +201,8 @@ class CommandHandler:
                     command_output = "Error: Could not parse expression for AI explanation."
                     is_error_output = True
                 else:
-                    _, explanation = aop_ai_explainer.get_ai_explanation_and_session(ai_target_expr_str, ai_target_result_str, calc_to_use.base, ast_for_explainer)
+                    _, explanation = aop_ai_explainer.get_ai_explanation_and_session(
+                        ai_target_expr_str, ai_target_result_str, calc_to_use.base, ast_for_explainer)
                     if explanation is None:
                         command_output = "Error: AI explanation service failed."
                         is_error_output = True
@@ -236,100 +233,42 @@ class CommandHandler:
                 start_val = parts[from_idx + 1]
                 end_val = parts[to_idx + 1]
         else:
-            class PlotConfigDialog(QDialog):
-                def __init__(self, parent=None):
-                    super().__init__(parent)
-                    self.setWindowTitle("Plot Configuration")
-                    layout = QVBoxLayout(self)
-
-                    expr_layout = QHBoxLayout()
-                    expr_label = QLabel("Expression:")
-                    self.expr_input = QLineEdit()
-                    expr_layout.addWidget(expr_label)
-                    expr_layout.addWidget(self.expr_input)
-                    layout.addLayout(expr_layout)
-
-                    var_layout = QHBoxLayout()
-                    var_label = QLabel("Variable:")
-                    self.var_input = QLineEdit()
-                    var_layout.addWidget(var_label)
-                    var_layout.addWidget(self.var_input)
-                    layout.addLayout(var_layout)
-
-                    start_layout = QHBoxLayout()
-                    start_label = QLabel("Start Value:")
-                    self.start_input = QLineEdit("1")
-                    start_layout.addWidget(start_label)
-                    start_layout.addWidget(self.start_input)
-                    layout.addLayout(start_layout)
-
-                    end_layout = QHBoxLayout()
-                    end_label = QLabel("End Value:")
-                    self.end_input = QLineEdit("100")
-                    end_layout.addWidget(end_label)
-                    end_layout.addWidget(self.end_input)
-                    layout.addLayout(end_layout)
-
-                    steps_layout = QHBoxLayout()
-                    steps_label = QLabel("Steps:")
-                    self.steps_input = QLineEdit("200")
-                    steps_layout.addWidget(steps_label)
-                    steps_layout.addWidget(self.steps_input)
-                    layout.addLayout(steps_layout)
-
-                    self.log_x_check = QCheckBox("Logarithmic X-axis")
-                    self.log_y_check = QCheckBox("Logarithmic Y-axis")
-                    layout.addWidget(self.log_x_check)
-                    layout.addWidget(self.log_y_check)
-
-                    button_layout = QHBoxLayout()
-                    ok_button = QPushButton("OK")
-                    cancel_button = QPushButton("Cancel")
-                    ok_button.clicked.connect(self.accept)
-                    cancel_button.clicked.connect(self.reject)
-                    button_layout.addStretch()
-                    button_layout.addWidget(ok_button)
-                    button_layout.addWidget(cancel_button)
-                    layout.addLayout(button_layout)
-
             dialog = PlotConfigDialog()
-            if dialog.exec():
-                expression = dialog.expr_input.text()
-                variable = dialog.var_input.text()
-                start_val = dialog.start_input.text()
-                end_val = dialog.end_input.text()
-                steps_str = dialog.steps_input.text()
-                log_x = dialog.log_x_check.isChecked()
-                log_y = dialog.log_y_check.isChecked()
-
-                if not expression:
-                    node.set_display("Error: No expression provided for plot.", True)
-                    return
-                if not variable:
-                    node.set_display("Error: No variable provided for plot.", True)
-                    return
-                if not start_val:
-                    node.set_display("Error: No start value provided for plot.", True)
-                    return
-                if not end_val:
-                    node.set_display("Error: No end value provided for plot.", True)
-                    return
-                try:
-                    steps = int(steps_str) if steps_str else 200
-                except ValueError:
-                    steps = 200
-            else:
+            if not dialog.exec():
                 node.set_display("Error: Plot configuration cancelled.", True)
                 return
+            expression = dialog.expr_input.text()
+            variable = dialog.var_input.text()
+            start_val = dialog.start_input.text()
+            end_val = dialog.end_input.text()
+            steps_str = dialog.steps_input.text()
+            log_x = dialog.log_x_check.isChecked()
+            log_y = dialog.log_y_check.isChecked()
+            if not expression:
+                node.set_display("Error: No expression provided for plot.", True)
+                return
+            if not variable:
+                node.set_display("Error: No variable provided for plot.", True)
+                return
+            if not start_val:
+                node.set_display("Error: No start value provided for plot.", True)
+                return
+            if not end_val:
+                node.set_display("Error: No end value provided for plot.", True)
+                return
+            try:
+                steps = int(steps_str) if steps_str else 200
+            except ValueError:
+                steps = 200
 
         if not variable.startswith("$"):
             variable = f"${variable}"
 
         calc_to_use = calculator if calculator else self.scene.calculator
-        plot_node = PlotNode(self.scene, calc_to_use, expression, variable[1:], start_val, end_val, steps, log_x, log_y)
+        plot_node = PlotNode(
+            self.scene, calc_to_use, expression, variable[1:],
+            start_val, end_val, steps, log_x, log_y)
         self.scene.addItem(plot_node)
         plot_node.setPos(node.pos().x() + 50, node.pos().y() + 50)
         node.set_display(f"Plot created for {expression}", False)
         self.scene.graph_manager.update_dependencies_for_node(plot_node)
-
-    # --- COMMAND HANDLERS END ---
