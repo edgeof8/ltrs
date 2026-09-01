@@ -76,7 +76,7 @@ ltrs "a*b" --mode aop
 python -m aopl_python_impl.aop_calculator_cli "5b^2d" --base 2 --mode aop --debug
 ```
 
-`pip install -e ".[gui]"` also installs Cosmic Scratchpad dependencies and the `cosmic-scratchpad` command.
+`pip install -e ".[gui]"` also installs Cosmic Scratchpad. The GUI lives in `aopl_python_impl.gui`; `cosmic-scratchpad` and `python main.py` both start it.
 
 ## The Calculation Report (`--debug` mode)
 

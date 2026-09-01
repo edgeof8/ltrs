@@ -1,0 +1,1 @@
+# Cosmic Scratchpad GUI package.
