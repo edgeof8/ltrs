@@ -99,8 +99,7 @@ def evaluate_ast(node: ASTNode, base: int, cache: Optional[dict] = None, variabl
                         except ValueError as e:
                             raise AoPError(str(e)) from e
                     elif op == '==':
-                        # Compare numerical values for equality, return 1 or 0
-                        is_equal = left_aop.to_numerical() == right_aop.to_numerical()
+                        is_equal = left_aop == right_aop
                         result = AoPValue.from_number(1 if is_equal else 0, base)
                     else:
                         raise AoPError(f"Unsupported operator: {op}")

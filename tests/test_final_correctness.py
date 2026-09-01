@@ -13,7 +13,7 @@ class TestFinalCorrectness(unittest.TestCase):
 
     def test_basic_symbolic(self):
         self.assertEqual(eval_str(self.calc, "a*b", mode="num"), "1000")
-        self.assertEqual(eval_str(self.calc, "a*b"), "a^3")
+        self.assertEqual(eval_str(self.calc, "a*b"), "c")
         self.assertEqual(eval_str(self.calc, "10a*c", mode="num"), "100000")
 
     def test_numerical_power(self):
@@ -22,7 +22,7 @@ class TestFinalCorrectness(unittest.TestCase):
 
     def test_hyper_power(self):
         self.assertEqual(eval_str(self.calc, "a^b", mode="num"), str(10 ** 100))
-        self.assertEqual(eval_str(self.calc, "a^b"), "a^a^2")
+        self.assertEqual(eval_str(self.calc, "a^b"), "Z")
 
     def test_tetration(self):
         self.assertEqual(eval_str(self.calc, "a^b^c"), "a^(a^(2*c))")

@@ -36,7 +36,7 @@ Every expression goes through a three-stage pipeline:
 
 3. **Formatting (`aop_formatter.py`):** The final `AoPValue` object is converted into a human-readable string. This can be:
     * **Numerical (`num` mode):** The polynomial is fully calculated into its decimal string representation.
-    * **Symbolic (`aop` mode):** The polynomial is formatted back into the Alphabet of Powers notation (e.g., `a^f + ...`). This process is recursive, formatting exponents themselves for maximum symbolic clarity.
+    * **Symbolic (`aop` mode):** unit monomials use the letter map (`a*b` → `c`, `a^b` → `Z`). Other polynomials print as sums of letters.
 
 ## Project Structure (`/src/aopl_python_impl/`)
 

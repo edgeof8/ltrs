@@ -142,6 +142,16 @@ class AoPValue:
     def to_numerical(self) -> int:
         return _call_rust(self._rust_obj.to_numerical)
 
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, AoPValue):
+            return NotImplemented
+        if self._rust_obj.base != other._rust_obj.base:
+            return False
+        return (
+            self._rust_obj.coeff == other._rust_obj.coeff
+            and self._rust_obj.get_poly() == other._rust_obj.get_poly()
+        )
+
     def __str__(self) -> str:
         return self._rust_obj.__str__()
 

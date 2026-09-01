@@ -44,7 +44,7 @@ class TestAoPCache(unittest.TestCase):
             side_effect=AssertionError("should not re-evaluate"),
         ):
             aop, _ = self.calc.evaluate_expression("a * b", mode="aop")
-        self.assertEqual(aop, "a^3")
+        self.assertEqual(aop, "c")
 
     def test_saved_cache_has_no_pickle(self):
         self.calc.evaluate_expression("ba", mode="num")

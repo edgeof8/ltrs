@@ -18,4 +18,4 @@ class TestAssociativity(unittest.TestCase):
 
     def test_multiplication_associativity(self):
         self.assertEqual(eval_str(self.calculator, "a * b * c", mode="num"), "1000000")
-        self.assertEqual(eval_str(self.calculator, "a * b * c"), "a^6")
+        self.assertEqual(eval_str(self.calculator, "a * b * c"), "f")

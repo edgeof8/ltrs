@@ -20,7 +20,7 @@ class TestAoPCalculator(unittest.TestCase):
 
     def test_basic_multiplication(self):
         self.assertEqual(eval_str(self.calculator, "a * b"), "1000")
-        self.assertEqual(eval_str(self.calculator, "a * b", mode="aop"), "a^3")
+        self.assertEqual(eval_str(self.calculator, "a * b", mode="aop"), "c")
 
     def test_letter_juxtaposition_adds(self):
         self.assertEqual(eval_str(self.calculator, "ba"), "110")
@@ -28,7 +28,7 @@ class TestAoPCalculator(unittest.TestCase):
 
     def test_power_operation(self):
         self.assertEqual(eval_str(self.calculator, "a ^ b"), str(10 ** 100))
-        self.assertEqual(eval_str(self.calculator, "a ^ b", mode="aop"), "a^a^2")
+        self.assertEqual(eval_str(self.calculator, "a ^ b", mode="aop"), "Z")
 
     def test_complex_expression(self):
         self.assertEqual(eval_str(self.calculator, "(a + b) * c"), "110000")
@@ -65,7 +65,10 @@ class TestAoPCalculator(unittest.TestCase):
                 self.calculator.evaluate_expression(expr)
             self.assertIn("does not divide", str(ctx.exception), msg=expr)
 
-    def test_trailing_equals_evaluates_left_hand_side(self):
+    def test_equality_compares_polynomials(self):
+        self.assertEqual(eval_str(self.calculator, "a == 10"), "1")
+        self.assertEqual(eval_str(self.calculator, "a == b"), "0")
+
         a_eq = eval_str(self.calculator, "a=")
         a_spaced = eval_str(self.calculator, "a =")
         three_e3 = eval_str(self.calculator, "3e3 =")

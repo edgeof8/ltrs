@@ -28,7 +28,7 @@ class TestAoPCalculatorCLI(unittest.TestCase):
     def test_aop_mode(self):
         stdout, stderr, returncode = self.run_cli(["a * b", "--mode", "aop", "--no-cache"])
         self.assertEqual(returncode, 0, stderr)
-        self.assertEqual(stdout, "a^3")
+        self.assertEqual(stdout, "c")
 
     def test_juxtaposition_adds(self):
         stdout, stderr, returncode = self.run_cli(["ba", "--no-cache"])
