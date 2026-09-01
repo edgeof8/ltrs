@@ -473,9 +473,13 @@ class CosmicScratchpadWindow(QMainWindow):
             self.scene.keyPressEvent(QKeySequence(QKeySequence.StandardKey.Delete))
 
 
-if __name__ == "__main__":
+def main():
     app = QApplication(sys.argv)
     window = CosmicScratchpadWindow()
     window.show()
     sys.exit(app.exec())
+
+
+if __name__ == "__main__":
+    main()
 

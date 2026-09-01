@@ -1,7 +1,6 @@
 import tempfile
 import json
 import os
-import requests
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QTextEdit, QPushButton, QCheckBox, QFileDialog
 from PySide6.QtGui import QPainterPath
 from PySide6.QtCore import Qt

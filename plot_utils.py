@@ -1,28 +1,18 @@
 from PySide6.QtGui import QPixmap
-import matplotlib.pyplot as plt
-import numpy as np
-import io
 from aopl_python_impl.aop_calculator import AoP_Calculator
 
 def generate_plot_pixmap(calculator, expression, variable, start_val, end_val, steps=200, log_x=False, log_y=False, width=400, height=300):
     """
     Generate a plot pixmap from the given expression and parameters.
-
-    Args:
-        calculator: An instance of AoP_Calculator for evaluating expressions.
-        expression: The mathematical expression to plot.
-        variable: The variable to vary for plotting.
-        start_val: Starting value for the variable.
-        end_val: Ending value for the variable.
-        steps: Number of steps between start and end values (default: 200).
-        log_x: Boolean indicating if x-axis should be logarithmic (default: False).
-        log_y: Boolean indicating if y-axis should be logarithmic (default: False).
-        width: Width of the plot in pixels (default: 400).
-        height: Height of the plot in pixels (default: 300).
-
-    Returns:
-        QPixmap: A pixmap containing the generated plot, or None if an error occurs.
     """
+    try:
+        import io
+        import matplotlib.pyplot as plt
+        import numpy as np
+    except ImportError:
+        print("Plotting needs matplotlib and numpy (pip install -e \".[gui]\").")
+        return None
+
     try:
         temp_calc = AoP_Calculator(base=calculator.base)
         temp_calc.variables = calculator.variables.copy()

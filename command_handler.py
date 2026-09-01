@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 from PySide6.QtWidgets import QApplication
 from aopl_python_impl.aop_calculator import AoP_Calculator
 from aopl_python_impl.constants import LETTER_TO_EXPONENT_MAP
-from aopl_python_impl import aop_ai_explainer
 from aopl_python_impl.aop_formatter import format_as_decimal_string
 from gui_items.calculation_node import CalculationNode
 from gui_items.plot_node import PlotNode
@@ -201,14 +200,23 @@ class CommandHandler:
                     command_output = "Error: Could not parse expression for AI explanation."
                     is_error_output = True
                 else:
-                    _, explanation = aop_ai_explainer.get_ai_explanation_and_session(
-                        ai_target_expr_str, ai_target_result_str, calc_to_use.base, ast_for_explainer)
-                    if explanation is None:
-                        command_output = "Error: AI explanation service failed."
+                    try:
+                        from aopl_python_impl import aop_ai_explainer
+                    except ImportError:
+                        command_output = (
+                            "Error: AI explainer needs the 'explain' extra "
+                            "(pip install -e \".[explain]\")."
+                        )
                         is_error_output = True
                     else:
-                        command_output = explanation
-                        is_error_output = explanation.startswith("Error:")
+                        _, explanation = aop_ai_explainer.get_ai_explanation_and_session(
+                            ai_target_expr_str, ai_target_result_str, calc_to_use.base, ast_for_explainer)
+                        if explanation is None:
+                            command_output = "Error: AI explanation service failed."
+                            is_error_output = True
+                        else:
+                            command_output = explanation
+                            is_error_output = explanation.startswith("Error:")
 
         node.set_display(command_output, is_error_output, is_command_output=True)
 

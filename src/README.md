@@ -68,6 +68,16 @@ print(f"The result of '{expression}' in base 2 is: {result}")
 # Output: The result of '5b^2d' in base 2 is: a^(g + c + a) + ...
 ```
 
+From a checkout, install the package so the library and `ltrs` script are available:
+
+```bash
+pip install -e .
+ltrs "a*b" --mode aop
+python -m aopl_python_impl.aop_calculator_cli "5b^2d" --base 2 --mode aop --debug
+```
+
+`pip install -e ".[gui]"` also installs Cosmic Scratchpad dependencies and the `cosmic-scratchpad` command.
+
 ## The Calculation Report (`--debug` mode)
 
 The engine features a powerful debug mode that generates a beautiful, self-documenting report on the entire calculation process. This is the best way to understand the internal workings of the engine.

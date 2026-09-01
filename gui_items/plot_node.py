@@ -5,9 +5,6 @@ from PySide6.QtGui import QFont, QColor, QBrush, QPainter, QPixmap, QPen
 from PySide6.QtCore import Qt, QRectF, QPointF
 from PySide6.QtWidgets import QGraphicsSceneMouseEvent, QGraphicsSceneHoverEvent
 from config import FONT_FAMILY, FONT_SIZE, COLOR_NODE_BACKGROUND, COLOR_TEXT_INPUT, COLOR_TEXT_RESULT
-import matplotlib.pyplot as plt
-import numpy as np
-import io
 from aopl_python_impl.aop_calculator import AoP_Calculator
 from plot_utils import generate_plot_pixmap
 

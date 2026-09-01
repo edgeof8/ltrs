@@ -5,9 +5,14 @@
 # the expression's syntax tree, then sends this to an AI to generate a coherent explanation.
 
 import os
-import requests
 import json
 from typing import Optional
+
+try:
+    import requests
+except ImportError:
+    requests = None  # type: ignore
+
 from .aop_ast import ASTNode
 from .aop_prompt_builder import PromptBuilderVisitor
 
@@ -25,6 +30,11 @@ class AIConversation:
 
     def ask(self, user_prompt: str) -> str:
         """Sends a user prompt to the AI and returns the response."""
+        if requests is None:
+            return (
+                "Error: The 'requests' package is not installed. "
+                "Install it with: pip install -e \".[explain]\""
+            )
         self.history.append({"role": "user", "content": user_prompt.strip()})
 
         max_tokens = 4096

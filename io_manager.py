@@ -2,7 +2,6 @@ import json
 import os
 import sys
 import tempfile
-import requests
 from pathlib import Path
 from PySide6.QtWidgets import (QFileDialog, QDialog, QVBoxLayout, QHBoxLayout,
                                QLabel, QLineEdit, QTextEdit, QPushButton)
@@ -175,7 +174,12 @@ class IOManager:
     def share_to_library(self):
         # This method contains an inner class and imports, which is not ideal.
         # For simplicity in moving, I'll keep it as is for now, but it could be refactored further.
-        import requests
+        try:
+            import requests
+        except ImportError:
+            self.window.status_bar.showMessage(
+                "Share needs the 'explain' extra (pip install -e \".[explain]\").", 5000)
+            return
         import tempfile
         import json
 

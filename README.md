@@ -107,6 +107,8 @@ $ ltrs "10 / 2"
 
 ## Installation
 
+You need a working **Rust toolchain** (for the `aop_rust_core` extension) and Python 3.10+.
+
 1.  **Clone the Repository:**
     ```bash
     git clone https://github.com/edgeof8/ltrs.git
@@ -120,30 +122,35 @@ $ ltrs "10 / 2"
     # On macOS/Linux: source venv/bin/activate
     ```
 
-3.  **Install Dependencies:**
+3.  **Install the engine (editable) with Maturin:**
     ```bash
-    pip install PySide6 requests matplotlib numpy
+    pip install maturin
+    pip install -e .
+    # equivalent: maturin develop
     ```
-    *   `PySide6` is required for the Cosmic Scratchpad GUI.
-    *   `requests` is required for the AI Explainer feature.
-    *   `matplotlib` and `numpy` are required for visualization features.
+    This compiles the Rust core and puts `ltrs` on your PATH.
 
-4.  **Set up AI Explainer (Optional):**
+    Optional extras:
+
+    *   `pip install -e ".[gui]"` — Cosmic Scratchpad (`PySide6`, matplotlib, numpy)
+    *   `pip install -e ".[explain]"` — `requests` for `/explain`
+    *   `pip install -e ".[pretty]"` — `rich` terminal output
+    *   `pip install -e ".[all]"` — GUI + explain + pretty + library server + pytest
+
+4.  **Run:**
+    ```bash
+    ltrs "a*b" --mode aop
+    ltrs "ba"                 # juxtaposition adds → 110
+    cosmic-scratchpad         # requires .[gui] and a git checkout
+    # still supported:
+    python main.py
+    python -m aopl_python_impl.aop_calculator_cli "a*b" --mode aop
+    ```
+
+5.  **Set up AI Explainer (Optional):**
     The `/explain` command requires an AI backend. Configure one by setting an environment variable:
     *   **For OpenRouter:** `OPENROUTER_API_KEY="sk-or-..."`
     *   **For a local Ollama instance:** `OLLAMA_MODEL="mistral"` (or another model you have installed).
-
-5.  **Set up CLI Alias (Optional):**
-    For easy access to the command-line engine, create a `ltrs` alias.
-    *   **Linux/macOS** (add to your `.bashrc` or `.zshrc`):
-        ```bash
-        alias ltrs='python -m src.aopl_python_impl.aop_calculator_cli'
-        ```
-    *   **Windows** (create a file named `ltrs.bat` in a folder that's in your system's PATH):
-        ```batch
-        @echo off
-        python -m src.aopl_python_impl.aop_calculator_cli %*
-        ```
 
 ## Project Structure
 

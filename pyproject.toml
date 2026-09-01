@@ -1,21 +1,56 @@
-# ltrs/pyproject.toml
-
 [build-system]
 requires = ["maturin>=1.0,<2.0"]
 build-backend = "maturin"
 
 [project]
-# The project name can be anything, e.g., "aop-calculator"
 name = "aop-calculator"
 version = "0.1.0"
+description = "Alphabet of Powers calculator: sparse-polynomial arithmetic and Cosmic Scratchpad."
+readme = "README.md"
+requires-python = ">=3.10"
 
-# --- THIS SECTION IS THE FIX ---
-# We define a "src-layout" which is standard for mixed projects.
+# Engine is stdlib + the compiled Rust extension. Optional extras pull in GUI, AI, etc.
+dependencies = []
+
+[project.optional-dependencies]
+gui = [
+    "PySide6>=6.5",
+    "matplotlib>=3.7",
+    "numpy>=1.24",
+]
+explain = [
+    "requests>=2.28",
+]
+pretty = [
+    "rich>=13",
+]
+library = [
+    "fastapi>=0.100",
+    "python-multipart>=0.0.6",
+]
+dev = [
+    "pytest>=7.0",
+]
+all = [
+    "PySide6>=6.5",
+    "matplotlib>=3.7",
+    "numpy>=1.24",
+    "requests>=2.28",
+    "rich>=13",
+    "fastapi>=0.100",
+    "python-multipart>=0.0.6",
+    "pytest>=7.0",
+]
+
+[project.scripts]
+ltrs = "aopl_python_impl.aop_calculator_cli:main"
+cosmic-scratchpad = "aopl_python_impl.scratchpad:main"
+
+[project.urls]
+Homepage = "https://github.com/edgeof8/ltrs"
+Repository = "https://github.com/edgeof8/ltrs"
+
 [tool.maturin]
-# This tells maturin that the Python package 'aopl_python_impl' is inside the 'src' directory.
 python-source = "src"
-# This tells maturin where to find the Rust crate to compile.
 manifest-path = "src/aopl_python_impl/aop_rust_core/Cargo.toml"
-# This tells maturin the name of the Python module it should create.
-# It MUST match the one defined in your Rust lib.rs (`#[pymodule] fn aop_rust_core(...)`).
 module-name = "aopl_python_impl.aop_rust_core"
