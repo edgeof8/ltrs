@@ -25,7 +25,7 @@ class TestAoPFormatter(unittest.TestCase):
 
     def test_additive_literal(self):
         self.assertEqual(format_as_decimal_string(AoPValue.from_literal("ba")), "110")
-        self.assertEqual(format_as_aop(AoPValue.from_literal("a")), "a^1")
+        self.assertEqual(format_as_aop(AoPValue.from_literal("a")), "a")
 
     def test_decimal_commas_every_five_from_the_right(self):
         self.assertEqual(group_characters("10000"), "10000")

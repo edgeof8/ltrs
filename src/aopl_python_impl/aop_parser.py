@@ -10,6 +10,14 @@ from .definitions import Token, AoPError
 from .constants import OPERATORS, TOKEN_REGEX
 from .aop_ast import ASTNode, NumberNode, IdentifierNode, BinaryOpNode, UnaryOpNode, VariableNode
 
+_DIGIT_GROUP_COMMA = re.compile(r"(?<=\d),(?=\d)")
+
+
+def strip_digit_group_commas(text: str) -> str:
+    """Remove commas that sit between digits (num-mode grouping on paste)."""
+    return _DIGIT_GROUP_COMMA.sub("", text)
+
+
 def tokenize_expression(expression: str) -> List[Token]:
     """
     A stateful tokenizer that understands the 'additive by default' grammar.
@@ -20,7 +28,8 @@ def tokenize_expression(expression: str) -> List[Token]:
     # - \*\*                       : Finds power operator '**'
     # - ==?                        : Finds equality '==' and assignment '=' (Note: '=' is handled separately below)
     # - [+\-*/^()]                 : Finds single-character operators and parentheses
-    token_regex = re.compile(r"(\$[a-zA-Z_][a-zA-Z0-9_]*|\*\*|==?|[+\-*/^()])")
+    expression = strip_digit_group_commas(expression)
+    token_regex = re.compile(r"(\$[a-zA-Z_][a-zA-Z0-9_]*|\*\*|==?|\bgcd\b|[+\-*/^()])")
     raw_parts = [p.strip() for p in token_regex.split(expression) if p.strip()]
     tokens = []
     pos = 0

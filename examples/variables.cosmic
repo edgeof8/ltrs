@@ -1,0 +1,43 @@
+{
+  "version": "0.3",
+  "base": 10,
+  "nodes": [
+    {
+      "type": "calculation",
+      "expression": "$x = a * b",
+      "output_mode": "num",
+      "pos_x": 40,
+      "pos_y": 40,
+      "width": 240,
+      "height": 80
+    },
+    {
+      "type": "calculation",
+      "expression": "$y = $x + c",
+      "output_mode": "num",
+      "pos_x": 340,
+      "pos_y": 40,
+      "width": 240,
+      "height": 80
+    },
+    {
+      "type": "calculation",
+      "expression": "$y / a",
+      "output_mode": "num",
+      "pos_x": 340,
+      "pos_y": 180,
+      "width": 240,
+      "height": 80
+    }
+  ],
+  "drawing_items": [
+    {
+      "type": "text_note",
+      "text": "$vars update live. A dashed arrow runs from a definition to each use.",
+      "pos_x": 40,
+      "pos_y": -40,
+      "width": 540,
+      "height": 60
+    }
+  ]
+}

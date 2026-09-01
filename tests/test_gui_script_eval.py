@@ -5,8 +5,12 @@ import tempfile
 import unittest
 
 from src.aopl_python_impl.aop_calculator import AoP_Calculator
-from src.aopl_python_impl.gui.graph_logic import graph_has_cycle
-from src.aopl_python_impl.gui.script_eval import run_isolated_script
+from src.aopl_python_impl.gui.graph_logic import (
+    graph_has_cycle,
+    pair_display_lines,
+    point_on_rect_toward,
+)
+from src.aopl_python_impl.gui.script_eval import run_isolated_script, run_isolated_script_pair
 
 
 class _Node:
@@ -38,6 +42,26 @@ class TestGuiScriptEval(unittest.TestCase):
     def test_aop_mode(self):
         result = run_isolated_script(self.calc, "a * b", mode="aop")
         self.assertEqual(result, "c")
+
+    def test_pair_includes_letter_form(self):
+        num, aop = run_isolated_script_pair(self.calc, "a * b")
+        self.assertEqual(num, "1000")
+        self.assertEqual(aop, "c")
+
+    def test_pair_omits_identical_fingerprint(self):
+        num, aop = run_isolated_script_pair(self.calc, "5")
+        self.assertEqual(num, "5")
+        self.assertIsNone(aop)
+
+    def test_pair_display_swaps_primary(self):
+        self.assertEqual(pair_display_lines("1000", "c", "num"), ("1000", "c"))
+        self.assertEqual(pair_display_lines("1000", "c", "aop"), ("c", "1000"))
+        self.assertEqual(pair_display_lines("5", None, "num"), ("5", None))
+
+    def test_point_on_rect_hits_border(self):
+        x, y = point_on_rect_toward(0, 0, 100, 50, 200, 0)
+        self.assertAlmostEqual(x, 50)
+        self.assertAlmostEqual(y, 0)
 
     def test_cycle_between_two_definitions(self):
         n1 = _Node("$x", ["y"])

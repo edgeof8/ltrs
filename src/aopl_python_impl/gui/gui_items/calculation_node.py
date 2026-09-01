@@ -1,11 +1,12 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
+import html
 from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QFont, QColor, QBrush, QKeyEvent, QPainter
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QGraphicsItem
 from ..config import (FONT_FAMILY, FONT_SIZE, COLOR_NODE_BACKGROUND, COLOR_TEXT_INPUT,
-                    COLOR_TEXT_RESULT, COLOR_TEXT_ERROR)
+                    COLOR_TEXT_RESULT, COLOR_TEXT_ERROR, COLOR_TEXT_FINGERPRINT)
 from .base_item import ResizableTextItem
 
 if TYPE_CHECKING:
@@ -105,14 +106,29 @@ class CalculationNode(ResizableTextItem):
         painter.drawRoundedRect(self.boundingRect(), 5, 5)
         super().paint(painter, option, widget)
 
-    def set_display(self, result_str: str, is_error: bool, is_command_output: bool = False):
+    def set_display(
+        self,
+        result_str: str,
+        is_error: bool,
+        is_command_output: bool = False,
+        secondary_str: Optional[str] = None,
+    ):
         if self.hasFocus():
             return
-        safe_expression_html = self.expression_str.replace('<', '<').replace('>', '>').replace('\n', '<br>')
-        safe_result_str_html = result_str.replace('<', '<').replace('>', '>').replace('\n', '<br>')
+        safe_expression_html = html.escape(self.expression_str).replace("\n", "<br>")
+        safe_result_str_html = html.escape(result_str).replace("\n", "<br>")
         if result_str:
             color = COLOR_TEXT_ERROR if is_error else COLOR_TEXT_RESULT
-            html_content = f"<span style='color: {COLOR_TEXT_INPUT.name()};'>{safe_expression_html}</span> <span style='color: {color.name()};'>→ {safe_result_str_html}</span>"
+            html_content = (
+                f"<span style='color: {COLOR_TEXT_INPUT.name()};'>{safe_expression_html}</span>"
+                f" <span style='color: {color.name()};'>→ {safe_result_str_html}</span>"
+            )
+            if secondary_str and not is_error and not is_command_output:
+                safe_secondary = html.escape(secondary_str).replace("\n", "<br>")
+                html_content += (
+                    f"<br><span style='font-size: 0.85em; color: {COLOR_TEXT_FINGERPRINT.name()};'>"
+                    f"{safe_secondary}</span>"
+                )
         else:
             html_content = f"<span style='color: {COLOR_TEXT_INPUT.name()};'>{safe_expression_html}</span>"
         self.setHtml(html_content)

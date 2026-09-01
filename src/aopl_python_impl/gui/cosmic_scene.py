@@ -5,7 +5,7 @@ from PySide6.QtWidgets import QGraphicsScene, QToolBar, QMenu, QInputDialog, QGr
 from PySide6.QtGui import QPainterPath, QAction, QPen
 from PySide6.QtCore import Qt
 from aopl_python_impl.aop_calculator import AoP_Calculator
-from .config import DrawingToolMode, COLOR_VAR_EDGE
+from .config import DrawingToolMode
 from .command_handler import CommandHandler
 from .dependency_manager import DependencyGraphManager
 from .evaluation_manager import EvaluationManager
@@ -15,6 +15,7 @@ from .gui_items.text_note_item import TextNoteItem
 from .gui_items.pen_stroke_item import PenStrokeItem
 from .gui_items.base_item import ResizableTextItem
 from .gui_items.plot_node import PlotNode
+from .gui_items.var_edge_item import VarEdgeItem
 from .canvas_history import CanvasHistory
 
 if TYPE_CHECKING:
@@ -74,9 +75,10 @@ class CosmicScene(QGraphicsScene):
             menu.addSeparator()
 
         if isinstance(item_at_click, CalculationNode):
-            mode = item_at_click.output_mode
-            other = "aop" if mode == "num" else "num"
-            toggle = QAction(f"Output mode: {mode} (switch to {other})", menu)
+            if item_at_click.output_mode == "num":
+                toggle = QAction("Show aop as primary line", menu)
+            else:
+                toggle = QAction("Show num as primary line", menu)
             toggle.triggered.connect(item_at_click.toggle_output_mode)
             menu.addAction(toggle)
             menu.addSeparator()
@@ -381,15 +383,10 @@ class CosmicScene(QGraphicsScene):
             if line.scene() is self:
                 self.removeItem(line)
         self.var_edge_items = []
-        pen = QPen(COLOR_VAR_EDGE, 1.2, Qt.PenStyle.DashLine)
         for src, dst in self.graph_manager.definition_edges():
-            c1 = src.sceneBoundingRect().center()
-            c2 = dst.sceneBoundingRect().center()
-            line = QGraphicsLineItem(c1.x(), c1.y(), c2.x(), c2.y())
-            line.setPen(pen)
-            line.setZValue(-1)
-            self.addItem(line)
-            self.var_edge_items.append(line)
+            edge = VarEdgeItem(src, dst)
+            self.addItem(edge)
+            self.var_edge_items.append(edge)
 
 
     # Method update_node_dependencies moved to DependencyGraphManager

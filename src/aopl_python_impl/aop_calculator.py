@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Tuple, Optional
 from .definitions import AoPError
 from .constants import EXPONENT_TO_LETTER_MAP
-from .aop_parser import tokenize_expression, Parser
+from .aop_parser import tokenize_expression, Parser, strip_digit_group_commas
 from .aop_formatter import format_as_aop, format_as_decimal_string
 from .aop_operations import evaluate_ast, _resolve_to_value
 import logging, os, json
@@ -46,6 +46,7 @@ class AoP_Calculator:
         return Parser(tokens).parse()
 
     def evaluate_expression(self, expression: str, mode: str = "num") -> Tuple[str, Optional[ASTNode]]:
+        expression = strip_digit_group_commas(expression)
         print_legend(expression, self.base)
 
         try:

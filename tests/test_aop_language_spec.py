@@ -57,6 +57,10 @@ class TestAoPLanguageSpec(unittest.TestCase):
     def test_equality_is_polynomial_identity(self):
         self.assertEqual(self.ev("a == 10"), "1")
         self.assertEqual(self.ev("a == b"), "0")
+
+    def test_gcd_is_integer_gcd(self):
+        self.assertEqual(self.ev("48 gcd 18"), "6")
+        self.assertEqual(self.ev("Z gcd Y", mode="aop"), "Y")
         self.assertEqual(self.ev("ba == (b + a)"), "1")
 
     def test_base_change_reinterprets_letters_not_digits(self):
@@ -66,3 +70,8 @@ class TestAoPLanguageSpec(unittest.TestCase):
         a_two, _ = two.evaluate_expression("a", mode="num")
         self.assertEqual(a_ten, "10")
         self.assertEqual(a_two, "2")
+
+    def test_grouped_digits_round_trip(self):
+        self.assertEqual(self.ev("1,00000"), "1,00000")
+        self.assertEqual(self.ev("5,00000 + 2"), "5,00002")
+        self.assertEqual(self.ev("1,00000"), self.ev("100000"))

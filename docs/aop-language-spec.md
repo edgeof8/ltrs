@@ -38,8 +38,9 @@ Parentheses still group and can imply multiplication in the usual way:
 
 ## Operators
 
-Precedence, high to low: `^` / `**` (right-associative), then `*` and `/`
-(left-associative), then `+` and `-`, then `==`, then `=` (right-associative).
+Precedence, high to low: `^` / `**` (right-associative), then `gcd`
+(left-associative), then `*` and `/` (left-associative), then `+` and `-`,
+then `==`, then `=` (right-associative).
 
 - `*` multiplies polynomials. `a * b` is \(B^1 \cdot B^2 = B^3\), which **aop**
   mode prints as `c`, not `a^3`.
@@ -49,6 +50,9 @@ Precedence, high to low: `^` / `**` (right-associative), then `*` and `/`
   division when carrying has already rewritten a constant as \(X^1\)).
   `c / a` is `b`. `a / b`, `(a + 1) / a`, and `a / 0` raise `AoPError`.
   There is no truncating integer division and no fraction type.
+- `gcd` is integer gcd of the two values, taken from the sparse polynomial
+  (modular powers of the base) rather than by expanding huge exponents.
+  `48 gcd 18` is `6`. `Z gcd Y` is `Y`.
 - `==` compares **canonical polynomials** of the same base (coefficient plus
   sparse terms). It does not expand either side into a Python `int`. After
   simplify, `a == 10` is true in base 10 because `10` is stored as \(X^1\).
@@ -62,8 +66,9 @@ Precedence, high to low: `^` / `**` (right-associative), then `*` and `/`
   the map stay nested `a^(…)` form.
 - **num:** the only place the polynomial is forced into a decimal string.
   Digits are grouped with commas every five characters from the right
-  (`100000` → `1,00000`). Exponents that do not fit in `u32` fail instead of
-  wrapping to \(B^0\).
+  (`100000` → `1,00000`). Commas that sit between digits in **input** are
+  ignored, so pasting a grouped result back in is the same number.
+  Exponents that do not fit in `u32` fail instead of wrapping to \(B^0\).
 
 ## Errors
 

@@ -1,0 +1,52 @@
+{
+  "version": "0.3",
+  "base": 10,
+  "nodes": [
+    {
+      "type": "calculation",
+      "expression": "ba",
+      "output_mode": "num",
+      "pos_x": 40,
+      "pos_y": 40,
+      "width": 220,
+      "height": 80
+    },
+    {
+      "type": "calculation",
+      "expression": "cab",
+      "output_mode": "num",
+      "pos_x": 40,
+      "pos_y": 160,
+      "width": 220,
+      "height": 80
+    },
+    {
+      "type": "calculation",
+      "expression": "a * b",
+      "output_mode": "num",
+      "pos_x": 300,
+      "pos_y": 40,
+      "width": 220,
+      "height": 80
+    },
+    {
+      "type": "calculation",
+      "expression": "2c4a",
+      "output_mode": "num",
+      "pos_x": 300,
+      "pos_y": 160,
+      "width": 220,
+      "height": 80
+    }
+  ],
+  "drawing_items": [
+    {
+      "type": "text_note",
+      "text": "Juxtaposition adds. ba is 110, not b*a. Use * to multiply.",
+      "pos_x": 40,
+      "pos_y": -40,
+      "width": 480,
+      "height": 60
+    }
+  ]
+}

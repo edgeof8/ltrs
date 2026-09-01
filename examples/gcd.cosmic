@@ -1,0 +1,43 @@
+{
+  "version": "0.3",
+  "base": 10,
+  "nodes": [
+    {
+      "type": "calculation",
+      "expression": "48 gcd 18",
+      "output_mode": "num",
+      "pos_x": 40,
+      "pos_y": 40,
+      "width": 240,
+      "height": 80
+    },
+    {
+      "type": "calculation",
+      "expression": "c gcd a",
+      "output_mode": "aop",
+      "pos_x": 320,
+      "pos_y": 40,
+      "width": 240,
+      "height": 80
+    },
+    {
+      "type": "calculation",
+      "expression": "Z gcd Y",
+      "output_mode": "aop",
+      "pos_x": 40,
+      "pos_y": 180,
+      "width": 240,
+      "height": 80
+    }
+  ],
+  "drawing_items": [
+    {
+      "type": "text_note",
+      "text": "gcd is integer gcd on the polynomial (infix). Z gcd Y is Y, without dumping 10^100 digits first.",
+      "pos_x": 40,
+      "pos_y": -50,
+      "width": 520,
+      "height": 70
+    }
+  ]
+}

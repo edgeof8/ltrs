@@ -15,7 +15,7 @@ The Cosmic Scratchpad is the heart of the project—an interactive, graphical en
 
 *   **Infinite Canvas:** A zoomable, pannable canvas to lay out your thoughts, connect ideas, and build complex calculations visually.
 *   **Live Calculation Nodes:**
-    *   Click anywhere to create a new calculation node. Results update live as you type.
+    *   Results show **num** (grouped digits) with the **aop** letter form underneath when they differ. Right-click to swap which line is primary.
     *   **Multi-line Scripts:** Use `Shift+Enter` for new lines to write sequential statements within a single node.
     *   **Variable Assignments:** Define variables like `$myvar = a*b` and use them in other nodes.
     *   **Automatic Dependency Graph:** Nodes automatically update when variables they depend on change, creating a reactive calculation environment.
@@ -34,12 +34,14 @@ The Cosmic Scratchpad is the heart of the project—an interactive, graphical en
     *   `/delvar <$var>`: Deletes a variable and updates dependent nodes.
     *   `/explain [expr|last]`: Provides an AI-generated explanation for an expression or the last calculation (requires setup).
     *   `/explain model <name>`: Sets the AI model for explanations (e.g., a local Ollama model or an OpenRouter model).
-*   **File Operations:** Save and load your scratchpad sessions as `.cosmic` JSON files.
+*   **File Operations:** Save and load your scratchpad sessions as `.cosmic` JSON files. Start with the canvases in `examples/` (`juxtaposition.cosmic`, `variables.cosmic`, `gcd.cosmic`).
 
 **Running the Cosmic Scratchpad:**
 ```bash
-python main.py
+pip install -e ".[gui]"
+cosmic-scratchpad
 ```
+From a checkout, `python main.py` still launches the same packaged app.
 
 ## II. The Alphabet of Powers (Core Concept)
 
@@ -67,7 +69,7 @@ Underpinning the Cosmic Scratchpad is a robust command-line engine that can also
 *   **Symbolic Core:** Represents all numbers as sparse polynomials (`AoPValue`) in the Rust core, enabling arbitrary-precision arithmetic.
 *   **Elegant Formatting:** Results are displayed in their most compact AoP form (e.g., `10^100` is `z`).
 *   **Arbitrary Base:** Explore AoP in any integer base via the `--base` flag.
-*   **Full Operator Support**: `+`, `-`, `*`, `/`, `^` (power), with correct order of operations. A trailing `=` evaluates the left-hand side (`a=` is the same as `a`).
+*   **Full Operator Support**: `+`, `-`, `*`, `/`, `gcd`, `^` (power), with correct order of operations. A trailing `=` evaluates the left-hand side (`a=` is the same as `a`).
 *   **Exact Division:** `/` is exact sparse polynomial division in \(\mathbb{Z}[X]\) (where \(X\) is the calculator base). If that form does not divide evenly — for example `10 / 2`, because `10` is stored as the monomial \(X\) — the engine falls back to exact integer division and re-encodes the quotient as an AoP polynomial. Inexact cases (`11 / 2`, `a / b`) and divide-by-zero raise an error; results are never truncated.
 *   **Literals vs operators:** Letter juxtaposition is addition (`ba` = `b+a`). Use `*` (or parentheses) for multiplication: `a*b`, `a(b+c)`. A leading coefficient on a one-letter term scales it (`2b` = `2*b`).
 
@@ -141,9 +143,8 @@ You need a working **Rust toolchain** (for the `aop_rust_core` extension) and Py
     ```bash
     ltrs "a*b" --mode aop
     ltrs "ba"                 # juxtaposition adds → 110
-    cosmic-scratchpad         # requires .[gui] and a git checkout
-    # still supported:
-    python main.py
+    cosmic-scratchpad
+    python main.py              # checkout launcher for the same packaged GUI
     python -m aopl_python_impl.aop_calculator_cli "a*b" --mode aop
     ```
 
@@ -157,20 +158,18 @@ You need a working **Rust toolchain** (for the `aop_rust_core` extension) and Py
 The project is organized into a primary GUI application and a core symbolic engine library.
 
 -   `/` (Root Directory)
-    -   `main.py`: Entry point for the Cosmic Scratchpad GUI.
-    -   `cosmic_scene.py`: Manages all items, interactions, and command logic on the canvas.
-    -   `command_handler.py`: Slash-command implementations used by the scratchpad.
-    -   `gui_items/`: Custom QGraphicsItem classes for nodes, lines, notes, and plots.
-    -   `config.py`: Contains configuration constants for the GUI.
+    -   `main.py`: Checkout launcher for Cosmic Scratchpad (same as `cosmic-scratchpad`).
     -   `README.md`: **This file.**
+    -   `docs/aop-language-spec.md`: The language the engine implements.
 -   `/src/aopl_python_impl/`
+    -   `gui/`: Cosmic Scratchpad (canvas, nodes, slash commands). Entry: `scratchpad.py`.
     -   `aop_calculator.py`: The main calculator class that ties the engine together.
     -   `aop_value.py`: Python handle for the Rust `AoPValue` (add, sub, mul, exact division, power).
     -   `aop_rust_core/`: Rust crate that implements sparse polynomial arithmetic, including exact `/`.
     -   `aop_parser.py` & `aop_operations.py`: The parser and evaluation engine.
     -   `aop_formatter.py`: Logic for formatting results into `num` or `aop` strings.
     -   `aop_calculator_cli.py`: The entry point for the command-line tool.
-    -   `aop_visualizer.py`, `aop_ai_explainer.py`, `aop_batch_processor.py`: Modules for advanced tooling.
+    -   `aop_visualizer.py`, `aop_ai_explainer.py`: Modules for advanced tooling.
 -   `/research/`
     -   Contains numerous scripts and documents for performance profiling, experimentation, and theoretical exploration of the AoP system.
 -   `/docs/`

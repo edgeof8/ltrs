@@ -1,9 +1,10 @@
 # evaluation_manager.py
 from __future__ import annotations
 from typing import TYPE_CHECKING
-from .script_eval import run_isolated_script
+from .script_eval import run_isolated_script, run_isolated_script_pair
 from .gui_items.calculation_node import CalculationNode
 from .gui_items.plot_node import PlotNode
+from .graph_logic import pair_display_lines
 
 if TYPE_CHECKING:
     from .cosmic_scene import CosmicScene
@@ -52,25 +53,41 @@ class EvaluationManager:
                 start_node.set_display("Error: Variable dependency cycle.", True)
             return
 
-        mode = getattr(start_node, "output_mode", "num")
-        script_result_str = self.evaluate_script(expr_for_evaluation, mode=mode)
-        script_is_error = script_result_str.startswith("Error:")
+        if isinstance(start_node, PlotNode):
+            script_result_str = self.evaluate_script(expr_for_evaluation, mode="num")
+            script_is_error = script_result_str.startswith("Error:")
+        else:
+            script_result_str, fingerprint = run_isolated_script_pair(
+                self.scene.calculator, expr_for_evaluation
+            )
+            script_is_error = script_result_str.startswith("Error:")
+            if not script_is_error and "==" in expr_for_evaluation:
+                if script_result_str == "1":
+                    script_result_str = "True"
+                    fingerprint = None
+                elif script_result_str == "0":
+                    script_result_str = "False"
+                    fingerprint = None
+            if not script_is_error:
+                script_result_str, fingerprint = pair_display_lines(
+                    script_result_str,
+                    fingerprint,
+                    getattr(start_node, "output_mode", "num"),
+                )
 
         if not script_is_error and isinstance(start_node, CalculationNode):
             self.scene.last_evaluated_calc_node = start_node
-
-        if "==" in expr_for_evaluation and not script_is_error:
-            if script_result_str == "1":
-                script_result_str = "True"
-            elif script_result_str == "0":
-                script_result_str = "False"
 
         if hasattr(start_node, 'defined_variable') and start_node.defined_variable:
             if script_is_error and start_node.defined_variable in self.scene.calculator.variables:
                 del self.scene.calculator.variables[start_node.defined_variable]
 
         if isinstance(start_node, CalculationNode):
-            start_node.set_display(script_result_str, script_is_error)
+            start_node.set_display(
+                script_result_str,
+                script_is_error,
+                secondary_str=None if script_is_error else fingerprint,
+            )
 
         # Propagation (only if requested and for CalculationNode with defined variable)
         if propagate and hasattr(start_node, 'defined_variable') and start_node.defined_variable and not script_is_error:

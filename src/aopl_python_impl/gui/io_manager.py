@@ -19,6 +19,12 @@ from aopl_python_impl.aop_calculator import AoP_Calculator
 from .config import WINDOW_TITLE # Assuming WINDOW_TITLE is needed for window title updates
 from .dialogs import ShareDialog
 
+
+def _examples_dir():
+    repo_root = Path(__file__).resolve().parents[3]
+    path = repo_root / "examples"
+    return path if path.is_dir() else None
+
 class IOManager:
     def __init__(self, window):
         self.window = window # The QMainWindow instance
@@ -71,7 +77,12 @@ class IOManager:
         for node in nodes_to_process: self.window.scene.update_and_propagate(node)
 
     def open_file(self):
-        path, _ = QFileDialog.getOpenFileName(self.window, "Open Cosmic Scratchpad File", "", "Cosmic Files (*.cosmic);;All Files (*)")
+        path, _ = QFileDialog.getOpenFileName(
+            self.window,
+            "Open Cosmic Scratchpad File",
+            str(_examples_dir()) if _examples_dir() else "",
+            "Cosmic Files (*.cosmic);;All Files (*)",
+        )
         if not path: return
         try:
             with open(path, 'r') as f: data = json.load(f)
