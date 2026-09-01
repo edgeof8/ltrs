@@ -1,5 +1,6 @@
 import unittest
 from src.aopl_python_impl.aop_calculator import AoP_Calculator
+from src.aopl_python_impl.aop_formatter import group_characters
 
 
 def eval_str(calc, expression, mode="aop"):
@@ -20,7 +21,7 @@ class TestStressAndEdgeCases(unittest.TestCase):
 
     def test_deeply_nested_expression(self):
         result, _ = self.calc.evaluate_expression("(a*b + c*d)^2", mode="num")
-        self.assertEqual(result, "100020001000000")
+        self.assertEqual(result, group_characters("100020001000000"))
 
     def test_right_associativity_challenge(self):
         self.assertEqual(eval_str(self.calc, "a**b**c"), "a^(a^(2*c))")

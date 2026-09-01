@@ -17,5 +17,5 @@ class TestAssociativity(unittest.TestCase):
         self.assertEqual(eval_str(self.calculator, "a^b^c"), "a^(a^(2*c))")
 
     def test_multiplication_associativity(self):
-        self.assertEqual(eval_str(self.calculator, "a * b * c", mode="num"), "1000000")
+        self.assertEqual(eval_str(self.calculator, "a * b * c", mode="num"), "10,00000")
         self.assertEqual(eval_str(self.calculator, "a * b * c"), "f")

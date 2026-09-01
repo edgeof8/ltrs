@@ -61,7 +61,9 @@ Precedence, high to low: `^` / `**` (right-associative), then `*` and `/`
   is in the map is that letter (`a*b` → `c`, `a^b` → `Z`). Exponents outside
   the map stay nested `a^(…)` form.
 - **num:** the only place the polynomial is forced into a decimal string.
-  Exponents that do not fit in `u32` fail instead of wrapping to \(B^0\).
+  Digits are grouped with commas every five characters from the right
+  (`100000` → `1,00000`). Exponents that do not fit in `u32` fail instead of
+  wrapping to \(B^0\).
 
 ## Errors
 

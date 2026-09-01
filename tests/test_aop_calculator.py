@@ -2,6 +2,7 @@
 
 import unittest
 from src.aopl_python_impl.aop_calculator import AoP_Calculator as AoPCalculator
+from src.aopl_python_impl.aop_formatter import group_characters
 from src.aopl_python_impl.aop_value import AoPValue
 from src.aopl_python_impl.definitions import AoPError
 
@@ -27,11 +28,11 @@ class TestAoPCalculator(unittest.TestCase):
         self.assertNotEqual(eval_str(self.calculator, "ba"), eval_str(self.calculator, "a * b"))
 
     def test_power_operation(self):
-        self.assertEqual(eval_str(self.calculator, "a ^ b"), str(10 ** 100))
+        self.assertEqual(eval_str(self.calculator, "a ^ b"), group_characters(str(10 ** 100)))
         self.assertEqual(eval_str(self.calculator, "a ^ b", mode="aop"), "Z")
 
     def test_complex_expression(self):
-        self.assertEqual(eval_str(self.calculator, "(a + b) * c"), "110000")
+        self.assertEqual(eval_str(self.calculator, "(a + b) * c"), "1,10000")
 
     def test_basic_division(self):
         self.assertEqual(eval_str(self.calculator, "c / a"), "100")

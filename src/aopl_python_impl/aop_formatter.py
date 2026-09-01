@@ -8,6 +8,30 @@ from .definitions import SymbolicPowerResult
 from .aop_ast import ASTNode
 from .constants import EXPONENT_TO_LETTER_MAP
 
+# Num-mode digit groups, counted from the least significant digit.
+DIGIT_GROUP_SIZE = 5
+
+
+def group_characters(text: str, group_size: int = DIGIT_GROUP_SIZE) -> str:
+    """Insert commas every `group_size` characters, from the right.
+
+    A leading minus is kept outside the groups. Non-digit bodies are unchanged.
+    """
+    if group_size <= 0:
+        raise ValueError("group_size must be positive")
+    sign = ""
+    body = text
+    if body.startswith("-"):
+        sign, body = "-", body[1:]
+    if not body.isdigit():
+        return text
+    chunks = []
+    while body:
+        chunks.append(body[-group_size:])
+        body = body[:-group_size]
+    return sign + ",".join(reversed(chunks))
+
+
 def format_as_aop(val, letter_map=None, resolver_func=None):
     if letter_map is None:
         letter_map = EXPONENT_TO_LETTER_MAP
@@ -71,4 +95,4 @@ def _format_aopvalue_to_aop_string(val: AoPValue, letter_map) -> str:
     return f"{coeff} * ({poly_str})"
 
 def format_as_decimal_string(val: AoPValue) -> str:
-    return str(val.to_numerical())
+    return group_characters(str(val.to_numerical()))

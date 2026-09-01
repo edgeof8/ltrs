@@ -44,7 +44,7 @@ class TestAoPProperties(unittest.TestCase):
         for expr in cases:
             with self.subTest(expr=expr):
                 got, _ = calc.evaluate_expression(expr, mode="num")
-                self.assertEqual(int(got), _python_value(expr, 10), expr)
+                self.assertEqual(int(got.replace(",", "")), _python_value(expr, 10), expr)
 
     def test_random_plus_times_against_python_int(self):
         rng = random.Random(20260901)
@@ -53,4 +53,8 @@ class TestAoPProperties(unittest.TestCase):
             for _ in range(40):
                 expr = _random_expr(rng, depth=3)
                 got, _ = calc.evaluate_expression(expr, mode="num")
-                self.assertEqual(int(got), _python_value(expr, base), f"{expr} base={base}")
+                self.assertEqual(
+                    int(got.replace(",", "")),
+                    _python_value(expr, base),
+                    f"{expr} base={base}",
+                )
