@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import QApplication
 from aopl_python_impl.aop_calculator import AoP_Calculator
+from aopl_python_impl.definitions import AoPError
 from aopl_python_impl.constants import LETTER_TO_EXPONENT_MAP
 from aopl_python_impl.aop_formatter import format_as_decimal_string
 from gui_items.calculation_node import CalculationNode
@@ -190,12 +191,14 @@ class CommandHandler:
             calc_to_use = calculator if calculator else self.scene.calculator
             temp_calc = AoP_Calculator(base=calc_to_use.base)
             temp_calc.variables = calc_to_use.variables.copy()
-            ai_target_result_str, _ = temp_calc.evaluate_expression(ai_target_expr_str, "num")
-            if ai_target_result_str.startswith("Error:"):
-                command_output = f"Error evaluating for explanation: {ai_target_result_str}"
+            try:
+                ai_target_result_str, ast_for_explainer = temp_calc.evaluate_expression(
+                    ai_target_expr_str, "num"
+                )
+            except AoPError as e:
+                command_output = f"Error evaluating for explanation: {e}"
                 is_error_output = True
             else:
-                _, ast_for_explainer = temp_calc.evaluate_expression(ai_target_expr_str, "num")
                 if ast_for_explainer is None:
                     command_output = "Error: Could not parse expression for AI explanation."
                     is_error_output = True

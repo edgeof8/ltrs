@@ -6,6 +6,9 @@
 # instantiate and use the AoP_Calculator class directly.
 
 from .aop_calculator import AoP_Calculator
+from .definitions import AoPError
+
+__all__ = ["evaluate_expression", "AoPError"]
 
 # Create a single, module-level instance to be reused.
 _shared_aop_calculator: AoP_Calculator = AoP_Calculator()
@@ -21,7 +24,10 @@ def evaluate_expression(expression_str: str) -> str:
         expression_str: The AoP expression string to evaluate.
 
     Returns:
-        A string representing the calculated AoP value or an error message.
+        A string representing the calculated AoP value.
+
+    Raises:
+        AoPError: If the expression cannot be evaluated.
     """
     # Clear any variables from previous calls to ensure stateless behavior for this API
     _shared_aop_calculator.variables.clear()

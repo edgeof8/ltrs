@@ -10,100 +10,121 @@ from .constants import EXPONENT_TO_LETTER_MAP
 from .aop_parser import tokenize_expression, Parser
 from .aop_formatter import format_as_aop, format_as_decimal_string
 from .aop_operations import evaluate_ast, _resolve_to_value
-import logging, os, json, pickle, base64
-from .aop_logger import print_legend, log_eval_report_start, DebugTimer
-from .aop_value import AoPValue
+import logging, os, json
+from .aop_logger import print_legend, log_eval_report_start, DebugTimer, is_debug_timer_enabled
 from .aop_ast import ASTNode
 from .definitions import SymbolicPowerResult
-
-CACHE_FILENAME = 'precalculated_cache_v2.json'
+from .aop_cache import (
+    CACHE_FILENAME,
+    decode_aop_value,
+    empty_cache,
+    encode_aop_value,
+    find_poly_entry,
+    is_usable_cache,
+    store_result,
+)
 
 class AoP_Calculator:
-    def __init__(self, base: int = 10):
+    def __init__(self, base: int = 10, cache_file: Optional[str] = None):
         self.base = base
+        self.cache_file = cache_file or os.path.join(
+            "research", "experiment_results", "cache", CACHE_FILENAME
+        )
         self.cache = self._load_cache()
         self.cache_dirty = False
         self.variables = {}
 
+    def _format_value(self, value, mode: str) -> str:
+        if mode == "aop":
+            return format_as_aop(value, EXPONENT_TO_LETTER_MAP)
+        return format_as_decimal_string(value)
+
+    def _parse(self, expression: str) -> Optional[ASTNode]:
+        tokens = tokenize_expression(expression)
+        if not tokens:
+            return None
+        return Parser(tokens).parse()
+
     def evaluate_expression(self, expression: str, mode: str = "num") -> Tuple[str, Optional[ASTNode]]:
-        # The logger functions will only print if the global flag is set
         print_legend(expression, self.base)
 
         try:
-            timer = DebugTimer(enabled=True)
+            timer = DebugTimer(enabled=is_debug_timer_enabled())
             timer.lap("Cache Check")
-            base_str = str(self.base)
-            result_obj = None
 
-            if self.cache and base_str in self.cache and expression in self.cache[base_str]:
-                cached_data = self.cache[base_str][expression]
-                if "raw_pickle" in cached_data and mode in cached_data:
-                    cached_result = cached_data[mode]
-                    tokens = tokenize_expression(expression)
-                    parser = Parser(tokens)
-                    ast = parser.parse()
+            cached = find_poly_entry(self.cache, expression, self.base)
+            if cached is not None:
+                _key, entry = cached
+                ast = self._parse(expression)
+                if mode in entry:
                     timer.report()
-                    return cached_result, ast
+                    return entry[mode], ast
+                try:
+                    value = decode_aop_value(entry)
+                except (KeyError, TypeError, ValueError):
+                    value = None
+                if value is not None:
+                    formatted = self._format_value(value, mode)
+                    timer.lap("Format Output")
+                    store_result(self.cache, expression, mode, encode_aop_value(value), formatted)
+                    self.cache_dirty = True
+                    timer.report()
+                    return formatted, ast
 
-            if result_obj is None:
-                tokens = tokenize_expression(expression)
-                timer.lap("Tokenize")
-                if not tokens: return "", None
-                parser = Parser(tokens)
-                ast = parser.parse()
-                timer.lap("Parse AST")
-                if ast is None: return "", None # Handle empty expressions
-                log_eval_report_start(repr(ast))
-                # Pass the cache object down to the AST evaluator
-                result_obj = evaluate_ast(ast, self.base, self.cache, self.variables)
-                timer.lap("Evaluate AST")
+            ast = self._parse(expression)
+            timer.lap("Tokenize")
+            timer.lap("Parse AST")
+            if ast is None:
+                return "", None
+            log_eval_report_start(repr(ast))
+            result_obj = evaluate_ast(ast, self.base, {}, self.variables)
+            timer.lap("Evaluate AST")
 
-            # --- ALWAYS resolve the result to a final AoPValue ---
             final_aop_value = _resolve_to_value(result_obj)
             timer.lap("Resolve Value")
 
             if isinstance(final_aop_value, SymbolicPowerResult):
-                return "Error: Result is symbolic and cannot be represented.", None
+                raise AoPError("Result is symbolic and cannot be represented.")
 
-            if mode == "aop":
-                final_result_str = format_as_aop(final_aop_value, EXPONENT_TO_LETTER_MAP)
-                cacheable_obj = final_aop_value
-                timer.lap("Format Output")
-            else: # "num" mode
-                final_result_str = format_as_decimal_string(final_aop_value)
-                cacheable_obj = final_aop_value
-                timer.lap("Format Output")
+            final_result_str = self._format_value(final_aop_value, mode)
+            timer.lap("Format Output")
 
             if self.cache is not None:
-                pickled_obj = pickle.dumps(cacheable_obj)
-                b64_pickle = base64.b64encode(pickled_obj).decode('utf-8')
-                if base_str not in self.cache: self.cache[base_str] = {}
-                if expression not in self.cache[base_str]: self.cache[base_str][expression] = {}
-                self.cache[base_str][expression]["raw_pickle"] = b64_pickle
-                self.cache[base_str][expression][mode] = final_result_str
+                store_result(
+                    self.cache,
+                    expression,
+                    mode,
+                    encode_aop_value(final_aop_value),
+                    final_result_str,
+                )
                 self.cache_dirty = True
 
             timer.report()
             return final_result_str, ast
 
-        except AoPError as e:
-            return f"Error: {e}", None
-        except Exception as e:
-            logging.error("Unexpected error in calculation", exc_info=True)
-            return f"Error: {type(e).__name__}: {e}", None
+        except AoPError:
+            raise
+        except (ValueError, SyntaxError, NameError, TypeError) as e:
+            raise AoPError(str(e)) from e
 
     def _load_cache(self):
-        cache_file = os.path.join('research', 'experiment_results', 'cache', CACHE_FILENAME)
-        if os.path.exists(cache_file):
+        if os.path.exists(self.cache_file):
             try:
-                with open(cache_file, 'r') as f: return json.load(f)
+                with open(self.cache_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                if is_usable_cache(data):
+                    return data
+                logging.warning("Ignoring incompatible or pickle-based calculator cache.")
             except Exception as e:
                 logging.warning(f"Failed to load cache: {e}")
-                return {} # Return empty dict on failure
-        return {} # Return empty dict if file doesn't exist
+        return empty_cache()
 
     def save_cache(self):
         if not self.cache or not self.cache_dirty:
             return
-
-        cache_dir = os.path.join('research', 'experiment_results', 'cache')
+        cache_dir = os.path.dirname(self.cache_file)
+        if cache_dir:
+            os.makedirs(cache_dir, exist_ok=True)
+        with open(self.cache_file, "w", encoding="utf-8") as f:
+            json.dump(self.cache, f, indent=2)
+        self.cache_dirty = False

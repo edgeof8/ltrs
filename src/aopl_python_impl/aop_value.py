@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import Dict, Optional, Any, TYPE_CHECKING
 import logging
 from .constants import LETTER_TO_EXPONENT_MAP # Import from constants
+from .definitions import AoPError
 import re # Keep this line
 
 if TYPE_CHECKING:
@@ -21,6 +22,14 @@ except ImportError as e:
     _RUST_CORE_ENABLED = False
     rust_core = None
     logging.warning(f"Could not load Rust core: {e}. Falling back to Python implementation.")
+
+
+def _call_rust(operation):
+    try:
+        return operation()
+    except ValueError as e:
+        raise AoPError(str(e)) from e
+
 
 class AoPValue:
     _rust_obj: Any
@@ -80,31 +89,31 @@ class AoPValue:
     def __add__(self, other: 'AoPValue') -> 'AoPValue':
         if not isinstance(other, AoPValue): raise TypeError(f"Unsupported operand type for +: '{type(other).__name__}'")
         new_instance = self.__class__.__new__(self.__class__)
-        new_instance._rust_obj = self._rust_obj.__add__(other._rust_obj)
+        new_instance._rust_obj = _call_rust(lambda: self._rust_obj.__add__(other._rust_obj))
         return new_instance
 
     def __sub__(self, other: 'AoPValue') -> 'AoPValue':
         if not isinstance(other, AoPValue): raise TypeError(f"Unsupported operand type for -: '{type(other).__name__}'")
         new_instance = self.__class__.__new__(self.__class__)
-        new_instance._rust_obj = self._rust_obj.__sub__(other._rust_obj)
+        new_instance._rust_obj = _call_rust(lambda: self._rust_obj.__sub__(other._rust_obj))
         return new_instance
 
     def __mul__(self, other: 'AoPValue') -> 'AoPValue':
         if not isinstance(other, AoPValue): raise TypeError(f"Unsupported operand type for *: '{type(other).__name__}'")
         new_instance = self.__class__.__new__(self.__class__)
-        new_instance._rust_obj = self._rust_obj.__mul__(other._rust_obj)
+        new_instance._rust_obj = _call_rust(lambda: self._rust_obj.__mul__(other._rust_obj))
         return new_instance
 
     def __truediv__(self, other: 'AoPValue') -> 'AoPValue':
         if not isinstance(other, AoPValue): raise TypeError(f"Unsupported operand type for /: '{type(other).__name__}'")
         new_instance = self.__class__.__new__(self.__class__)
-        new_instance._rust_obj = self._rust_obj.__truediv__(other._rust_obj)
+        new_instance._rust_obj = _call_rust(lambda: self._rust_obj.__truediv__(other._rust_obj))
         return new_instance
 
     def __pow__(self, other: 'AoPValue') -> 'AoPValue':
         if not isinstance(other, AoPValue): raise TypeError(f"Unsupported operand type for **: '{type(other).__name__}'")
         new_instance = self.__class__.__new__(self.__class__)
-        new_instance._rust_obj = self._rust_obj.power(other._rust_obj)
+        new_instance._rust_obj = _call_rust(lambda: self._rust_obj.power(other._rust_obj))
         return new_instance
 
     def get_coeff_as_power(self) -> Optional[tuple[int, int]]:
@@ -131,7 +140,7 @@ class AoPValue:
         return poly_str
 
     def to_numerical(self) -> int:
-        return self._rust_obj.to_numerical()
+        return _call_rust(self._rust_obj.to_numerical)
 
     def __str__(self) -> str:
         return self._rust_obj.__str__()

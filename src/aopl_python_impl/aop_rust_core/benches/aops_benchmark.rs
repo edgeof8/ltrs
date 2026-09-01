@@ -50,7 +50,7 @@ fn bench_to_numerical(c: &mut Criterion) {
     let large_result = create_large_aop_value(5000, 10);
 
     c.bench_function("to_numerical_large", |b| {
-        b.iter(|| large_result.to_numerical())
+        b.iter(|| large_result.try_to_numerical().unwrap())
     });
 }
 

@@ -2,6 +2,8 @@
 
 import unittest
 from src.aopl_python_impl.aop_calculator import AoP_Calculator as AoPCalculator
+from src.aopl_python_impl.aop_value import AoPValue
+from src.aopl_python_impl.definitions import AoPError
 
 
 def eval_str(calc, expression, mode="num"):
@@ -53,17 +55,15 @@ class TestAoPCalculator(unittest.TestCase):
         self.assertEqual(eval_str(self.calculator, "c / a / a"), "10")
 
     def test_division_by_zero(self):
-        result, ast = self.calculator.evaluate_expression("a / 0")
-        self.assertTrue(result.startswith("Error:"), result)
-        self.assertIn("Division by zero", result)
-        self.assertIsNone(ast)
+        with self.assertRaises(AoPError) as ctx:
+            self.calculator.evaluate_expression("a / 0")
+        self.assertIn("Division by zero", str(ctx.exception))
 
     def test_inexact_division_errors(self):
         for expr in ("a / b", "(a + 1) / a", "c / 3"):
-            result, ast = self.calculator.evaluate_expression(expr)
-            self.assertIsNone(ast, msg=expr)
-            self.assertTrue(result.startswith("Error:"), msg=expr)
-            self.assertIn("does not divide", result, msg=expr)
+            with self.assertRaises(AoPError, msg=expr) as ctx:
+                self.calculator.evaluate_expression(expr)
+            self.assertIn("does not divide", str(ctx.exception), msg=expr)
 
     def test_trailing_equals_evaluates_left_hand_side(self):
         a_eq = eval_str(self.calculator, "a=")
@@ -74,8 +74,19 @@ class TestAoPCalculator(unittest.TestCase):
         self.assertEqual(a_eq, a_plain)
         self.assertEqual(a_spaced, a_plain)
         self.assertEqual(three_e3, three_e3_plain)
-        self.assertFalse(a_eq.startswith("Error:"))
-        self.assertFalse(three_e3.startswith("Error:"))
+
+    def test_mixed_bases_raise(self):
+        left = AoPValue.from_number(1, 10)
+        right = AoPValue.from_number(1, 2)
+        with self.assertRaises(AoPError) as ctx:
+            left + right
+        self.assertIn("different bases", str(ctx.exception))
+
+    def test_to_numerical_rejects_exponent_above_u32(self):
+        huge = AoPValue(poly={str(2**40): 1}, base=10)
+        with self.assertRaises(AoPError) as ctx:
+            huge.to_numerical()
+        self.assertIn("u32", str(ctx.exception))
 
 
 if __name__ == '__main__':

@@ -6,6 +6,8 @@ from __future__ import annotations
 from typing import Optional
 
 from .aop_calculator import AoP_Calculator
+from .definitions import AoPError
+from .aop_value import AoPValue
 
 # Moved matplotlib import inside the function to make it an optional dependency.
 def plot_expression(
@@ -72,7 +74,7 @@ def plot_expression(
                     print(f"Warning: Non-positive result ({y_num:.2f}) for {variable_name}={x_val:.2f} skipped for log y-axis.")
                 else:
                     y_values.append(y_num)
-            except (ValueError, TypeError, NotImplementedError, OverflowError, NameError) as e:
+            except (ValueError, TypeError, NotImplementedError, OverflowError, NameError, AoPError) as e:
                 print(f"Warning: Evaluation failed for {variable_name}={x_val:.2f} ({type(e).__name__}: {e}). Skipping point.")
                 y_values.append(np.nan)
 

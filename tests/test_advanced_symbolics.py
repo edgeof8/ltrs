@@ -2,6 +2,7 @@
 
 import unittest
 from src.aopl_python_impl.aop_calculator import AoP_Calculator as AoPCalculator
+from src.aopl_python_impl.definitions import AoPError
 
 
 def eval_str(calc, expression, mode="aop"):
@@ -17,5 +18,8 @@ class TestAdvancedSymbolics(unittest.TestCase):
         self.assertEqual(eval_str(self.calculator, "a^b^c"), "a^(a^(2*c))")
 
     def test_hyper_power_plus_one(self):
-        result = eval_str(self.calculator, "a^b + 1", mode="num")
-        self.assertTrue(result.endswith("1") or result.startswith("Error:"), result)
+        try:
+            result = eval_str(self.calculator, "a^b + 1", mode="num")
+        except AoPError:
+            return
+        self.assertTrue(result.endswith("1"), result)

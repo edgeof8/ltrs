@@ -2,6 +2,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 from aopl_python_impl.aop_calculator import AoP_Calculator
+from aopl_python_impl.definitions import AoPError
 from PySide6.QtWidgets import QApplication
 from gui_items.calculation_node import CalculationNode
 from gui_items.plot_node import PlotNode
@@ -99,13 +100,11 @@ class EvaluationManager:
                     expression=statement_text,
                     mode="auto"
                 )
-                if result_str.startswith("Error:"):
-                    return result_str  # Abort on the first error
+                final_result_str = result_str
 
-                final_result_str = result_str  # The result of the script is the result of the last line
-
+            except AoPError as e:
+                return f"Error: {e}"
             except Exception as e:
-                # This catches deeper errors within the evaluation logic
                 return f"Error: {type(e).__name__}: {str(e)}"
 
         # If we got here, the entire script ran without errors.

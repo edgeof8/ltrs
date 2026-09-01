@@ -27,6 +27,7 @@ except ImportError:
 
 # This global flag controls all output from this module.
 _EXPLAIN_MODE_ENABLED = False
+_DEBUG_TIMER_ENABLED = False
 # Global console object to manage all rich printing.
 console = Console() if Console else None
 
@@ -34,6 +35,18 @@ def enable_explainer():
     """Turns on the explainer output."""
     global _EXPLAIN_MODE_ENABLED
     _EXPLAIN_MODE_ENABLED = True
+
+def enable_debug_timer():
+    """Turns on DebugTimer (CLI --debug / REPL !debug only)."""
+    global _DEBUG_TIMER_ENABLED
+    _DEBUG_TIMER_ENABLED = True
+
+def is_debug_timer_enabled() -> bool:
+    return _DEBUG_TIMER_ENABLED
+
+def disable_debug_timer():
+    global _DEBUG_TIMER_ENABLED
+    _DEBUG_TIMER_ENABLED = False
 
 @contextmanager
 def capture_logs():

@@ -8,8 +8,9 @@ import sys
 import logging
 from typing import Optional
 from .aop_calculator import AoP_Calculator
+from .definitions import AoPError
 # Import the new setup function
-from .aop_logger import enable_explainer, capture_logs
+from .aop_logger import enable_explainer, enable_debug_timer, capture_logs
 
 # Import rich for beautiful terminal output. It's an optional dependency.
 try:
@@ -56,9 +57,15 @@ def handle_repl_command(line: str, calc: AoP_Calculator, console):
 
             is_debug = command == '!debug'
             enable_explainer() # AI explainer needs the logger enabled
-            with capture_logs() as log_buffer:
-                result, ast = calc.evaluate_expression(expression)
-            debug_log = log_buffer.getvalue()
+            if is_debug:
+                enable_debug_timer()
+            try:
+                with capture_logs() as log_buffer:
+                    result, ast = calc.evaluate_expression(expression)
+                debug_log = log_buffer.getvalue()
+            except AoPError as e:
+                print(f"Error: {e}")
+                return
 
             if is_debug:
                 print(debug_log, end="")
@@ -77,15 +84,11 @@ def handle_repl_command(line: str, calc: AoP_Calculator, console):
         else:
             print(f"Unknown command: {command}. Type !help for options.")
     else:
-        # Regular expression evaluation
-        _, ast = calc.evaluate_expression(line)
-        # The result of assignments is handled by the evaluator, but we might want to print it.
-        # For now, let's assume the user does `$x` on a new line to see the value.
-        # To print results of every line, we'd need to adjust `evaluate_expression`.
-        # This simple REPL focuses on the stateful variable aspect.
-        # Let's get the value of the last expression to print it.
-        result, _ = calc.evaluate_expression(line, mode="num")
-        print(result)
+        try:
+            result, _ = calc.evaluate_expression(line, mode="num")
+            print(result)
+        except AoPError as e:
+            print(f"Error: {e}")
 
 
 def start_interactive_session(conversation):
@@ -157,14 +160,17 @@ def main():
 
     # --- Calculation Mode ---
 
-    # Enable logging if --debug or --explain is used.
+    # Trace logs for --debug or --explain; the performance timer is --debug only.
     if args.debug or args.explain:
         enable_explainer()
+    if args.debug:
+        enable_debug_timer()
 
     calc = AoP_Calculator(base=args.base)
     if args.no_cache:
         calc.cache = None
 
+    exit_code = 0
     try:
         # Capture the log during calculation.
         with capture_logs() as log_buffer:
@@ -219,11 +225,17 @@ def main():
         elif not args.output:
             print(result)
 
+    except AoPError as e:
+        print(f"Error: {e}")
+        exit_code = 1
     except Exception as e:
         logging.error(f"An error occurred: {e}", exc_info=args.debug)
+        exit_code = 1
 
     if not args.no_cache:
         calc.save_cache()
+    if exit_code:
+        sys.exit(exit_code)
 
 if __name__ == "__main__":
     main()

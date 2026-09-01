@@ -136,10 +136,12 @@ cython_debug/
 *.swp
 *~
 research/s
+research/experiment_results/cache/
 expressions.txt
 results.txt
 
 # Build artifacts and accidental source dumps
 *.pdb
+.sprint3_ext/
 src/aopl_python_impl/aop_rust_core/src/*.txt
 src/aopl_python_impl/aop_rust_core/benches/*Copy*

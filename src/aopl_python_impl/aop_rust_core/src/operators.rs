@@ -9,10 +9,13 @@ use std::ops::{Add, Mul, Neg, Sub};
 impl Add for &AoPValue {
     type Output = AoPValue;
     fn add(self, other: &AoPValue) -> AoPValue {
-        // Ensure bases are compatible for a meaningful operation.
+        debug_assert_eq!(
+            self.base, other.base,
+            "add of AoPValues with different bases (Python must check first)"
+        );
         if self.base != other.base {
-            // In a real application, you might return a Result<_, Error>
-            // For now, we'll panic as this represents a logical error.
+            // Mixed bases are a logic error. Python pymethods reject them with PyErr
+            // before calling this. Returning the left operand would hide bugs.
             panic!("Cannot add AoPValues with different bases.");
         }
 
@@ -66,6 +69,10 @@ impl Neg for &AoPValue {
 impl Mul for &AoPValue {
     type Output = AoPValue;
     fn mul(self, other: &AoPValue) -> AoPValue {
+        debug_assert_eq!(self.base, other.base, "mul of AoPValues with different bases");
+        if self.base != other.base {
+            panic!("Cannot multiply AoPValues with different bases.");
+        }
         let new_coeff = &self.coeff * &other.coeff;
         if new_coeff.is_zero() {
             return AoPValue::_new_internal(BigInt::zero(), HashMap::new(), self.base);

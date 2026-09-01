@@ -37,17 +37,36 @@ impl AoPValue {
         AoPValue::_new_internal(coeff, poly, base)
     }
 
-    pub fn to_numerical(&self) -> BigInt {
+    /// Convert to an integer. Fails if any polynomial exponent does not fit in u32
+    /// (`num_bigint::BigInt::pow` takes u32). Never silently maps overflow to 0.
+    pub fn try_to_numerical(&self) -> Result<BigInt, BigInt> {
         if self.poly.is_empty() {
-            return self.coeff.clone();
+            return Ok(self.coeff.clone());
         }
         let mut total = BigInt::zero();
         let base_bigint = BigInt::from(self.base);
         for (exp, poly_coeff) in &self.poly {
-            total += poly_coeff * base_bigint.pow(exp.to_u32().unwrap_or(0));
+            let exp_u32 = exp.to_u32().ok_or_else(|| exp.clone())?;
+            total += poly_coeff * base_bigint.pow(exp_u32);
         }
-        total * &self.coeff
+        Ok(total * &self.coeff)
     }
+}
+
+fn require_same_base(left: &AoPValue, right: &AoPValue) -> PyResult<()> {
+    if left.base != right.base {
+        Err(pyo3::exceptions::PyValueError::new_err(
+            "Cannot operate on AoPValues with different bases.",
+        ))
+    } else {
+        Ok(())
+    }
+}
+
+fn exponent_overflow_err(exp: &BigInt) -> PyErr {
+    pyo3::exceptions::PyValueError::new_err(format!(
+        "Exponent {exp} does not fit in u32; cannot convert to a number."
+    ))
 }
 
 #[pymethods]
@@ -77,8 +96,9 @@ impl AoPValue {
     }
 
     #[pyo3(name = "to_numerical")]
-    pub fn py_to_numerical(&self) -> BigInt {
-        self.to_numerical()
+    pub fn py_to_numerical(&self) -> PyResult<BigInt> {
+        self.try_to_numerical()
+            .map_err(|exp| exponent_overflow_err(&exp))
     }
 
     pub fn get_poly(&self) -> HashMap<String, BigInt> {
@@ -117,14 +137,17 @@ impl AoPValue {
         format!("AoP({}{})", coeff_part, poly_str)
     }
 
-    pub fn __add__(&self, other: &Self) -> Self {
-        self + other
+    pub fn __add__(&self, other: &Self) -> PyResult<Self> {
+        require_same_base(self, other)?;
+        Ok(self + other)
     }
-    pub fn __sub__(&self, other: &Self) -> Self {
-        self - other
+    pub fn __sub__(&self, other: &Self) -> PyResult<Self> {
+        require_same_base(self, other)?;
+        Ok(self - other)
     }
-    pub fn __mul__(&self, other: &Self) -> Self {
-        self * other
+    pub fn __mul__(&self, other: &Self) -> PyResult<Self> {
+        require_same_base(self, other)?;
+        Ok(self * other)
     }
     pub fn __truediv__(&self, other: &Self) -> PyResult<Self> {
         self.divide(other)
@@ -147,6 +170,11 @@ impl AoPValue {
                     "Cannot divide AoPValues with different bases.",
                 ))
             }
+            Err(crate::internal_methods::PolyDivError::ExponentTooLarge) => {
+                Err(pyo3::exceptions::PyValueError::new_err(
+                    "Exponent does not fit in u32; cannot convert to a number for integer division.",
+                ))
+            }
         }
     }
 
@@ -155,13 +183,16 @@ impl AoPValue {
     }
 
     pub fn power(&self, exp_val: &Self) -> PyResult<Self> {
+        require_same_base(self, exp_val)?;
         // --- PURE SYMBOLIC PATH ---
         if self.coeff.is_one() && self.poly.len() == 1 {
             if let Some((base_exp, poly_coeff)) = self.poly.iter().next() {
                 if poly_coeff.is_one() {
                     let e1_as_aop = AoPValue::from_numerical_internal(base_exp.clone(), self.base);
                     let new_exp_aop = &e1_as_aop * exp_val;
-                    let final_exponent = new_exp_aop.to_numerical();
+                    let final_exponent = new_exp_aop
+                        .try_to_numerical()
+                        .map_err(|exp| exponent_overflow_err(&exp))?;
                     let final_poly = HashMap::from([(final_exponent, BigInt::one())]);
                     return Ok(AoPValue::_new_internal(
                         BigInt::one(),
@@ -173,7 +204,9 @@ impl AoPValue {
         }
 
         // --- FALLBACK PATH ---
-        let n = exp_val.to_numerical();
+        let n = exp_val
+            .try_to_numerical()
+            .map_err(|exp| exponent_overflow_err(&exp))?;
         if n.is_zero() {
             return Ok(AoPValue::from_numerical_internal(BigInt::one(), self.base));
         }

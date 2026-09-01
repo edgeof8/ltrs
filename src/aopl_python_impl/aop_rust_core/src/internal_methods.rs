@@ -182,8 +182,12 @@ impl AoPValue {
     /// and fails even though the number 10 is divisible by 2. Fall back to
     /// exact integer division and re-encode the quotient as an AoP polynomial.
     fn divide_exact_integer(&self, other: &Self) -> Result<Self, PolyDivError> {
-        let dividend = self.to_numerical();
-        let divisor = other.to_numerical();
+        let dividend = self
+            .try_to_numerical()
+            .map_err(|_| PolyDivError::ExponentTooLarge)?;
+        let divisor = other
+            .try_to_numerical()
+            .map_err(|_| PolyDivError::ExponentTooLarge)?;
         if divisor.is_zero() {
             return Err(PolyDivError::DivisionByZero);
         }
@@ -202,6 +206,7 @@ pub enum PolyDivError {
     DivisionByZero,
     DoesNotDivide,
     DifferentBases,
+    ExponentTooLarge,
 }
 
 fn is_zero_poly(p: &HashMap<BigInt, BigInt>) -> bool {

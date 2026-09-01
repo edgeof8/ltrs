@@ -6,11 +6,9 @@
 # sub-expression results.
 from typing import Dict, Any, Union, Optional
 from .aop_ast import ASTNode, NumberNode, IdentifierNode, BinaryOpNode, UnaryOpNode, AopLiteralNode, VariableNode
-from .definitions import AoPError, SymbolicPowerResult, Token
-from .constants import LETTER_TO_EXPONENT_MAP
+from .definitions import AoPError, SymbolicPowerResult
 from .aop_value import AoPValue
-import logging, pickle, base64, re
-from .aop_logger import log_eval, Colors, log_pow
+from .aop_logger import log_eval, log_pow
 
 _eval_depth = 0
 
@@ -34,17 +32,15 @@ def _resolve_to_value(current: Union[AoPValue, SymbolicPowerResult]) -> Union[Ao
     return current
 
 def evaluate_ast(node: ASTNode, base: int, cache: Optional[dict] = None, variables: Optional[Dict[str, Any]] = None) -> Union[AoPValue, SymbolicPowerResult]:
-    # Ensure variables is a dictionary, even if None is passed.
+    # `cache` is an in-memory memo for this evaluation only (live objects, never pickle).
     if variables is None:
         variables = {}
     global _eval_depth
     node_repr = repr(node)
-    base_str = str(base)
-    if cache is not None and base_str in cache and node_repr in cache[base_str]:
-        cached_data = cache[base_str][node_repr]
-        if "raw_pickle" in cached_data:
-            log_eval(f"Cache HIT for sub-expression: {node_repr}", _eval_depth)
-            return pickle.loads(base64.b64decode(cached_data["raw_pickle"]))
+    memo_key = (base, node_repr)
+    if cache is not None and memo_key in cache:
+        log_eval(f"Cache HIT for sub-expression: {node_repr}", _eval_depth)
+        return cache[memo_key]
 
     log_eval(f"Node: {node!r}", _eval_depth)
     _eval_depth += 1
@@ -111,12 +107,8 @@ def evaluate_ast(node: ASTNode, base: int, cache: Optional[dict] = None, variabl
             log_eval(f"Result -> {result!r}", _eval_depth - 1)
         else:
             raise AoPError(f"Unknown node type: {type(node).__name__}")
-        if cache is not None:
-            if base_str not in cache: cache[base_str] = {}
-            # We only need to store the raw object for sub-expressions
-            pickled_obj = pickle.dumps(result)
-            b64_pickle = base64.b64encode(pickled_obj).decode('utf-8')
-            cache[base_str][node_repr] = {"raw_pickle": b64_pickle}
+        if cache is not None and not isinstance(node, VariableNode):
+            cache[memo_key] = result
             log_eval(f"Cached result for: {node_repr}", _eval_depth - 1)
         return result
     finally:
