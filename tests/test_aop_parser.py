@@ -42,8 +42,3 @@ class TestAoPParser(unittest.TestCase):
         self.assertEqual(tokens[0].value, "100000")
         tokens = tokenize_expression("5,00000 + 1")
         self.assertEqual(tokens[0].value, "500000")
-
-    def test_gcd_is_an_infix_operator(self):
-        ast = Parser(tokenize_expression("48 gcd 18")).parse()
-        self.assertIsInstance(ast, BinaryOpNode)
-        self.assertEqual(ast.op.value, "gcd")

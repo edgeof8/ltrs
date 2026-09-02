@@ -57,11 +57,8 @@ class TestAoPLanguageSpec(unittest.TestCase):
     def test_equality_is_polynomial_identity(self):
         self.assertEqual(self.ev("a == 10"), "1")
         self.assertEqual(self.ev("a == b"), "0")
-
-    def test_gcd_is_integer_gcd(self):
-        self.assertEqual(self.ev("48 gcd 18"), "6")
-        self.assertEqual(self.ev("Z gcd Y", mode="aop"), "Y")
         self.assertEqual(self.ev("ba == (b + a)"), "1")
+        self.assertEqual(self.ev("cQ == Q + c"), "1")
 
     def test_base_change_reinterprets_letters_not_digits(self):
         ten = AoP_Calculator(base=10, cache_file=os.path.join(self.tmp.name, "b10.json"))

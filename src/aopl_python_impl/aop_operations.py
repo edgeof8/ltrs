@@ -101,8 +101,6 @@ def evaluate_ast(node: ASTNode, base: int, cache: Optional[dict] = None, variabl
                     elif op == '==':
                         is_equal = left_aop == right_aop
                         result = AoPValue.from_number(1 if is_equal else 0, base)
-                    elif op == 'gcd':
-                        result = left_aop.gcd(right_aop)
                     else:
                         raise AoPError(f"Unsupported operator: {op}")
             log_eval(f"Result -> {result!r}", _eval_depth - 1)

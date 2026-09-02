@@ -21,7 +21,7 @@ LETTER_TO_EXPONENT_MAP['z'] = 100 # 'z' is an alias for 'Z' for convenience.
 EXPONENT_TO_LETTER_MAP = {v: k for k, v in LETTER_TO_EXPONENT_MAP.items() if k != 'z'}
 
 # --- Tokenizer Regex ---
-TOKEN_REGEX = re.compile(r"(\*\*|==?|\bgcd\b|[+\-*/^()])")
+TOKEN_REGEX = re.compile(r"(\*\*|==?|[+\-*/^()])")
 
 # --- Operator Definitions ---
 # Defines the supported operators, their precedence, and their associativity.
@@ -29,12 +29,13 @@ TOKEN_REGEX = re.compile(r"(\*\*|==?|\bgcd\b|[+\-*/^()])")
 # Higher precedence values are evaluated first.
 OPERATORS = {
     '=': {'precedence': 1, 'associativity': 'right'},  # Assignment
-    '==': {'precedence': 1.5, 'associativity': 'left'}, # Equality comparison
-    '+': {'precedence': 2, 'associativity': 'left'},   # Addition
-    '-': {'precedence': 2, 'associativity': 'left'},   # Subtraction
-    '*': {'precedence': 3, 'associativity': 'left'},   # Multiplication
-    '/': {'precedence': 3, 'associativity': 'left'},   # Division (integer)
-    'gcd': {'precedence': 3.2, 'associativity': 'left'},  # Integer gcd (no expand)
-    '^': {'precedence': 5, 'associativity': 'right'},  # Power (right-associative)
-    '**': {'precedence': 5, 'associativity': 'right'}  # Power (alias)
+    # == must sit strictly below +/-, and + must be >= ==.prec+1 so that
+    # `cQ == Q + c` is `cQ == (Q + c)` rather than `(cQ == Q) + c`.
+    '==': {'precedence': 2, 'associativity': 'left'},  # Equality comparison
+    '+': {'precedence': 3, 'associativity': 'left'},   # Addition
+    '-': {'precedence': 3, 'associativity': 'left'},   # Subtraction
+    '*': {'precedence': 4, 'associativity': 'left'},   # Multiplication
+    '/': {'precedence': 4, 'associativity': 'left'},   # Division (integer)
+    '^': {'precedence': 6, 'associativity': 'right'},  # Power (right-associative)
+    '**': {'precedence': 6, 'associativity': 'right'}  # Power (alias)
 }

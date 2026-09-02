@@ -38,9 +38,10 @@ Parentheses still group and can imply multiplication in the usual way:
 
 ## Operators
 
-Precedence, high to low: `^` / `**` (right-associative), then `gcd`
-(left-associative), then `*` and `/` (left-associative), then `+` and `-`,
-then `==`, then `=` (right-associative).
+Precedence, high to low: `^` / `**` (right-associative), then `*` and `/`
+(left-associative), then `+` and `-`, then `==` (left-associative), then
+`=` (right-associative). So `cQ == Q + c` is `cQ == (Q + c)`, not
+`(cQ == Q) + c`.
 
 - `*` multiplies polynomials. `a * b` is \(B^1 \cdot B^2 = B^3\), which **aop**
   mode prints as `c`, not `a^3`.
@@ -50,9 +51,6 @@ then `==`, then `=` (right-associative).
   division when carrying has already rewritten a constant as \(X^1\)).
   `c / a` is `b`. `a / b`, `(a + 1) / a`, and `a / 0` raise `AoPError`.
   There is no truncating integer division and no fraction type.
-- `gcd` is integer gcd of the two values, taken from the sparse polynomial
-  (modular powers of the base) rather than by expanding huge exponents.
-  `48 gcd 18` is `6`. `Z gcd Y` is `Y`.
 - `==` compares **canonical polynomials** of the same base (coefficient plus
   sparse terms). It does not expand either side into a Python `int`. After
   simplify, `a == 10` is true in base 10 because `10` is stored as \(X^1\).

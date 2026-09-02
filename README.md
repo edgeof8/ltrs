@@ -34,7 +34,7 @@ The Cosmic Scratchpad is the heart of the project—an interactive, graphical en
     *   `/delvar <$var>`: Deletes a variable and updates dependent nodes.
     *   `/explain [expr|last]`: Provides an AI-generated explanation for an expression or the last calculation (requires setup).
     *   `/explain model <name>`: Sets the AI model for explanations (e.g., a local Ollama model or an OpenRouter model).
-*   **File Operations:** Save and load your scratchpad sessions as `.cosmic` JSON files. Start with the canvases in `examples/` (`juxtaposition.cosmic`, `variables.cosmic`, `gcd.cosmic`).
+*   **File Operations:** Save and load your scratchpad sessions as `.cosmic` JSON files.
 
 **Running the Cosmic Scratchpad:**
 ```bash
@@ -69,7 +69,7 @@ Underpinning the Cosmic Scratchpad is a robust command-line engine that can also
 *   **Symbolic Core:** Represents all numbers as sparse polynomials (`AoPValue`) in the Rust core, enabling arbitrary-precision arithmetic.
 *   **Elegant Formatting:** Results are displayed in their most compact AoP form (e.g., `10^100` is `z`).
 *   **Arbitrary Base:** Explore AoP in any integer base via the `--base` flag.
-*   **Full Operator Support**: `+`, `-`, `*`, `/`, `gcd`, `^` (power), with correct order of operations. A trailing `=` evaluates the left-hand side (`a=` is the same as `a`).
+*   **Full Operator Support**: `+`, `-`, `*`, `/`, `^` (power), with correct order of operations. A trailing `=` evaluates the left-hand side (`a=` is the same as `a`).
 *   **Exact Division:** `/` is exact sparse polynomial division in \(\mathbb{Z}[X]\) (where \(X\) is the calculator base). If that form does not divide evenly — for example `10 / 2`, because `10` is stored as the monomial \(X\) — the engine falls back to exact integer division and re-encodes the quotient as an AoP polynomial. Inexact cases (`11 / 2`, `a / b`) and divide-by-zero raise an error; results are never truncated.
 *   **Literals vs operators:** Letter juxtaposition is addition (`ba` = `b+a`). Use `*` (or parentheses) for multiplication: `a*b`, `a(b+c)`. A leading coefficient on a one-letter term scales it (`2b` = `2*b`).
 

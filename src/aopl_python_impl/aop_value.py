@@ -9,7 +9,6 @@ from typing import Dict, Optional, Any, TYPE_CHECKING
 import logging
 from .constants import LETTER_TO_EXPONENT_MAP # Import from constants
 from .definitions import AoPError
-import math
 from .aop_parser import strip_digit_group_commas
 import re # Keep this line
 
@@ -31,103 +30,6 @@ def _call_rust(operation):
         return operation()
     except ValueError as e:
         raise AoPError(str(e)) from e
-
-
-def _terms(val: "AoPValue") -> Dict[int, int]:
-    outer = int(val._rust_obj.coeff)
-    if outer == 0:
-        return {}
-    poly = val._rust_obj.get_poly()
-    if not poly:
-        return {0: outer}
-    return {int(exp): outer * int(coeff) for exp, coeff in poly.items() if int(coeff)}
-
-
-def _is_zero(val: "AoPValue") -> bool:
-    return not _terms(val)
-
-
-def _try_int(val: "AoPValue") -> Optional[int]:
-    try:
-        return val.to_numerical()
-    except AoPError:
-        return None
-
-
-def _from_terms(terms: Dict[int, int], base: int) -> "AoPValue":
-    cleaned = {exp: coeff for exp, coeff in terms.items() if coeff}
-    if not cleaned:
-        return AoPValue.from_number(0, base)
-    return AoPValue(poly={str(exp): coeff for exp, coeff in cleaned.items()}, base=base, coeff=1)
-
-
-def _residue(val: "AoPValue", modulus: int) -> int:
-    modulus = abs(int(modulus))
-    if modulus == 0:
-        n = _try_int(val)
-        if n is None:
-            raise AoPError("gcd: modulus is 0 and the other value cannot be expanded.")
-        return n
-    acc = 0
-    base = int(val._rust_obj.base)
-    for exp, coeff in _terms(val).items():
-        acc = (acc + int(coeff) * pow(base, exp, modulus)) % modulus
-    return acc
-
-
-def _abs_value(val: "AoPValue") -> "AoPValue":
-    n = _try_int(val)
-    if n is not None:
-        return AoPValue.from_number(abs(n), val._rust_obj.base)
-    if int(val._rust_obj.coeff) < 0:
-        return AoPValue.from_number(0, val._rust_obj.base) - val
-    return val
-
-
-def _shift_down(val: "AoPValue", k: int) -> "AoPValue":
-    return _from_terms({exp - k: coeff for exp, coeff in _terms(val).items()}, val._rust_obj.base)
-
-
-def _mul_base_pow(val: "AoPValue", k: int) -> "AoPValue":
-    if k == 0:
-        return val
-    return val * AoPValue(poly={str(k): 1}, base=val._rust_obj.base, coeff=1)
-
-
-def _gcd_values(left: "AoPValue", right: "AoPValue") -> "AoPValue":
-    a, b = left, right
-    base = int(a._rust_obj.base)
-    for _ in range(10_000):
-        if _is_zero(b):
-            return _abs_value(a)
-        if _is_zero(a):
-            return _abs_value(b)
-        na, nb = _try_int(a), _try_int(b)
-        if na is not None and nb is not None:
-            return AoPValue.from_number(math.gcd(na, nb), base)
-        if nb is not None:
-            a, b = b, AoPValue.from_number(_residue(a, nb), base)
-            continue
-        if na is not None:
-            b = AoPValue.from_number(_residue(b, na), base)
-            continue
-        terms_a, terms_b = _terms(a), _terms(b)
-        k = min(min(terms_a), min(terms_b))
-        if k > 0:
-            return _mul_base_pow(_gcd_values(_shift_down(a, k), _shift_down(b, k)), k)
-        ea, eb = max(terms_a), max(terms_b)
-        if ea < eb:
-            a, b = b, a
-            ea, eb = eb, ea
-            terms_a, terms_b = terms_b, terms_a
-        if ea == eb:
-            a = a - b
-            continue
-        d = ea - eb
-        q = max(abs(terms_a[ea]) // abs(terms_b[eb]), 1)
-        mono = AoPValue(poly={str(d): 1}, base=base, coeff=q)
-        a = a - mono * b
-    raise AoPError("gcd did not converge.")
 
 
 class AoPValue:
@@ -215,14 +117,6 @@ class AoPValue:
         new_instance = self.__class__.__new__(self.__class__)
         new_instance._rust_obj = _call_rust(lambda: self._rust_obj.power(other._rust_obj))
         return new_instance
-
-    def gcd(self, other: 'AoPValue') -> 'AoPValue':
-        """Integer gcd from the sparse poly. Does not call to_numerical on huge exponents."""
-        if not isinstance(other, AoPValue):
-            raise TypeError(f"Unsupported operand type for gcd: '{type(other).__name__}'")
-        if self._rust_obj.base != other._rust_obj.base:
-            raise AoPError("Cannot operate on AoPValues with different bases.")
-        return _gcd_values(self, other)
 
     def get_coeff_as_power(self) -> Optional[tuple[int, int]]:
         """Returns the coefficient as a power tuple (base, exponent) if it is a power, else None."""
