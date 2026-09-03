@@ -18,7 +18,6 @@ ASSIGN_HEAD_RE = re.compile(r"^\s*(\$[a-zA-Z_]\w*)\s*=(?!=)")
 ADDR_RE = re.compile(r"^([A-Za-z]+)(\d+)$")
 RANGE_RE = re.compile(r"\$([A-Za-z]+\d+)\s*:\s*\$([A-Za-z]+\d+)")
 
-KNOWN_CONSTANTS = ("#pi", "#e", "#phi", "#tau", "#sqrt2", "#j", "#sqrt3", "#ln2")
 HELP_TEXT = (
     "Cosmic Sheet uses the same AoP language as Cosmic Scratchpad.\n"
     "  Cell results bind as $A1, $B2, … — use those names in other cells.\n"
@@ -408,14 +407,10 @@ class SheetEngine:
         return f"Base set to {new_base}."
 
     def _cmd_constants(self, args: List[str]) -> str:
-        lines = ["Predefined Constants:"]
-        for const_name in KNOWN_CONSTANTS:
-            try:
-                val_str, _ = self.calculator.evaluate_expression(const_name, "num")
-                lines.append(f"  {const_name} = {val_str}")
-            except Exception:
-                lines.append(f"  {const_name} = (Error resolving)")
-        return "\n".join(lines)
+        return (
+            "The engine is an exact integer ring (Z[X]). Named real constants "
+            "(#pi, #e, …) are not part of the language."
+        )
 
     def _cmd_letters(self, args: List[str]) -> str:
         lines = ["AoP Letter Mapping (Current Base):"]

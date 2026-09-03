@@ -30,5 +30,6 @@ class TestExampleCosmicFiles(unittest.TestCase):
                 for node in data["nodes"]:
                     expr = node["expression"]
                     self.assertIsNotNone(Parser(tokenize_expression(expr)).parse())
-                    result, _ = calc.evaluate_expression(expr, mode="num")
+                    mode = node.get("output_mode", "num")
+                    result, _ = calc.evaluate_expression(expr, mode=mode)
                     self.assertFalse(str(result).startswith("Error:"), result)

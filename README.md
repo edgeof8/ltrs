@@ -28,7 +28,7 @@ The Cosmic Scratchpad is the canvas GUI—an interactive, graphical environment 
 *   **Powerful Slash Commands:**
     *   `/help`: Shows available commands.
     *   `/vars`: Lists all defined variables and their current values.
-    *   `/constants`: Lists predefined numerical constants like `#pi`, `#e`, `#sqrt2`, and `#j`.
+    *   `/constants`: The engine is an exact integer ring; named reals like `#pi` are not in the language.
     *   `/letters`: Displays the current letter-to-exponent mapping for the active base.
     *   `/setbase <num>`: Changes the calculator base for the entire scene.
     *   `/delvar <$var>`: Deletes a variable and updates dependent nodes.
@@ -113,7 +113,7 @@ Underpinning both GUIs is a robust command-line engine that can also be used ind
 *   **Symbolic Core:** Represents all numbers as sparse polynomials (`AoPValue`) in the Rust core, enabling arbitrary-precision arithmetic.
 *   **Elegant Formatting:** Results are displayed in their most compact AoP form (e.g., `10^100` is `z`).
 *   **Arbitrary Base:** Explore AoP in any integer base via the `--base` flag.
-*   **Full Operator Support**: `+`, `-`, `*`, `/`, `^` (power), with correct order of operations. A trailing `=` evaluates the left-hand side (`a=` is the same as `a`).
+*   **Full Operator Support**: `+`, `-`, `*`, `/`, `^` (power), `gcd` (integer gcd, infix), with correct order of operations. A trailing `=` evaluates the left-hand side (`a=` is the same as `a`).
 *   **Exact Division:** `/` is exact sparse polynomial division in \(\mathbb{Z}[X]\) (where \(X\) is the calculator base). If that form does not divide evenly — for example `10 / 2`, because `10` is stored as the monomial \(X\) — the engine falls back to exact integer division and re-encodes the quotient as an AoP polynomial. Inexact cases (`11 / 2`, `a / b`) and divide-by-zero raise an error; results are never truncated.
 *   **Literals vs operators:** Letter juxtaposition is addition (`ba` = `b+a`). Use `*` (or parentheses) for multiplication: `a*b`, `a(b+c)`. A leading coefficient on a one-letter term scales it (`2b` = `2*b`).
 
@@ -145,6 +145,12 @@ a^(2c + 4a + 8)
 # Exact polynomial division (monomials cancel)
 $ ltrs "c / a"
 100
+
+# Integer gcd stays sparse (no digit dump of 10^100)
+$ ltrs "c gcd a" --mode aop
+a
+$ ltrs "Z gcd Y" --mode aop
+Y
 
 # Carried constants still divide exactly via the integer fallback
 $ ltrs "10 / 2"
@@ -186,8 +192,10 @@ You need a working **Rust toolchain** (for the `aop_rust_core` extension) and Py
 
 4.  **Run:**
     ```bash
+    ltrs                      # interactive REPL
     ltrs "a*b" --mode aop
     ltrs "ba"                 # juxtaposition adds → 110
+    ltrs "c gcd a" --mode aop
     cosmic-scratchpad
     python main.py              # checkout launcher for the same packaged GUI
     cosmic-sheet                # spreadsheet web UI (same engine)

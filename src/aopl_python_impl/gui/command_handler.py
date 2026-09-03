@@ -96,16 +96,12 @@ class CommandHandler:
             node.set_display("Error: Usage /setbase <number>", True)
 
     def _handle_constants(self, context, node, calculator=None):
-        known_constants = ["#pi", "#e", "#phi", "#tau", "#sqrt2", "#j", "#sqrt3", "#ln2"]
-        command_output = "Predefined Constants:\n"
-        calc_to_use = calculator if calculator else self.scene.calculator
-        for const_name in known_constants:
-            try:
-                val_str, _ = calc_to_use.evaluate_expression(const_name, "num")
-                command_output += f"  {const_name} = {val_str}\n"
-            except Exception:
-                command_output += f"  {const_name} = (Error resolving)\n"
-        node.set_display(command_output.strip(), False, is_command_output=True)
+        node.set_display(
+            "The engine is an exact integer ring (Z[X]). Named real constants "
+            "(#pi, #e, …) are not part of the language.",
+            False,
+            is_command_output=True,
+        )
 
     def _handle_letters(self, context, node, calculator=None):
         command_output = "AoP Letter Mapping (Current Base):\n"

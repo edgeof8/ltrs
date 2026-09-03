@@ -60,3 +60,4 @@ Repository = "https://github.com/edgeof8/ltrs"
 python-source = "src"
 manifest-path = "src/aopl_python_impl/aop_rust_core/Cargo.toml"
 module-name = "aopl_python_impl.aop_rust_core"
+features = ["extension-module"]

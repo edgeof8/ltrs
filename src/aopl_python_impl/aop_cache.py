@@ -72,9 +72,9 @@ def find_poly_entry(
 def store_result(
     cache: Dict[str, Any],
     expression: str,
-    mode: str,
+    mode: Optional[str],
     encoded: Dict[str, Any],
-    formatted: str,
+    formatted: Optional[str],
 ) -> None:
     key = poly_key(encoded)
     entry = cache["by_poly"].get(key)
@@ -85,6 +85,7 @@ def store_result(
             "poly": encoded["poly"],
         }
         cache["by_poly"][key] = entry
-    entry[mode] = formatted
+    if mode is not None and formatted is not None:
+        entry[mode] = formatted
     if expression_is_cacheable(expression):
         cache["by_expression"][expression_key(expression, encoded["base"])] = key

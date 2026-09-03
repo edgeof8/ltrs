@@ -5,7 +5,7 @@ edition = "2021"
 
 [lib]
 name = "aop_rust_core"
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 # The `serde` feature is for serialization, which is good practice.
@@ -16,9 +16,12 @@ once_cell = "1.18.0"
 rayon = "1.8.0"
 regex = "1"
 
-# --- THIS IS THE FIX ---
-# Add the "num-bigint" feature directly to the pyo3 dependency.
-pyo3 = { version = "0.20.3", features = ["extension-module", "num-bigint"] }
+# `extension-module` is enabled by maturin when building the Python wheel so
+# `cargo test` can still link the rlib without Python.
+pyo3 = { version = "0.20.3", features = ["num-bigint"] }
+
+[features]
+extension-module = ["pyo3/extension-module"]
 
 [dev-dependencies]
 criterion = "0.5"

@@ -98,6 +98,11 @@ def evaluate_ast(node: ASTNode, base: int, cache: Optional[dict] = None, variabl
                             result = left_aop / right_aop
                         except ValueError as e:
                             raise AoPError(str(e)) from e
+                    elif op == 'gcd':
+                        try:
+                            result = left_aop.gcd(right_aop)
+                        except ValueError as e:
+                            raise AoPError(str(e)) from e
                     elif op == '==':
                         is_equal = left_aop == right_aop
                         result = AoPValue.from_number(1 if is_equal else 0, base)

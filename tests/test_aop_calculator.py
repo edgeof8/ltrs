@@ -92,6 +92,14 @@ class TestAoPCalculator(unittest.TestCase):
             huge.to_numerical()
         self.assertIn("u32", str(ctx.exception))
 
+    def test_evaluate_returns_value(self):
+        value, ast = self.calculator.evaluate("a * b")
+        self.assertIsInstance(value, AoPValue)
+        self.assertIsNotNone(ast)
+        self.assertEqual(value, AoPValue.from_literal("c", 10))
+        self.assertEqual(self.calculator.format_value(value, "num"), "1000")
+        self.assertEqual(self.calculator.format_value(value, "aop"), "c")
+
 
 if __name__ == '__main__':
     unittest.main()

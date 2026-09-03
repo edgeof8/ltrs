@@ -22,7 +22,7 @@ try:
 except ImportError as e:
     _RUST_CORE_ENABLED = False
     rust_core = None
-    logging.warning(f"Could not load Rust core: {e}. Falling back to Python implementation.")
+    logging.warning(f"Could not load Rust core: {e}.")
 
 
 def _call_rust(operation):
@@ -118,6 +118,13 @@ class AoPValue:
         new_instance._rust_obj = _call_rust(lambda: self._rust_obj.power(other._rust_obj))
         return new_instance
 
+    def gcd(self, other: 'AoPValue') -> 'AoPValue':
+        if not isinstance(other, AoPValue):
+            raise TypeError(f"Unsupported operand type for gcd: '{type(other).__name__}'")
+        new_instance = self.__class__.__new__(self.__class__)
+        new_instance._rust_obj = _call_rust(lambda: self._rust_obj.gcd(other._rust_obj))
+        return new_instance
+
     def get_coeff_as_power(self) -> Optional[tuple[int, int]]:
         """Returns the coefficient as a power tuple (base, exponent) if it is a power, else None."""
         return self._rust_obj.get_coeff_as_power()
@@ -150,50 +157,13 @@ class AoPValue:
         Empty dict is zero. Does not expand into a Python int. This is Theorem 7:
         factored 1024 * X^20 and carried X^23 + 2 X^21 + 4 X^20 compare equal.
         """
-        base = int(self._rust_obj.base)
-        leading = int(self._rust_obj.coeff)
-        raw = self._rust_obj.get_poly()
-        digits: dict[int, int] = {}
-        if not raw:
-            if leading:
-                digits[0] = leading
-        else:
-            for exp_str, term in raw.items():
-                total = leading * int(term)
-                if total:
-                    exp = int(exp_str)
-                    digits[exp] = digits.get(exp, 0) + total
-        if not digits:
-            return {}
-        exps = sorted(digits)
-        i = 0
-        while i < len(exps):
-            exp = exps[i]
-            coeff = digits.get(exp, 0)
-            if coeff == 0 or abs(coeff) < base:
-                i += 1
-                continue
-            carry, remainder = divmod(coeff, base)
-            if remainder == 0:
-                digits.pop(exp, None)
-            else:
-                digits[exp] = remainder
-            nxt = exp + 1
-            digits[nxt] = digits.get(nxt, 0) + carry
-            if nxt not in exps:
-                insert_at = i + 1
-                while insert_at < len(exps) and exps[insert_at] < nxt:
-                    insert_at += 1
-                exps.insert(insert_at, nxt)
-            i += 1
-        return {exp: coeff for exp, coeff in digits.items() if coeff}
+        raw = self._rust_obj.canonical_poly()
+        return {int(exp): int(coeff) for exp, coeff in raw.items() if int(coeff)}
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, AoPValue):
             return NotImplemented
-        if int(self._rust_obj.base) != int(other._rust_obj.base):
-            return False
-        return self.canonical_digits() == other.canonical_digits()
+        return bool(self._rust_obj == other._rust_obj)
 
     def __str__(self) -> str:
         return self._rust_obj.__str__()

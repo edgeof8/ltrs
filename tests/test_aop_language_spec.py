@@ -73,3 +73,7 @@ class TestAoPLanguageSpec(unittest.TestCase):
         self.assertEqual(self.ev("1,00000"), "1,00000")
         self.assertEqual(self.ev("5,00000 + 2"), "5,00002")
         self.assertEqual(self.ev("1,00000"), self.ev("100000"))
+
+    def test_gcd_is_integer_gcd(self):
+        self.assertEqual(self.ev("48 gcd 18"), "6")
+        self.assertEqual(self.ev("c gcd a", mode="aop"), "a")

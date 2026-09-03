@@ -4,6 +4,8 @@ from __future__ import annotations
 from typing import Optional, Tuple
 
 from aopl_python_impl.aop_calculator import AoP_Calculator
+from aopl_python_impl.aop_formatter import format_as_aop, format_as_decimal_string
+from aopl_python_impl.constants import EXPONENT_TO_LETTER_MAP
 from aopl_python_impl.definitions import AoPError
 
 
@@ -32,26 +34,25 @@ def run_isolated_script_pair(
     temp_calculator.cache = None
     temp_calculator.variables = calculator.variables.copy()
 
-    final_num = ""
-    last_statement = ""
+    final_value = None
     for statement_text in statements:
         try:
-            result_str, _ = temp_calculator.evaluate_expression(
-                expression=statement_text,
-                mode="num",
-            )
-            final_num = result_str
-            last_statement = statement_text
+            value, _ = temp_calculator.evaluate(statement_text)
+            if value is not None:
+                final_value = value
         except AoPError as e:
             return f"Error: {e}", None
         except Exception as e:
             return f"Error: {type(e).__name__}: {str(e)}", None
 
     calculator.variables = temp_calculator.variables
+    if final_value is None:
+        return "", None
     try:
-        aop, _ = temp_calculator.evaluate_expression(last_statement, mode="aop")
-    except Exception:
-        return final_num, None
+        final_num = format_as_decimal_string(final_value)
+        aop = format_as_aop(final_value, EXPONENT_TO_LETTER_MAP)
+    except (AoPError, ValueError, OverflowError) as e:
+        return f"Error: {e}", None
     if not aop or aop == final_num:
         return final_num, None
     return final_num, aop

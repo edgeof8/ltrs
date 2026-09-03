@@ -55,3 +55,24 @@ class TestAoPCalculatorCLI(unittest.TestCase):
         self.assertEqual(returncode, 0, stderr)
         self.assertEqual(stdout, "110")
         self.assertNotIn("Performance", stdout)
+
+    def test_gcd(self):
+        stdout, stderr, returncode = self.run_cli(["c gcd a", "--mode", "aop", "--no-cache"])
+        self.assertEqual(returncode, 0, stderr)
+        self.assertEqual(stdout, "a")
+
+
+class TestAoPRepl(unittest.TestCase):
+    def test_mode_persists_for_next_expression(self):
+        from src.aopl_python_impl.aop_calculator import AoP_Calculator
+        from src.aopl_python_impl.aop_calculator_cli import handle_repl_command
+        from unittest.mock import patch
+
+        calc = AoP_Calculator(base=10)
+        session = {"mode": "num"}
+        printed = []
+        with patch("builtins.print", side_effect=lambda *a, **_k: printed.append(" ".join(str(x) for x in a))):
+            handle_repl_command("!mode aop", calc, None, session)
+            handle_repl_command("a * b", calc, None, session)
+        self.assertEqual(session["mode"], "aop")
+        self.assertIn("c", printed)

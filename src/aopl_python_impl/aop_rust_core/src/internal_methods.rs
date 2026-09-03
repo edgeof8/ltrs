@@ -229,6 +229,32 @@ impl AoPValue {
             self.base,
         ))
     }
+
+    /// Integer gcd of the two values, without expanding `B^k` when the units
+    /// parts fit in `u32` exponents. Writes `n = B^{v(n)} · u(n)` and returns
+    /// `B^{min(v)} · gcd(B^{|v1-v2|} u_hi, u_lo)`, computing the remaining gcd
+    /// via `B^e mod |u_lo|` so shared factors of the base are kept.
+    /// `gcd(0, n) = |n|`.
+    pub fn integer_gcd(&self, other: &Self) -> Result<Self, PolyDivError> {
+        if self.base != other.base {
+            return Err(PolyDivError::DifferentBases);
+        }
+        let a = self.as_distributed_poly();
+        let b = other.as_distributed_poly();
+        if is_zero_poly(&a) {
+            return Ok(Self::from_distributed_poly(abs_poly(&b), self.base));
+        }
+        if is_zero_poly(&b) {
+            return Ok(Self::from_distributed_poly(abs_poly(&a), self.base));
+        }
+        let (v1, u1) = strip_valuation(&a);
+        let (v2, u2) = strip_valuation(&b);
+        let v = if v1 < v2 { v1.clone() } else { v2.clone() };
+        let e1 = &v1 - &v;
+        let e2 = &v2 - &v;
+        let g_units = gcd_after_valuation(&u1, &e1, &u2, &e2, self.base)?;
+        Ok(mul_by_base_power(g_units, v, self.base))
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -248,4 +274,176 @@ fn leading_term(p: &HashMap<BigInt, BigInt>) -> Option<(BigInt, BigInt)> {
         .filter(|(_, c)| !c.is_zero())
         .max_by(|a, b| a.0.cmp(b.0))
         .map(|(e, c)| (e.clone(), c.clone()))
+}
+
+fn abs_poly(p: &HashMap<BigInt, BigInt>) -> HashMap<BigInt, BigInt> {
+    p.iter()
+        .filter(|(_, c)| !c.is_zero())
+        .map(|(e, c)| (e.clone(), c.abs()))
+        .collect()
+}
+
+fn strip_valuation(p: &HashMap<BigInt, BigInt>) -> (BigInt, HashMap<BigInt, BigInt>) {
+    let v = p
+        .iter()
+        .filter(|(_, c)| !c.is_zero())
+        .map(|(e, _)| e)
+        .min()
+        .cloned()
+        .unwrap_or_else(BigInt::zero);
+    let units = p
+        .iter()
+        .filter(|(_, c)| !c.is_zero())
+        .map(|(e, c)| (e - &v, c.clone()))
+        .collect();
+    (v, units)
+}
+
+fn poly_abs_int(p: &HashMap<BigInt, BigInt>, base: u32) -> Result<BigInt, BigInt> {
+    AoPValue::from_distributed_poly(p.clone(), base)
+        .try_to_numerical()
+        .map(|n| n.abs())
+}
+
+/// gcd(B^{e1} u1, B^{e2} u2) with at least one of e1, e2 zero after stripping
+/// the shared valuation.
+fn gcd_after_valuation(
+    u1: &HashMap<BigInt, BigInt>,
+    e1: &BigInt,
+    u2: &HashMap<BigInt, BigInt>,
+    e2: &BigInt,
+    base: u32,
+) -> Result<BigInt, PolyDivError> {
+    let n1 = poly_abs_int(u1, base);
+    let n2 = poly_abs_int(u2, base);
+    match (n1, n2) {
+        (Ok(a), Ok(b)) if e1.is_zero() && e2.is_zero() => Ok(a.gcd(&b)),
+        (Ok(a), Ok(b)) if e2.is_zero() => Ok(gcd_base_power_times(base, e1, &a, &b)),
+        (Ok(a), Ok(b)) if e1.is_zero() => Ok(gcd_base_power_times(base, e2, &b, &a)),
+        (Ok(a), Err(_)) if a.is_one() && e2.is_zero() => Ok(BigInt::one()),
+        (Err(_), Ok(b)) if b.is_one() && e1.is_zero() => Ok(BigInt::one()),
+        _ => Err(PolyDivError::ExponentTooLarge),
+    }
+}
+
+/// gcd(base^exp * units, other) via modular exponentiation. Does not expand
+/// `base^exp` when `exp` is huge.
+fn gcd_base_power_times(base: u32, exp: &BigInt, units: &BigInt, other: &BigInt) -> BigInt {
+    let w = other.abs();
+    if w.is_zero() {
+        return units.abs();
+    }
+    if w.is_one() {
+        return BigInt::one();
+    }
+    let bmod = BigInt::from(base).modpow(exp, &w);
+    let umod = units.abs() % &w;
+    (&bmod * umod % &w).gcd(&w)
+}
+
+fn mul_by_base_power(g: BigInt, v: BigInt, base: u32) -> AoPValue {
+    let val = AoPValue::from_numerical_internal(g.abs(), base);
+    if v.is_zero() {
+        return val;
+    }
+    let monomial = AoPValue::_new_internal(
+        BigInt::one(),
+        HashMap::from([(v, BigInt::one())]),
+        base,
+    );
+    &val * &monomial
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn from_n(n: i64, base: u32) -> AoPValue {
+        AoPValue::from_numerical_internal(BigInt::from(n), base)
+    }
+
+    fn monomial(exp: i64, base: u32) -> AoPValue {
+        AoPValue::_new_internal(
+            BigInt::one(),
+            HashMap::from([(BigInt::from(exp), BigInt::one())]),
+            base,
+        )
+    }
+
+    #[test]
+    fn gcd_small_integers() {
+        let g = from_n(48, 10).integer_gcd(&from_n(18, 10)).unwrap();
+        assert_eq!(g.try_to_numerical().unwrap(), BigInt::from(6));
+        let z = from_n(0, 10).integer_gcd(&from_n(18, 10)).unwrap();
+        assert_eq!(z.try_to_numerical().unwrap(), BigInt::from(18));
+    }
+
+    #[test]
+    fn gcd_powers_of_the_base() {
+        let c = monomial(3, 10);
+        let a = monomial(1, 10);
+        let g = c.integer_gcd(&a).unwrap();
+        assert_eq!(g.canonical_poly(), a.canonical_poly());
+    }
+
+    #[test]
+    fn gcd_huge_monomial_with_small_int() {
+        let huge = monomial(1 << 40, 10);
+        let twenty_five = from_n(25, 10);
+        let g = huge.integer_gcd(&twenty_five).unwrap();
+        assert_eq!(g.try_to_numerical().unwrap(), BigInt::from(25));
+    }
+
+    #[test]
+    fn gcd_common_power_of_the_base() {
+        let k: i64 = 1 << 40;
+        let left = monomial(k, 10);
+        let right = monomial(k - 1, 10);
+        let g = left.integer_gcd(&right).unwrap();
+        assert_eq!(
+            g.poly,
+            HashMap::from([(BigInt::from(k - 1), BigInt::one())])
+        );
+    }
+
+    #[test]
+    fn divide_monomials() {
+        let c = monomial(3, 10);
+        let a = monomial(1, 10);
+        let q = c.divide_poly(&a).unwrap();
+        assert_eq!(
+            q.canonical_poly(),
+            HashMap::from([(BigInt::from(2), BigInt::one())])
+        );
+    }
+
+    #[test]
+    fn canonical_eq_factored_and_carried() {
+        let factored = AoPValue::_new_internal(
+            BigInt::from(1024),
+            HashMap::from([(BigInt::from(20), BigInt::one())]),
+            10,
+        );
+        let t = monomial(20, 10);
+        let carried = &from_n(1024, 10) * &t;
+        assert!(factored.canonical_eq(&carried));
+        assert_eq!(
+            factored.canonical_poly(),
+            HashMap::from([
+                (BigInt::from(20), BigInt::from(4)),
+                (BigInt::from(21), BigInt::from(2)),
+                (BigInt::from(23), BigInt::one()),
+            ])
+        );
+    }
+
+    #[test]
+    fn mixed_bases_gcd_errors() {
+        let left = from_n(10, 10);
+        let right = from_n(10, 2);
+        assert_eq!(
+            left.integer_gcd(&right).unwrap_err(),
+            PolyDivError::DifferentBases
+        );
+    }
 }

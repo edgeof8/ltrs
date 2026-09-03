@@ -55,17 +55,12 @@ Every expression goes through a three-stage pipeline:
 The engine is designed to be easily imported and used by other applications, such as Cosmic Scratchpad and Cosmic Sheet.
 
 ```python
-from aopl_python_impl.aop_calculator import AoP_Calculator
+from aopl_python_impl import Calculator, AoPValue
 
-# Initialize the calculator for a specific base
-calc = AoP_Calculator(base=2)
-
-# Evaluate an expression
-expression = "5b^2d"
-result = calc.evaluate_expression(expression, mode="aop")
-
-print(f"The result of '{expression}' in base 2 is: {result}")
-# Output: The result of '5b^2d' in base 2 is: a^(g + c + a) + ...
+calc = Calculator(base=2)
+value, ast = calc.evaluate("5b^2d")
+print(calc.format_value(value, "aop"))
+# Output: a^(g + c + a) + ...
 ```
 
 From a checkout, install the package so the library and `ltrs` script are available:

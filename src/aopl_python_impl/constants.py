@@ -21,7 +21,9 @@ LETTER_TO_EXPONENT_MAP['z'] = 100 # 'z' is an alias for 'Z' for convenience.
 EXPONENT_TO_LETTER_MAP = {v: k for k, v in LETTER_TO_EXPONENT_MAP.items() if k != 'z'}
 
 # --- Tokenizer Regex ---
-TOKEN_REGEX = re.compile(r"(\*\*|==?|[+\-*/^()])")
+TOKEN_REGEX = re.compile(
+    r"(\$[a-zA-Z_][a-zA-Z0-9_]*|\bgcd\b|\*\*|==?|[+\-*/^()])"
+)
 
 # --- Operator Definitions ---
 # Defines the supported operators, their precedence, and their associativity.
@@ -36,6 +38,7 @@ OPERATORS = {
     '-': {'precedence': 3, 'associativity': 'left'},   # Subtraction
     '*': {'precedence': 4, 'associativity': 'left'},   # Multiplication
     '/': {'precedence': 4, 'associativity': 'left'},   # Division (integer)
+    'gcd': {'precedence': 4, 'associativity': 'left'},  # Integer gcd (reserved word)
     '^': {'precedence': 6, 'associativity': 'right'},  # Power (right-associative)
     '**': {'precedence': 6, 'associativity': 'right'}  # Power (alias)
 }

@@ -6,12 +6,22 @@
 # instantiate and use the AoP_Calculator class directly.
 
 from .aop_calculator import AoP_Calculator
+from .aop_value import AoPValue
 from .definitions import AoPError
 
-__all__ = ["evaluate_expression", "AoPError"]
+__all__ = ["evaluate", "evaluate_expression", "AoPError"]
 
 # Create a single, module-level instance to be reused.
 _shared_aop_calculator: AoP_Calculator = AoP_Calculator()
+
+def evaluate(expression_str: str) -> AoPValue:
+    """Evaluate an expression to an AoPValue, with no variables carried over."""
+    _shared_aop_calculator.variables.clear()
+    value, _ = _shared_aop_calculator.evaluate(expression_str)
+    if value is None:
+        raise AoPError("Empty expression.")
+    return value
+
 
 def evaluate_expression(expression_str: str) -> str:
     """
@@ -29,14 +39,5 @@ def evaluate_expression(expression_str: str) -> str:
     Raises:
         AoPError: If the expression cannot be evaluated.
     """
-    # Clear any variables from previous calls to ensure stateless behavior for this API
-    _shared_aop_calculator.variables.clear()
-
-    # We only care about the result string here, not the AST.
-    result_str, _ = _shared_aop_calculator.evaluate_expression(
-        expression=expression_str, mode="num")
-    return result_str
-
-# Note: For any functions that might rely on or modify calculator state (like variables),
-# it's generally better to require the user to instantiate and use AoP_Calculator directly.
-# This simplified API in aop_core.py is for very basic, stateless operations.
+    value = evaluate(expression_str)
+    return _shared_aop_calculator.format_value(value, "num")

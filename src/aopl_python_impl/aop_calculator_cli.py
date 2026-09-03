@@ -19,11 +19,13 @@ try:
 except ImportError:
     Console, Markdown = None, None
 
-def handle_repl_command(line: str, calc: AoP_Calculator, console):
+def handle_repl_command(line: str, calc: AoP_Calculator, console, session=None):
     """Processes a single line of input from the REPL."""
     line = line.strip()
     if not line:
         return
+    if session is None:
+        session = {"mode": "num"}
 
     # Meta-commands start with '!'
     if line.startswith('!'):
@@ -43,8 +45,8 @@ def handle_repl_command(line: str, calc: AoP_Calculator, console):
                 new_mode = parts[1].lower()
                 if new_mode not in ['num', 'aop']:
                     raise ValueError()
-                # We can store the mode on the calculator or handle it per call
-                print(f"Default output mode set to '{new_mode}'.") # For now, just a message.
+                session["mode"] = new_mode
+                print(f"Default output mode set to '{new_mode}'.")
             except (IndexError, ValueError):
                 print("Usage: !mode <num|aop>")
         elif command in ['!exit', '!quit']:
@@ -61,7 +63,7 @@ def handle_repl_command(line: str, calc: AoP_Calculator, console):
                 enable_debug_timer()
             try:
                 with capture_logs() as log_buffer:
-                    result, ast = calc.evaluate_expression(expression)
+                    result, ast = calc.evaluate_expression(expression, mode=session["mode"])
                 debug_log = log_buffer.getvalue()
             except AoPError as e:
                 print(f"Error: {e}")
@@ -85,8 +87,10 @@ def handle_repl_command(line: str, calc: AoP_Calculator, console):
             print(f"Unknown command: {command}. Type !help for options.")
     else:
         try:
-            result, _ = calc.evaluate_expression(line, mode="num")
-            print(result)
+            value, _ = calc.evaluate(line)
+            if value is None:
+                return
+            print(calc.format_value(value, session["mode"]))
         except AoPError as e:
             print(f"Error: {e}")
 
@@ -108,19 +112,19 @@ def start_interactive_session(conversation):
         except Exception as e:
             print(f"Error during interaction: {e}")
 
-def start_repl():
+def start_repl(base: int = 10, mode: str = "num"):
     """Starts the interactive REPL session."""
     print(f"Welcome to the Alphabet of Powers (AoP) Calculator.")
     print("Type an expression, or `!help` for meta-commands. `!exit` or Ctrl+C to quit.")
 
-    # Create a single, persistent calculator for the session
-    calc = AoP_Calculator()
+    calc = AoP_Calculator(base=base)
     console = Console() if Console else None
+    session = {"mode": mode}
 
     while True:
         try:
-            line = input(f"aopl(b{calc.base})> ")
-            handle_repl_command(line, calc, console)
+            line = input(f"aopl(b{calc.base}/{session['mode']})> ")
+            handle_repl_command(line, calc, console, session)
         except (EOFError, KeyboardInterrupt):
             print("\nExiting.")
             break
@@ -153,9 +157,9 @@ def main():
             print("Could not start AI help session. Please check your configuration.")
         return
 
-    # If no expression is provided and we're not in help mode, show help.
+    # If no expression is provided, start the REPL (the engine's face).
     if not args.expression:
-        parser.print_help()
+        start_repl(base=args.base, mode=args.mode)
         return
 
     # --- Calculation Mode ---

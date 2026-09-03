@@ -38,8 +38,8 @@ Parentheses still group and can imply multiplication in the usual way:
 
 ## Operators
 
-Precedence, high to low: `^` / `**` (right-associative), then `*` and `/`
-(left-associative), then `+` and `-`, then `==` (left-associative), then
+Precedence, high to low: `^` / `**` (right-associative), then `*`, `/`, and
+`gcd` (left-associative), then `+` and `-`, then `==` (left-associative), then
 `=` (right-associative). So `cQ == Q + c` is `cQ == (Q + c)`, not
 `(cQ == Q) + c`.
 
@@ -51,6 +51,11 @@ Precedence, high to low: `^` / `**` (right-associative), then `*` and `/`
   division when carrying has already rewritten a constant as \(X^1\)).
   `c / a` is `b`. `a / b`, `(a + 1) / a`, and `a / 0` raise `AoPError`.
   There is no truncating integer division and no fraction type.
+- `gcd` is integer gcd, written infix (`48 gcd 18`, `c gcd a`). It has the
+  same precedence as `*` and `/`, and is left-associative. The word `gcd` is
+  reserved: it is not the three-letter sum \(g+c+d\). Write `g+c+d` for that.
+  The engine factors out powers of the base first, so `Z gcd Y` is `Y` and
+  `B^{2^{40}} gcd 25` is `25` without expanding the left integer.
 - `==` compares **canonical polynomials** of the same base: distribute the
   leading coefficient into \(\mathbb{Z}[X]\), carry until digits lie in
   \(\{0,\ldots,B-1\}\), and compare the resulting sparse maps. It does not
@@ -75,7 +80,7 @@ Precedence, high to low: `^` / `**` (right-associative), then `*` and `/`
 
 Library code raises `AoPError`. The CLI prints `Error: …` and exits 1.
 Scratchpad nodes and Sheet cells still show that prefix. Mixed calculator
-bases on `+`, `-`, `*`, `/`, or `^` are errors, not panics.
+bases on `+`, `-`, `*`, `/`, `^`, or `gcd` are errors, not panics.
 
 ## Spreadsheet bindings (Cosmic Sheet)
 

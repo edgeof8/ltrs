@@ -29,8 +29,7 @@ def tokenize_expression(expression: str) -> List[Token]:
     # - ==?                        : Finds equality '==' and assignment '=' (Note: '=' is handled separately below)
     # - [+\-*/^()]                 : Finds single-character operators and parentheses
     expression = strip_digit_group_commas(expression)
-    token_regex = re.compile(r"(\$[a-zA-Z_][a-zA-Z0-9_]*|\*\*|==?|[+\-*/^()])")
-    raw_parts = [p.strip() for p in token_regex.split(expression) if p.strip()]
+    raw_parts = [p.strip() for p in TOKEN_REGEX.split(expression) if p.strip()]
     tokens = []
     pos = 0
     for part in raw_parts:

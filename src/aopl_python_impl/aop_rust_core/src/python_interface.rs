@@ -108,6 +108,14 @@ impl AoPValue {
             .collect()
     }
 
+    #[pyo3(name = "canonical_poly")]
+    pub fn canonical_poly_py(&self) -> HashMap<String, BigInt> {
+        self.canonical_poly()
+            .iter()
+            .map(|(e, c)| (e.to_string(), c.clone()))
+            .collect()
+    }
+
     fn __eq__(&self, other: &Self) -> bool {
         self.canonical_eq(other)
     }
@@ -158,6 +166,25 @@ impl AoPValue {
     }
     pub fn __neg__(&self) -> Self {
         self.neg()
+    }
+
+    pub fn gcd(&self, other: &Self) -> PyResult<Self> {
+        match self.integer_gcd(other) {
+            Ok(value) => Ok(value),
+            Err(crate::internal_methods::PolyDivError::DifferentBases) => {
+                Err(pyo3::exceptions::PyValueError::new_err(
+                    "Cannot operate on AoPValues with different bases.",
+                ))
+            }
+            Err(crate::internal_methods::PolyDivError::ExponentTooLarge) => {
+                Err(pyo3::exceptions::PyValueError::new_err(
+                    "Exponent does not fit in u32; cannot convert units for gcd.",
+                ))
+            }
+            Err(err) => Err(pyo3::exceptions::PyValueError::new_err(format!(
+                "gcd failed: {err:?}"
+            ))),
+        }
     }
 
     pub fn divide(&self, other: &Self) -> PyResult<Self> {
