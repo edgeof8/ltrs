@@ -5,7 +5,7 @@ build-backend = "maturin"
 [project]
 name = "aop-calculator"
 version = "0.1.0"
-description = "Alphabet of Powers calculator: sparse-polynomial arithmetic and Cosmic Scratchpad."
+description = "Alphabet of Powers calculator: sparse-polynomial arithmetic, Cosmic Scratchpad, and Cosmic Sheet."
 readme = "README.md"
 requires-python = ">=3.10"
 

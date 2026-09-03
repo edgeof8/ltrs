@@ -73,6 +73,21 @@ Precedence, high to low: `^` / `**` (right-associative), then `*` and `/`
 
 ## Errors
 
-Library code raises `AoPError`. The CLI prints `Error: …` and exits 1. The
-GUI still shows that prefix on the node. Mixed calculator bases on `+`, `-`,
-`*`, `/`, or `^` are errors, not panics.
+Library code raises `AoPError`. The CLI prints `Error: …` and exits 1.
+Scratchpad nodes and Sheet cells still show that prefix. Mixed calculator
+bases on `+`, `-`, `*`, `/`, or `^` are errors, not panics.
+
+## Spreadsheet bindings (Cosmic Sheet)
+
+Cosmic Sheet cells are ordinary AoP scripts. After a cell evaluates, its
+result is bound as `$A1`, `$B2`, … so other cells use the same `$name`
+language as Scratchpad. **Bare `A1` is not a cell** — it is letter `A`
+followed by the integer `1`.
+
+- A leading `=` is optional sugar (`=$A1 + 1` is `$A1 + 1`). `==` is still
+  comparison: `$A1 == c` is not an assignment.
+- `$a1` is rewritten to `$A1` (cell names are case-insensitive).
+- `$A1:$C2` expands to the sum of every cell in that rectangle
+  (`$A1 + $B1 + $C1 + $A2 + $B2 + $C2`). Empty cells count as 0. Fill and
+  paste shift both ends of the range the same way they shift a single
+  `$A1`.

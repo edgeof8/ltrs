@@ -10,6 +10,7 @@
     "A2": { "expr": "$x = c", "output_mode": "num" },
     "B2": { "expr": "$x / a", "output_mode": "num" },
     "A3": { "expr": "ba", "output_mode": "num" },
-    "B3": { "expr": "$A3 == 110", "output_mode": "num" }
+    "B3": { "expr": "$A3 == 110", "output_mode": "num" },
+    "C2": { "expr": "$A1:$B1", "output_mode": "num" }
   }
 }

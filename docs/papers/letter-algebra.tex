@@ -1,0 +1,473 @@
+% Letter Algebra
+% Prepared for the American Mathematical Monthly (article, not note).
+%
+% Initial submissions are double-anonymous: do not put author names in this
+% file. A separate title page and cover letter are required by the Monthly;
+% see letter-algebra-title.tex.
+%
+% If you have maa-monthly.sty from maa.org, you may replace the ams packages
+% below by \usepackage{maa-monthly} and omit amsmath/amsthm/amssymb/url
+% (that style already loads them). Generic article format is accepted.
+
+\documentclass{article}
+
+\usepackage{amsmath,amsthm,amssymb}
+
+\DeclareMathOperator{\ev}{ev}
+\DeclareMathOperator{\supp}{supp}
+
+\newcommand{\ZZ}{\mathbb{Z}}
+\newcommand{\NN}{\mathbb{N}}
+\newcommand{\rank}{r}
+\newcommand{\eqc}{\mathrel{\mathtt{==}}}
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}
+\newtheorem*{lemma*}{Lemma}
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\newtheorem*{certificate}{Certificate}
+
+\theoremstyle{remark}
+\newtheorem*{remark}{Remark}
+
+\title{Letter Algebra: Formal and Evaluational Identities\\
+in the Alphabet of Powers}
+\markright{Letter Algebra}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We treat the Latin letters as named monomials in \(\ZZ[X]\), evaluated at
+an integer base \(B \ge 2\). Concatenation of letters is addition of
+monomials, never multiplication. In this notation two classical facts become
+typographic. First, multiplying a sparse sum by a letter is a translation of
+the alphabet: \((Q+c)\cdot e = V+h\). Second, raising a scaled letter to a
+letter power peels the coefficient off as an ordinary integer in front of a
+monomial: \((2b)^a = 2^a\cdot b^a\), which at \(B=10\) is \(1024\cdot t\).
+We split identities into three layers---formal in \(\ZZ[X]\), covariant
+after evaluation at every \(B\), and named only at a particular
+base---and certify each layer by canonical polynomial equality, without
+expanding astronomical digit strings.
+\end{abstract}
+
+\noindent
+\textit{Mathematics Subject Classification.}
+11A63, 13F20, 68W30.
+
+\section{Letters as monomials.}
+\label{sec:letters}
+
+Fix an integer \(B \ge 2\), the \emph{calculator base}. Write \(X\) for an
+indeterminate. The \emph{rank map} \(\rank\) sends
+\(a,\dots,y\) to \(1,\dots,25\),
+\(A,\dots,Y\) to \(26,\dots,50\), and
+\(Z\) (with alias \(z\)) to \(100\).
+
+The \emph{letter embedding} is the map \(\varphi\) from letters to \(\ZZ[X]\)
+given by \(\varphi(\ell) = X^{\rank(\ell)}\). Evaluation
+\(\ev_B \colon \ZZ[X] \to \ZZ\) is \(p \mapsto p(B)\). The number a letter
+\emph{means} is \(\ev_B(\varphi(\ell)) = B^{\rank(\ell)}\). In base ten,
+\(a=10\), \(b=100\), \(c=10^3\), \(e=10^5\), \(q=10^{17}\), \(t=10^{20}\),
+\(O=10^{40}\), \(Q=10^{42}\), \(h=10^8\), \(V=10^{47}\), \(Z=10^{100}\).
+
+A general value is a sparse polynomial
+\(p = c_0 + \sum_i c_i X^{e_i}\) with \(c_i \in \ZZ\) and \(e_i \ge 1\).
+\emph{Carry} (canonical form) rewrites any such \(p\) so that every
+coefficient lies in \(\{0,1,\dots,B-1\}\). After carry, \(\ev_B\) is
+injective on canonical polynomials: this is ordinary uniqueness of
+base-\(B\) expansions~\cite{knuth97}.
+
+Arithmetic is performed in \(\ZZ[X]\). Decimal strings are requested only
+when a figure needs them. Equality of two expressions, written
+\(L \eqc R\), compares canonical polynomials of the same base. That is the
+certificate relation used below. It is not a comparison of decimal dumps.
+
+\section{Juxtaposition is addition.}
+\label{sec:juxtaposition}
+
+\begin{theorem}[Words are sparse sums]
+\label{thm:words}
+A finite word in letters and digit-letter chunks denotes the sum of its
+chunks. In particular, for letters \(\alpha,\beta\),
+\[
+\alpha\beta \;=\; \alpha + \beta \;=\; X^{\rank(\alpha)} + X^{\rank(\beta)}.
+\]
+Juxtaposition never multiplies. Multiplication is the operator \(*\).
+\end{theorem}
+
+\begin{proof}
+This is the grammar of the language. The content is that the free
+commutative monoid on the alphabet, sent by \(\varphi\), lands in the
+additive monoid of \(\ZZ[X]\).
+\end{proof}
+
+\begin{certificate}
+\texttt{cQ == Q + c} evaluates to \(1\). The word \(cQ\) is the
+two-spike polynomial \(X^{42}+X^3\).
+\end{certificate}
+
+A glued block such as \(2b\) or \(cQ\) is a single literal, so \(2b^a\) is
+\((2b)^a\) and \(cQ * e\) is \((c+Q)\cdot e\). That parsing is part of the
+notation, not an accident of precedence.
+
+\section{Translation of the alphabet.}
+\label{sec:translation}
+
+\begin{theorem}[Letter multiplication is rank addition]
+\label{thm:rank-add}
+For letters \(\alpha,\beta\),
+\[
+\alpha * \beta \;=\; X^{\rank(\alpha)+\rank(\beta)}.
+\]
+If \(\rank(\alpha)+\rank(\beta)\) is itself a named rank, the product
+\emph{is} that letter. In base-independent form: \(a*b=c\), \(e*Q=V\),
+\(e*c=h\).
+\end{theorem}
+
+\begin{proof}
+\(\varphi(\alpha)\varphi(\beta)
+= X^{\rank(\alpha)} X^{\rank(\beta)}
+= X^{\rank(\alpha)+\rank(\beta)}\).
+\end{proof}
+
+\begin{theorem}[Translation]
+\label{thm:translation}
+Let \(w = \sum_i \ell_i\) be a sum of letters and let \(\varepsilon\) be a
+letter. Then
+\[
+w * \varepsilon \;=\; \sum_i \ell_i'
+\]
+where \(\rank(\ell_i') = \rank(\ell_i) + \rank(\varepsilon)\). In the
+running example,
+\[
+(Q+c)\cdot e \;=\; V+h.
+\]
+\end{theorem}
+
+\begin{proof}
+Distribute and apply Theorem~\ref{thm:rank-add}:
+\(\rank(Q)+\rank(e)=42+5=47=\rank(V)\) and
+\(\rank(c)+\rank(e)=3+5=8=\rank(h)\).
+\end{proof}
+
+\begin{certificate}
+\texttt{cQ * e == V + h} and
+\texttt{cQ * 2e == 2*(V+h)}.
+\end{certificate}
+
+The second identity is the first with a scaled letter: \(2e = 2\cdot X^5\).
+One side may be stored as the factored pair \(2\cdot(V+h)\) and the other
+as the distributed polynomial \(2V+2h\). Canonical equality identifies
+them (Theorem~\ref{thm:canonical}). A printer may still show
+\(2\cdot(V+h)\) on the left---that is the figure, not a disagreement.
+
+This is Figure~\ref{fig:translation}. In decimal form the same identity is
+a digit string that begins \(100\) and ends \(01000\,00000\): the two
+spikes have moved five places. The letter line underneath \emph{names}
+the move.
+
+The rank map is a homomorphism from the multiplicative monoid of letters
+(under \(*\)) to \((\NN,+)\). Translation by \(\varepsilon\) is the action
+of adding \(\rank(\varepsilon)\) on ranks, hence a shift of the alphabet.
+The same action on a sparse sum is Theorem~\ref{thm:translation}.
+
+\begin{figure}[htbp]
+\centering
+\begin{tabular}{lll}
+Expression & Polynomial & Named form \\
+\hline
+\(cQ\) & \(X^{42}+X^3\) & \(Q+c\) \\
+\(cQ * e\) & \(X^{47}+X^8\) & \(V+h\) \\
+\(cQ * 2e\) & \(2X^{47}+2X^8\) & \(2(V+h)\) \\
+\end{tabular}
+\caption{Translation of a two-spike word by the letter \(e\).
+Juxtaposition is the sum; \(*\) shifts ranks.}
+\label{fig:translation}
+\end{figure}
+
+\section{Support gaps and carry.}
+\label{sec:gaps}
+
+\begin{theorem}[Support gap]
+\label{thm:gap}
+Let \(p,q \in \ZZ[X]\) be canonical, with \(\supp(p)\) and \(\supp(q)\)
+disjoint, and \(\min\supp(p) > \max\supp(q)\). Then \(p+q\) is already
+canonical, and the base-\(B\) digit string of \(\ev_B(p+q)\) is the digit
+string of \(\ev_B(p)\) followed by exactly
+\(\min\supp(p) - \operatorname{width}(q)\) zeros, followed by the digit string of
+\(\ev_B(q)\). In particular there is no carry from \(q\) into \(p\).
+\end{theorem}
+
+\begin{proof}
+Canonical form only carries when a coefficient is \(\ge B\). Disjoint
+supports add coefficientwise with no collision, so no carry is created.
+The base-\(B\) layout of a polynomial is digits sitting at place-values
+\(B^e\) for \(e\) in the support; a gap in support is a run of zeros.
+\end{proof}
+
+For \(Q+c\) the gap is \(42-3=39\) place-values. This is why \(cQ\) looks
+like a \(100\) and a \(01000\) with nothing in between, and why adding
+\(c\) to \(Q\) does not perturb the high spike.
+
+Carry \emph{does} matter for identities such as \(10 \eqc a\) in base ten:
+the constant \(10\) is rewritten as \(X^1\). Formal division in
+\(\ZZ[X]\) and integer division after carry can therefore disagree about
+the \emph{route}, even when they agree about the integer quotient. That
+distinction belongs in a remark, not the lead.
+
+\section{The coefficient-power law.}
+\label{sec:coeff}
+
+\begin{theorem}[Coefficient-power]
+\label{thm:coeff}
+Let \(k \in \ZZ\) and let \(n,m \ge 0\). After evaluation at \(B\),
+\[
+\bigl(k \cdot B^n\bigr)^{B^m} \;=\; k^{B^m} \cdot B^{n B^m}.
+\]
+In letters: \((kb)^{B^m}\) with \(\rank(b)=n\) is \(k^{B^m}\) times the
+monomial of rank \(n B^m\). Taking \(k=2\), \(n=2\), \(m=1\):
+\[
+(2b)^a \;=\; 2^a \cdot b^a.
+\]
+\end{theorem}
+
+\begin{proof}
+\((k B^n)^{B^m} = k^{B^m} (B^n)^{B^m} = k^{B^m} B^{n B^m}\).
+\end{proof}
+
+This identity is \emph{not} an identity in \(\ZZ[X]\). The exponent \(a\)
+is the integer \(B\), not the indeterminate. It is nevertheless true for
+every \(B \ge 2\). Call such identities \emph{base-covariant}.
+
+At \(B=10\), \(2^a = 2^{10} = 1024\) and
+\(b^a = (10^2)^{10} = 10^{20} = t\), so \((2b)^a = 1024 \cdot t\).
+Doubling the exponent,
+\((2b)^{2a} = 2^{20} \cdot b^{2a} = 1048576 \cdot O\). Binary powers
+appear as coefficients of decimal monomials. That is
+Figure~\ref{fig:coeff}.
+
+A value may be stored as a pair \((k,p)\): a leading coefficient times a
+sparse polynomial. Raising the scaled monomial \(2b = 2\cdot X^2\) to the
+tenth power keeps the factor, printed \(1024\cdot t\). Multiplying the
+already-carried integer \(2^a\) by \(t\) distributes that factor and
+carries, printed \(w + 2u + 4t\). Both evaluate to the same twenty-four
+digit integer \(1024\) followed by twenty zeros. They are the same integer
+in two presentations.
+
+\begin{lemma*}[Digit expansion of a scaled monomial]
+For \(k \ge 0\) and \(e \ge 0\), if \(k = \sum_{i=0}^d k_i B^i\) is the
+canonical base-\(B\) expansion of \(k\), then
+\[
+k \cdot X^e \;=\; \sum_{i=0}^d k_i X^{e+i}
+\]
+in \(\ZZ[X]/(X-B)\) after carry. At \(B=10\), \(k=1024\), \(e=20\), this
+is \(1024\cdot t = w + 2u + 4t\).
+\end{lemma*}
+
+\begin{proof}
+Carry is the rewriting \(B^i X^e = X^{e+i}\) in the quotient by \(X-B\).
+Apply it to each digit of \(k\).
+\end{proof}
+
+\begin{certificate}
+\texttt{(2b)$^a$ == $2^a$ * (b$^a$)} and
+\texttt{2b$^a$ == 1024 * t} both evaluate to \(1\). The printed
+strings remain distinct: that is the lemma, not a failure of the identity.
+Subtraction of two presentations is not the certificate; \(\eqc\) is.
+\end{certificate}
+
+\begin{figure}[htbp]
+\centering
+\begin{tabular}{lll}
+Expression & Factored form & Carried form \\
+\hline
+\(b^a\) & \(t\) & \(t\) \\
+\((2b)^a\) & \(1024\cdot t\) & \(w+2u+4t\) \\
+\((2b)^{2a}\) & \(1048576\cdot O\) & carry of \(2^{20}X^{40}\) \\
+\end{tabular}
+\caption{Coefficient-power at \(B=10\). The factor \(2^{B^m}\) sits in
+front of a decimal monomial; carry redistributes it as digits.}
+\label{fig:coeff}
+\end{figure}
+
+\section{Formal versus evaluational identities.}
+\label{sec:layers}
+
+\begin{definition}
+\label{def:layers}
+An identity \(L = R\) written in letters is
+\begin{itemize}
+\item \emph{Layer~I} (formal) if it holds in \(\ZZ[X]\) before evaluation
+(Theorems~\ref{thm:words}--\ref{thm:translation});
+\item \emph{Layer~II} (covariant) if \(\ev_B(L)=\ev_B(R)\) for every
+\(B \ge 2\), while the two sides need not be the same element of
+\(\ZZ[X]\) before the exponent is evaluated (Theorem~\ref{thm:coeff})---after
+canonical presentation they still compare equal;
+\item \emph{Layer~III} (named) if it uses a letter or a decimal numeral on
+the right-hand side whose rank (or value) equals a \(B\)-dependent
+quantity, so it holds only for particular \(B\)
+(Theorem~\ref{thm:naming}).
+\end{itemize}
+\end{definition}
+
+The same identities, re-evaluated at a new base, separate the layers.
+Changing the base does not convert a finished decimal dump; it reinterprets
+every letter as a power of the new \(B\).
+
+\begin{theorem}[Naming at base ten]
+\label{thm:naming}
+The following are equivalent to \(B=10\):
+\begin{enumerate}
+\item \(b^a = t\), because \(b^a = B^{2B}\) and \(t = B^{20}\);
+\item \(b^{2a} = O\), because \(2B\cdot B = 40\);
+\item \(2^a = 1024\).
+\end{enumerate}
+\end{theorem}
+
+\begin{proof}
+Immediate from the rank map and Theorem~\ref{thm:coeff}.
+\end{proof}
+
+At every base the Layer~I and Layer~II certificates remain \(1\). The
+Layer~III certificates become \(0\). Table~\ref{tab:certs} records the
+experiment at \(B=2\), \(10\), and \(16\). Figure~\ref{fig:basechange}
+shows where the names went.
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{lcccc}
+Identity & Layer & \(B=2\) & \(B=10\) & \(B=16\) \\
+\hline
+\texttt{cQ * e == V + h} & I & \(1\) & \(1\) & \(1\) \\
+\texttt{(2b)$^a$ == $2^a$ * (b$^a$)} & II & \(1\) & \(1\) & \(1\) \\
+\texttt{b$^a$ == t} & III & \(0\) & \(1\) & \(0\) \\
+\texttt{2$^a$ == 1024} & III & \(0\) & \(1\) & \(0\) \\
+\texttt{2b$^a$ == 1024 * t} & III & \(0\) & \(1\) & \(0\) \\
+\end{tabular}
+\caption{The same certificates at three bases. Layers~I and~II are
+invariant; named equalities live at \(B=10\).}
+\label{tab:certs}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\begin{tabular}{llll}
+Expression & \(B=2\) & \(B=10\) & \(B=16\) \\
+\hline
+\(a\) & \(2\), \(a\) & \(10\), \(a\) & \(16\), \(a\) \\
+\(b^a\) & \(16\), \(d\) & \(10^{20}\), \(t\) & \(16^{32}\), \(G\) \\
+\(t\) & \(2^{20}\), \(t\) & \(10^{20}\), \(t\) & \(16^{20}\), \(t\) \\
+\(2^a\) & \(4\), \(b\) & \(1024\), \(c+2a+4\) & \(65536\), \(d\) \\
+\((2b)^a\) & \(64\), \(4\cdot d\) & \(1024\cdot 10^{20}\), \(1024\cdot t\)
+  & \(65536\cdot 16^{32}\), \(65536\cdot G\) \\
+\(2^a\cdot b^a\) & \(64\), \(f\) & same integer, \(w+2u+4t\)
+  & same integer, \(K\) \\
+\end{tabular}
+\caption{Values, not certificates. Each cell is the integer and its
+printed monomial form. Letters name ranks, not decimal numbers.}
+\label{fig:basechange}
+\end{figure}
+
+Letters name \emph{ranks}, not decimal numbers. At \(B=2\),
+\(b^a = (2^2)^2 = 2^4 = d\), while \(t\) is still the letter of rank
+\(20\). The identity \(b^a = t\) asked a rank-\(20\) letter to equal a
+rank that depends on \(B\). It fails as soon as \(2B \ne 20\). The
+numeral \(1024\) is the same kind of object: it is \(2^{10}\), hence
+Layer~III.
+
+Layer~II never mentions those names. \((2b)^a = 2^a \cdot b^a\) holds at
+\(B=2\) as \(64=64\), and at \(B=16\) as two forty-digit integers that
+\(\eqc\) identifies without printing them.
+
+At \(B=2\) the factored form of \((2b)^a\) is \(4\cdot d\) and the
+carried form is \(f\), because \(4\cdot X^4 = X^6\) after carry in base
+\(2\). At \(B=16\) the coefficient \(2^{16}=65536=16^4\) is itself a
+monomial, so \(65536\cdot G\) carries all the way to the single letter
+\(K\) (rank \(32+4=36\)). At \(B=10\) the coefficient \(1024\) is
+\emph{not} a power of ten, so the factored line \(1024\cdot t\) and the
+carried line \(w+2u+4t\) remain visibly different. Canonical equality
+identifies all three pairs (Theorem~\ref{thm:canonical}). The printer is
+allowed to show the factor; the certificate is not allowed to care.
+
+\begin{remark}[When \(2^B\) is a monomial]
+\(2^B = B^k\) for an integer \(k \ge 0\) if and only if
+\(B = 2^{2^m}\) for some \(m \ge 0\)
+(\(B = 2, 4, 16, 256, \ldots\)). In that case \(2^a\) is a unit monomial
+and the two printed presentations of \((2b)^a\) collapse to one letter
+after carry. Base ten is interesting precisely because it is \emph{not}
+on that list: the binary coefficient is forced to sit in front of a
+decimal monomial, which is the picture in Figure~\ref{fig:coeff}.
+\end{remark}
+
+\begin{proof}
+If \(B\) has an odd prime factor then \(B^k\) does too, while \(2^B\)
+does not. Write \(B=2^s\). Then \(2^{sk}=2^B\) gives \(k=2^s/s\), so
+\(s \mid 2^s\), hence \(s\) is a power of \(2\).
+\end{proof}
+
+\section{Canonical presentation.}
+\label{sec:canonical}
+
+An Alphabet of Powers value is a pair
+\((k,p) \in \ZZ \times \ZZ[X]\). The empty polynomial is the unit for
+multiplication by \(k\): it denotes the constant \(k\), equivalently
+\(k X^0\). Write \(D(k,p) = k\cdot p \in \ZZ[X]\) for the
+\emph{distributed} polynomial, and write \(C\) for carry into digits in
+\(\{0,1,\dots,B-1\}\).
+
+\begin{theorem}[Canonical presentation]
+\label{thm:canonical}
+For non-negative values, \(C(D(k,p))\) is the unique canonical base-\(B\)
+expansion of the integer \(k\cdot p(B)\). In particular
+\[
+(k,p) \sim (k',p') \quad\text{iff}\quad C(D(k,p)) = C(D(k',p'))
+\]
+if and only if \(\ev_B(k p) = \ev_B(k' p')\). The relation \(\sim\) does
+not require writing that integer.
+\end{theorem}
+
+\begin{proof}
+Uniqueness of base-\(B\) expansions of non-negative integers. Carry is
+exactly the rewriting
+\(c X^e \mapsto (c \bmod B) X^e + \lfloor c/B\rfloor X^{e+1}\)
+until every coefficient is a digit. Two polynomials with digits in
+\(\{0,\ldots,B-1\}\) evaluate equally if and only if they are identical.
+\end{proof}
+
+The relation \(\eqc\) is \(\sim\). The stored pair \((k,p)\) may be
+printed without forcing \(C\circ D\), which is why \((2b)^a\) still reads
+\(1024\cdot t\) while \(2^a \cdot b^a\) reads \(w+2u+4t\). The
+certificate does not care. Decimal evaluation is \(\ev_B\), used for
+figures, not for equality.
+
+A glued comparison such as \texttt{cQ == Q + c} requires
+\(\eqc\) to bind looser than \(+\). Without that, the parser would read
+\texttt{(cQ == Q) + c} and return the letter \(c\).
+
+\section{Closing remarks.}
+\label{sec:close}
+
+We do not claim a new theorem of number theory. We claim a language in
+which two classical identities are \emph{seen}, a three-layer split that
+base change makes experimental, and a certificate relation that does not
+require writing the numbers the identities are about.
+
+Hyperpower collapse---\(Z^e = a^g\) at base ten, without writing
+\(10^{10^7}\) digits---is a companion note. The multinomial theorem, and
+the identity \(\gcd(B^i,B^j)=B^{\min(i,j)}\) on letters, remain further
+sequels.
+
+\begin{thebibliography}{1}
+
+\bibitem{knuth97}
+D.~E. Knuth,
+\textit{The Art of Computer Programming}, Vol.~2:
+\textit{Seminumerical Algorithms}, 3rd~ed.,
+Addison-Wesley, Reading, MA, 1997.
+
+\end{thebibliography}
+
+\end{document}

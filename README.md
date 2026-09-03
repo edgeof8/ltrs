@@ -1,15 +1,15 @@
-# Cosmic Scratchpad & The Alphabet of Powers Engine
+# Cosmic Scratchpad, Cosmic Sheet & The Alphabet of Powers Engine
 
-Welcome to the Alphabet of Powers (AoP) project, a suite featuring a powerful symbolic algebra engine and the **Cosmic Scratchpad**—an innovative, node-based graphical environment for exploring numbers of all scales, from the everyday to the truly astronomical.
+Welcome to the Alphabet of Powers (AoP) project: a symbolic algebra engine and two GUIs over the **same calculator core**. **Cosmic Scratchpad** is a node-based canvas. **Cosmic Sheet** is a spreadsheet. Both are for exploring numbers of all scales, from the everyday to the astronomical.
 
-This is more than just a calculator; it's a visual tool for exploring number theory, symbolic algebra, and the very limits of computation in an interactive, infinite canvas.
+This is more than a calculator: it is a visual tool for number theory, symbolic algebra, and the limits of computation.
 
 
 *(A sample session showing variable dependencies, slash commands, and calculations.)*
 
 ## I. The Cosmic Scratchpad GUI
 
-The Cosmic Scratchpad is the heart of the project—an interactive, graphical environment for AoP calculations and mathematical exploration.
+The Cosmic Scratchpad is the canvas GUI—an interactive, graphical environment for AoP calculations and mathematical exploration.
 
 **Key Features:**
 
@@ -45,21 +45,47 @@ From a checkout, `python main.py` still launches the same packaged app.
 
 ## I.b Cosmic Sheet (web spreadsheet)
 
-A second entry over the **same calculator core**, laid out as a spreadsheet instead of a free canvas. Each cell is an AoP script. The cell’s result is bound as `$A1`, `$B2`, … so other cells can reference it with the existing `$var` language. Named assignments (`$x = a*b`) still work.
+Cosmic Sheet is the grid entry over the **same AoP engine** as Scratchpad. Each cell is an AoP script. After it evaluates, the result is bound as `$A1`, `$B2`, … so other cells use the existing `$name` language. Named assignments (`$x = a*b`) still work. Bare `A1` is letter `A` plus the digit `1`, not a cell.
 
+Example (the in-app **Demo** button):
+
+```
+A1  a * b          → 1000
+B1  $A1 + 1        → 1001
+C1  $A1 == c       → True
+C2  $A1:$B1        → 2001
+A3  ba             → 110
+```
+
+**Key Features:**
+
+*   **Stacked cells:** source on the first line, `→` result under it, AoP fingerprint when it differs. Huge values stay inside the cell (ellipsis); the strip under the formula bar shows the full value, selectable to copy.
+*   **Cell references:** other cells read this one as `$A1`. A leading `=` is optional (`=$A1+1`). `$a1` is the same as `$A1`. `$A1 == c` is comparison, not assignment.
+*   **Ranges:** `$A1:$C1` sums that rectangle (juxtaposition/addition). Empty cells count as 0.
+*   **Click-to-insert:** while editing, click another cell to insert `$B2`. Shift+click extends the last inserted ref to a range (`$B2:$D4`).
+*   **Spreadsheet selection:** drag across cells, Shift+click / Shift+arrows, or click a row/column header. Corner or Ctrl+A selects the sheet. Enter/Tab walk the current block; Esc collapses it.
+*   **Fill and paste:** drag the blue square, or Ctrl+D / Ctrl+R, to fill. Copy/paste is TSV; `$A1`-shaped names shift like a spreadsheet.
+*   **Column and row sizes:** drag a header edge, or set W / H for the selected column and row. Double-click a handle to reset. Taller rows wrap; values still truncate to the column width.
+*   **Primary line:** the toolbar **Primary** dropdown is the default for *new* cells (`num` or `aop`). Right-click a cell to swap that cell only.
+*   **Slash commands** in a cell: `/help`, `/vars`, `/base`, `/setbase <n>`, `/letters`, `/constants`.
+*   **Files:** save/load `.cosmic-sheet.json`. The last sheet also autosaves in the browser. **Demo** loads a short example (`examples/variables.cosmic-sheet.json` is the same idea).
+
+**Running Cosmic Sheet:**
 ```bash
 pip install -e ".[web]"
 cosmic-sheet
 ```
 
-From a checkout, `python web.py` opens the same app at `http://127.0.0.1:8765`. Right-click a cell to swap num/aop as the primary line. Save/load uses `.cosmic-sheet.json`.
+From a checkout, `python web.py` opens the same app at `http://127.0.0.1:8765`.
 
-If `aop-calculator` is already installed and `pip install -e ".[web]"` fails on Windows because `aop_rust_core*.pyd` is in use, install the web deps without rebuilding:
+If `aop-calculator` is already installed and `pip install -e ".[web]"` fails on Windows because `aop_rust_core*.pyd` is in use (Scratchpad or Sheet still running), install the web deps without rebuilding:
 
 ```bash
 python -m pip install fastapi uvicorn
 python web.py
 ```
+
+Hard-refresh the browser after pulling UI changes (`app.js` / `style.css` are versioned).
 
 ## II. The Alphabet of Powers (Core Concept)
 
@@ -80,7 +106,7 @@ The engine can represent numbers as polynomials in this system, providing a uniq
 
 ## III. The AoP Engine (CLI)
 
-Underpinning the Cosmic Scratchpad is a robust command-line engine that can also be used independently for quick calculations.
+Underpinning both GUIs is a robust command-line engine that can also be used independently for quick calculations.
 
 **Engine Features:**
 
@@ -176,13 +202,14 @@ You need a working **Rust toolchain** (for the `aop_rust_core` extension) and Py
 
 ## Project Structure
 
-The project is organized into a primary GUI application and a core symbolic engine library.
+The project is organized into two GUIs and a core symbolic engine library.
 
 -   `/` (Root Directory)
     -   `main.py`: Checkout launcher for Cosmic Scratchpad (same as `cosmic-scratchpad`).
     -   `web.py`: Checkout launcher for Cosmic Sheet (same as `cosmic-sheet`).
     -   `README.md`: **This file.**
-    -   `docs/aop-language-spec.md`: The language the engine implements.
+    -   `docs/aop-language-spec.md`: The language the engine implements (including Sheet `$A1` / `$A1:$C1` bindings).
+    -   `examples/variables.cosmic-sheet.json`: Sample Cosmic Sheet file.
 -   `/src/aopl_python_impl/`
     -   `gui/`: Cosmic Scratchpad (canvas, nodes, slash commands). Entry: `scratchpad.py`.
     -   `webgui/`: Cosmic Sheet (spreadsheet UI + FastAPI). Entry: `webgui/server.py`.

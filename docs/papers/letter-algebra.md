@@ -349,5 +349,9 @@ require writing the numbers the identities are about.
   at bases 2, 10, 16.
 - **Voice.** Write as mathematics with an instrument, not as a description
   of software. Name the engine once, in §7.
-- **LaTeX.** Convert this file once §1–7 are stable. Monthly style,
-  theorem–proof, three figures, one table of certificates.
+- **LaTeX.** `docs/papers/letter-algebra.tex` is the Monthly manuscript
+  (generic `article` class, theorem–proof, three figures, one certificate
+  table). Author names are omitted for double-anonymous review; use
+  `docs/papers/letter-algebra-title.tex` as the separate title page.
+  Drop in `maa-monthly.sty` from maa.org if desired; the Monthly also
+  accepts this generic format.

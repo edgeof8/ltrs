@@ -1,8 +1,8 @@
 # Alphabet of Powers (AoP) Engine
 
-This directory contains the core symbolic algebra engine for the **Cosmic Scratchpad** project. It is a standalone Python library designed for arbitrary-precision arithmetic using a novel symbolic representation called the "Alphabet of Powers."
+This directory contains the core symbolic algebra engine for **Cosmic Scratchpad** and **Cosmic Sheet**. It is a standalone Python library designed for arbitrary-precision arithmetic using a novel symbolic representation called the "Alphabet of Powers."
 
-While the main graphical interface is the primary way to interact with the system, this engine can be used directly as a command-line tool or imported as a library into other Python projects.
+The two GUIs (canvas and spreadsheet) are the usual way to interact with the system. This engine can also be used directly as a command-line tool or imported as a library into other Python projects.
 
 ## Core Design Philosophy
 
@@ -52,7 +52,7 @@ Every expression goes through a three-stage pipeline:
 
 ## Usage as a Library
 
-The engine is designed to be easily imported and used by other applications, such as the Cosmic Scratchpad GUI.
+The engine is designed to be easily imported and used by other applications, such as Cosmic Scratchpad and Cosmic Sheet.
 
 ```python
 from aopl_python_impl.aop_calculator import AoP_Calculator
@@ -78,7 +78,7 @@ python -m aopl_python_impl.aop_calculator_cli "5b^2d" --base 2 --mode aop --debu
 
 `pip install -e ".[gui]"` also installs Cosmic Scratchpad. Launch it with `cosmic-scratchpad` (or `python main.py` from a checkout). The GUI lives in `aopl_python_impl.gui`.
 
-`pip install -e ".[web]"` installs Cosmic Sheet, a spreadsheet web UI over the same `AoP_Calculator`. Launch it with `cosmic-sheet` (or `python web.py`). Cells bind as `$A1`, `$B2`, … and evaluate through `gui.script_eval`.
+`pip install -e ".[web]"` installs Cosmic Sheet, a spreadsheet web UI over the same `AoP_Calculator`. Launch it with `cosmic-sheet` (or `python web.py` from a checkout). Cells bind as `$A1`, `$B2`, … ; `$A1:$C1` sums a rectangle; evaluation goes through `gui.script_eval`. The UI lives in `aopl_python_impl.webgui`.
 
 ## The Calculation Report (`--debug` mode)
 
