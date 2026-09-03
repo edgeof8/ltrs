@@ -1,0 +1,88 @@
+{
+  "version": "0.3",
+  "base": 2,
+  "nodes": [
+    {
+      "type": "calculation",
+      "expression": "cQ * e == V + h",
+      "output_mode": "aop",
+      "pos_x": 40,
+      "pos_y": 80,
+      "width": 280,
+      "height": 80
+    },
+    {
+      "type": "calculation",
+      "expression": "(2b)^a == 2^a * (b^a)",
+      "output_mode": "aop",
+      "pos_x": 340,
+      "pos_y": 80,
+      "width": 320,
+      "height": 80
+    },
+    {
+      "type": "calculation",
+      "expression": "b^a == t",
+      "output_mode": "aop",
+      "pos_x": 680,
+      "pos_y": 80,
+      "width": 240,
+      "height": 80
+    },
+    {
+      "type": "calculation",
+      "expression": "2^a == 1024",
+      "output_mode": "aop",
+      "pos_x": 940,
+      "pos_y": 80,
+      "width": 240,
+      "height": 80
+    },
+    {
+      "type": "calculation",
+      "expression": "b^a",
+      "output_mode": "aop",
+      "pos_x": 40,
+      "pos_y": 220,
+      "width": 220,
+      "height": 80
+    },
+    {
+      "type": "calculation",
+      "expression": "t",
+      "output_mode": "aop",
+      "pos_x": 280,
+      "pos_y": 220,
+      "width": 220,
+      "height": 80
+    },
+    {
+      "type": "calculation",
+      "expression": "(2b)^a",
+      "output_mode": "aop",
+      "pos_x": 520,
+      "pos_y": 220,
+      "width": 260,
+      "height": 80
+    },
+    {
+      "type": "calculation",
+      "expression": "2^a * (b^a)",
+      "output_mode": "aop",
+      "pos_x": 800,
+      "pos_y": 220,
+      "width": 260,
+      "height": 80
+    }
+  ],
+  "drawing_items": [
+    {
+      "type": "text_note",
+      "text": "Figure 3. Base 2. Layer I and II stay 1. Layer III (b^a == t, 2^a == 1024) is 0. b^a is d, not t. (2b)^a is 4*(d); carried form is f.",
+      "pos_x": 40,
+      "pos_y": 10,
+      "width": 720,
+      "height": 50
+    }
+  ]
+}

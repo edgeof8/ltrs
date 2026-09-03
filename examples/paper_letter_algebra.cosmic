@@ -58,11 +58,11 @@
     },
     {
       "type": "calculation",
-      "expression": "b^a == t",
+      "expression": "cQ * 2e == 2 * (V + h)",
       "output_mode": "aop",
       "pos_x": 340,
       "pos_y": 560,
-      "width": 280,
+      "width": 320,
       "height": 80
     },
     {
@@ -103,20 +103,20 @@
     },
     {
       "type": "calculation",
-      "expression": "(2b)^a",
+      "expression": "(2b)^a == 2^a * (b^a)",
       "output_mode": "aop",
       "pos_x": 720,
       "pos_y": 560,
-      "width": 320,
+      "width": 360,
       "height": 80
     },
     {
       "type": "calculation",
-      "expression": "2^a * (b^a)",
+      "expression": "2b^a == 1024 * t",
       "output_mode": "aop",
-      "pos_x": 1060,
+      "pos_x": 1100,
       "pos_y": 560,
-      "width": 320,
+      "width": 280,
       "height": 80
     }
   ],
@@ -139,7 +139,7 @@
     },
     {
       "type": "text_note",
-      "text": "Certificates. Layer I: == is 1. Layer II: same num, two aop forms — 1024 * (t) versus w + 2*u + 4*t.",
+      "text": "Certificates. == is canonical presentation (Theorem 7). Layer I and Layer II both return 1. aop still prints 1024 * (t) on the factored side.",
       "pos_x": 40,
       "pos_y": 660,
       "width": 620,

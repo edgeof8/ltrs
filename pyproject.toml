@@ -28,6 +28,10 @@ library = [
     "fastapi>=0.100",
     "python-multipart>=0.0.6",
 ]
+web = [
+    "fastapi>=0.100",
+    "uvicorn>=0.23",
+]
 dev = [
     "pytest>=7.0",
 ]
@@ -39,12 +43,14 @@ all = [
     "rich>=13",
     "fastapi>=0.100",
     "python-multipart>=0.0.6",
+    "uvicorn>=0.23",
     "pytest>=7.0",
 ]
 
 [project.scripts]
 ltrs = "aopl_python_impl.aop_calculator_cli:main"
 cosmic-scratchpad = "aopl_python_impl.scratchpad:main"
+cosmic-sheet = "aopl_python_impl.webgui.server:main"
 
 [project.urls]
 Homepage = "https://github.com/edgeof8/ltrs"

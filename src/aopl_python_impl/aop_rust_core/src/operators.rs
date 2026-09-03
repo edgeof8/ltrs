@@ -2,7 +2,7 @@
 
 use super::aop_value::AoPValue;
 use num_bigint::BigInt;
-use num_traits::{One, Zero};
+use num_traits::Zero;
 use std::collections::HashMap;
 use std::ops::{Add, Mul, Neg, Sub};
 
@@ -19,36 +19,14 @@ impl Add for &AoPValue {
             panic!("Cannot add AoPValues with different bases.");
         }
 
-        // Case 1: If both have a coefficient of 1, we can just merge the polynomials.
-        // This is the most common and efficient path for expressions like 'a + b'.
-        if self.coeff.is_one() && other.coeff.is_one() {
-            let mut new_poly = self.poly.clone();
-            for (exp, coeff) in &other.poly {
-                *new_poly.entry(exp.clone()).or_default() += coeff;
-            }
-            let mut result = AoPValue::_new_internal(BigInt::one(), new_poly, self.base);
-            result._simplify();
-            return result;
+        // Distribute k·p and m·q into Z[X], add, then carry.
+        // Empty poly is the constant coeff (so 1 + a is a + 1, and cancelling
+        // spikes become 0 rather than the constant 1).
+        let mut new_poly = self.as_distributed_poly();
+        for (exp, coeff) in other.as_distributed_poly() {
+            *new_poly.entry(exp).or_default() += coeff;
         }
-
-        // Case 2: General case involving coefficients, e.g., 2*(a) + 3*(b).
-        // We must first "distribute" the coefficients into their respective polynomials.
-        // An AoPValue like `C * {exp: coeff}` is equivalent to `{exp: C * coeff}`
-        // if we set the outer coefficient to 1.
-        let mut new_poly = HashMap::new();
-
-        // Distribute self.coeff into self.poly
-        for (exp, p_coeff) in &self.poly {
-            *new_poly.entry(exp.clone()).or_default() += &self.coeff * p_coeff;
-        }
-        // Distribute other.coeff into other.poly
-        for (exp, p_coeff) in &other.poly {
-            *new_poly.entry(exp.clone()).or_default() += &other.coeff * p_coeff;
-        }
-
-        let mut result = AoPValue::_new_internal(BigInt::one(), new_poly, self.base);
-        result._simplify();
-        result
+        AoPValue::from_distributed_poly(new_poly, self.base)
     }
 }
 

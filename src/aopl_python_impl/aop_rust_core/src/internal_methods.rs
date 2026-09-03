@@ -110,6 +110,36 @@ impl AoPValue {
         new_poly
     }
 
+    /// Build an AoPValue from a distributed polynomial and carry.
+    /// The empty polynomial is the integer 0, not the constant 1.
+    pub fn from_distributed_poly(poly: HashMap<BigInt, BigInt>, base: u32) -> Self {
+        let poly: HashMap<BigInt, BigInt> = poly
+            .into_iter()
+            .filter(|(_, c)| !c.is_zero())
+            .collect();
+        if poly.is_empty() {
+            return Self::_new_internal(BigInt::zero(), HashMap::new(), base);
+        }
+        let mut result = Self::_new_internal(BigInt::one(), poly, base);
+        result._simplify();
+        if result.poly.is_empty() {
+            return Self::_new_internal(BigInt::zero(), HashMap::new(), base);
+        }
+        result
+    }
+
+    /// Unique non-negative digit map after distributing the leading coefficient
+    /// and carrying. Empty means zero. Does not expand into a single integer.
+    pub fn canonical_poly(&self) -> HashMap<BigInt, BigInt> {
+        Self::from_distributed_poly(self.as_distributed_poly(), self.base).poly
+    }
+
+    /// True iff both values have the same base and the same canonical digit map.
+    /// Factored `1024 * X^20` and carried `X^23 + 2 X^21 + 4 X^20` compare equal.
+    pub fn canonical_eq(&self, other: &Self) -> bool {
+        self.base == other.base && self.canonical_poly() == other.canonical_poly()
+    }
+
     pub fn poly_div_exact(
         dividend: &HashMap<BigInt, BigInt>,
         divisor: &HashMap<BigInt, BigInt>,

@@ -43,6 +43,24 @@ cosmic-scratchpad
 ```
 From a checkout, `python main.py` still launches the same packaged app.
 
+## I.b Cosmic Sheet (web spreadsheet)
+
+A second entry over the **same calculator core**, laid out as a spreadsheet instead of a free canvas. Each cell is an AoP script. The cell’s result is bound as `$A1`, `$B2`, … so other cells can reference it with the existing `$var` language. Named assignments (`$x = a*b`) still work.
+
+```bash
+pip install -e ".[web]"
+cosmic-sheet
+```
+
+From a checkout, `python web.py` opens the same app at `http://127.0.0.1:8765`. Right-click a cell to swap num/aop as the primary line. Save/load uses `.cosmic-sheet.json`.
+
+If `aop-calculator` is already installed and `pip install -e ".[web]"` fails on Windows because `aop_rust_core*.pyd` is in use, install the web deps without rebuilding:
+
+```bash
+python -m pip install fastapi uvicorn
+python web.py
+```
+
 ## II. The Alphabet of Powers (Core Concept)
 
 The AoP system provides a novel, compact way to represent and manipulate numbers, especially very large ones. By default, it operates in base 10.
@@ -135,9 +153,10 @@ You need a working **Rust toolchain** (for the `aop_rust_core` extension) and Py
     Optional extras:
 
     *   `pip install -e ".[gui]"` — Cosmic Scratchpad (`PySide6`, matplotlib, numpy)
+    *   `pip install -e ".[web]"` — Cosmic Sheet (`fastapi`, `uvicorn`)
     *   `pip install -e ".[explain]"` — `requests` for `/explain`
     *   `pip install -e ".[pretty]"` — `rich` terminal output
-    *   `pip install -e ".[all]"` — GUI + explain + pretty + library server + pytest
+    *   `pip install -e ".[all]"` — GUI + web + explain + pretty + library server + pytest
 
 4.  **Run:**
     ```bash
@@ -145,6 +164,8 @@ You need a working **Rust toolchain** (for the `aop_rust_core` extension) and Py
     ltrs "ba"                 # juxtaposition adds → 110
     cosmic-scratchpad
     python main.py              # checkout launcher for the same packaged GUI
+    cosmic-sheet                # spreadsheet web UI (same engine)
+    python web.py               # checkout launcher for Cosmic Sheet
     python -m aopl_python_impl.aop_calculator_cli "a*b" --mode aop
     ```
 
@@ -159,10 +180,12 @@ The project is organized into a primary GUI application and a core symbolic engi
 
 -   `/` (Root Directory)
     -   `main.py`: Checkout launcher for Cosmic Scratchpad (same as `cosmic-scratchpad`).
+    -   `web.py`: Checkout launcher for Cosmic Sheet (same as `cosmic-sheet`).
     -   `README.md`: **This file.**
     -   `docs/aop-language-spec.md`: The language the engine implements.
 -   `/src/aopl_python_impl/`
     -   `gui/`: Cosmic Scratchpad (canvas, nodes, slash commands). Entry: `scratchpad.py`.
+    -   `webgui/`: Cosmic Sheet (spreadsheet UI + FastAPI). Entry: `webgui/server.py`.
     -   `aop_calculator.py`: The main calculator class that ties the engine together.
     -   `aop_value.py`: Python handle for the Rust `AoPValue` (add, sub, mul, exact division, power).
     -   `aop_rust_core/`: Rust crate that implements sparse polynomial arithmetic, including exact `/`.

@@ -78,6 +78,8 @@ python -m aopl_python_impl.aop_calculator_cli "5b^2d" --base 2 --mode aop --debu
 
 `pip install -e ".[gui]"` also installs Cosmic Scratchpad. Launch it with `cosmic-scratchpad` (or `python main.py` from a checkout). The GUI lives in `aopl_python_impl.gui`.
 
+`pip install -e ".[web]"` installs Cosmic Sheet, a spreadsheet web UI over the same `AoP_Calculator`. Launch it with `cosmic-sheet` (or `python web.py`). Cells bind as `$A1`, `$B2`, … and evaluate through `gui.script_eval`.
+
 ## The Calculation Report (`--debug` mode)
 
 The engine features a powerful debug mode that generates a beautiful, self-documenting report on the entire calculation process. This is the best way to understand the internal workings of the engine.

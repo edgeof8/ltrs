@@ -108,6 +108,10 @@ impl AoPValue {
             .collect()
     }
 
+    fn __eq__(&self, other: &Self) -> bool {
+        self.canonical_eq(other)
+    }
+
     pub fn __repr__(&self) -> String {
         let coeff_part = match self.coeff.sign() {
             Sign::NoSign => return "AoP(0)".to_string(),

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cosmic Sheet</title>
+  <link rel="stylesheet" href="/static/style.css?v=3">
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">Σ</span>
+        <div>
+          <h1>Cosmic Sheet</h1>
+          <p class="tagline">Alphabet of Powers · spreadsheet entry</p>
+        </div>
+      </div>
+      <div class="toolbar">
+        <label class="field">
+          <span>Base</span>
+          <input id="base-input" type="number" min="2" value="10" title="Calculator base">
+        </label>
+        <label class="field">
+          <span>Primary</span>
+          <select id="mode-select" title="Default result line">
+            <option value="num">num</option>
+            <option value="aop">aop</option>
+          </select>
+        </label>
+        <button type="button" id="btn-new" title="New sheet">New</button>
+        <button type="button" id="btn-open" title="Open .sheet.json">Open</button>
+        <button type="button" id="btn-save" title="Save sheet">Save</button>
+        <button type="button" id="btn-recalc" title="Re-evaluate the sheet">Recalc</button>
+        <button type="button" id="btn-demo" title="Load a short example">Demo</button>
+        <button type="button" id="btn-help" class="ghost" title="Language and shortcuts">Help</button>
+        <input id="file-input" type="file" accept=".json,.sheet.json,.cosmic-sheet" hidden>
+      </div>
+    </header>
+
+    <div class="formula-row">
+      <div id="addr-badge" class="addr-badge">A1</div>
+      <span class="fx">fx</span>
+      <textarea id="formula-bar" rows="1" spellcheck="false" autocomplete="off"
+                placeholder="Source — $A1 is this cell’s value in other cells"></textarea>
+    </div>
+
+    <div class="preview-row" id="preview-row">
+      <div class="preview-label">=</div>
+      <div class="preview-body">
+        <div id="preview-num" class="preview-num"></div>
+        <div id="preview-aop" class="preview-aop"></div>
+      </div>
+    </div>
+
+    <div class="workspace">
+      <div id="grid-wrap" class="grid-wrap"></div>
+    </div>
+
+    <footer class="statusbar">
+      <span id="status-main">Ready</span>
+      <span id="status-detail" class="muted"></span>
+    </footer>
+  </div>
+
+  <menu id="ctx-menu" class="ctx-menu" hidden>
+    <button type="button" data-act="copy-expr">Copy source</button>
+    <button type="button" data-act="copy-result">Copy result</button>
+    <button type="button" data-act="paste">Paste</button>
+    <button type="button" data-act="clear">Clear</button>
+    <button type="button" data-act="toggle-mode">Swap num / aop</button>
+  </menu>
+
+  <dialog id="help-dialog">
+    <div class="help-card">
+      <header>
+        <h2>Same engine, grid instead of a free canvas</h2>
+        <button type="button" id="help-close" class="ghost">Close</button>
+      </header>
+      <div class="help-grid">
+        <section>
+          <h3>Cells</h3>
+          <p>Each cell keeps the <strong>source</strong> on the first line and the answer below it. Huge results stay inside the cell (ellipsis); the strip under the formula bar shows the full value, selectable to copy.</p>
+          <p>Other cells read this one as <code>$A1</code>. Named variables still work: <code>$x = a*b</code>. Adjacent letters <strong>add</strong> (<code>ba</code> is 110). Multiply with <code>*</code>.</p>
+        </section>
+        <section>
+          <h3>Shortcuts</h3>
+          <ul>
+            <li><kbd>Enter</kbd> evaluate, move down · <kbd>Shift</kbd>+<kbd>Enter</kbd> new line</li>
+            <li><kbd>Tab</kbd> evaluate, move right</li>
+            <li><kbd>F2</kbd> edit · <kbd>Esc</kbd> cancel</li>
+            <li><kbd>Delete</kbd> clear · <kbd>Ctrl</kbd>+<kbd>Z</kbd> undo</li>
+            <li><kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>V</kbd> copy source / paste</li>
+            <li><kbd>Ctrl</kbd>+<kbd>S</kbd> save · <kbd>Ctrl</kbd>+<kbd>O</kbd> open</li>
+          </ul>
+        </section>
+        <section>
+          <h3>Commands</h3>
+          <p>Type in a cell: <code>/help</code>, <code>/vars</code>, <code>/base</code>, <code>/setbase 2</code>, <code>/letters</code>, <code>/constants</code>.</p>
+        </section>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="/static/app.js?v=3"></script>
+</body>
+</html>

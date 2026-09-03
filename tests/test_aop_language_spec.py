@@ -59,6 +59,7 @@ class TestAoPLanguageSpec(unittest.TestCase):
         self.assertEqual(self.ev("a == b"), "0")
         self.assertEqual(self.ev("ba == (b + a)"), "1")
         self.assertEqual(self.ev("cQ == Q + c"), "1")
+        self.assertEqual(self.ev("(2b)^a == 1024 * t"), "1")
 
     def test_base_change_reinterprets_letters_not_digits(self):
         ten = AoP_Calculator(base=10, cache_file=os.path.join(self.tmp.name, "b10.json"))

@@ -51,9 +51,12 @@ Precedence, high to low: `^` / `**` (right-associative), then `*` and `/`
   division when carrying has already rewritten a constant as \(X^1\)).
   `c / a` is `b`. `a / b`, `(a + 1) / a`, and `a / 0` raise `AoPError`.
   There is no truncating integer division and no fraction type.
-- `==` compares **canonical polynomials** of the same base (coefficient plus
-  sparse terms). It does not expand either side into a Python `int`. After
-  simplify, `a == 10` is true in base 10 because `10` is stored as \(X^1\).
+- `==` compares **canonical polynomials** of the same base: distribute the
+  leading coefficient into \(\mathbb{Z}[X]\), carry until digits lie in
+  \(\{0,\ldots,B-1\}\), and compare the resulting sparse maps. It does not
+  expand either side into a Python `int`. Factored form and carried form of
+  the same integer are equal: `(2b)^a == 1024 * t`. After simplify,
+  `a == 10` is true in base 10 because `10` is stored as \(X^1\).
 - `$name = expr` binds a variable. A trailing `=` with a non-variable left
   side evaluates the left-hand side (`a=` is `a`).
 

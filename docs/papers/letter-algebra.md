@@ -106,9 +106,20 @@ where \(r(\ell_i') = r(\ell_i) + r(\varepsilon)\). In the running example,
 
 **Certificate.** `cQ * e == V + h` and `cQ * 2e == 2*(V+h)`.
 
+The second identity is the first with a scaled letter: \(2e = 2\cdot X^5\).
+The engine may store the left side as the factored pair \(2\cdot(V+h)\) and
+the right side as the distributed polynomial \(2V+2h\). Canonical `==`
+identifies them (Theorem 7). The **aop** printer still shows `2 * (V + h)`
+on the left — that is the figure, not a disagreement.
+
 This is the first figure. In **num** mode the same identity is a digit string
 that begins `100` and ends `01000,00000`: the two spikes have moved five
 decimal places. The aop line underneath *names* the move.
+
+The rank map is a homomorphism from the multiplicative monoid of letters
+(under `*`) to \((\mathbb{N},+)\). Translation by \(\varepsilon\) is the
+action of adding \(r(\varepsilon)\) on ranks, hence a shift of the alphabet.
+The same action on a sparse sum is Theorem 3.
 
 ## 4. Support gaps and carry
 
@@ -173,60 +184,149 @@ already-carried integer \(2^a\) by \(t\) distributes that factor and carries:
 `1024,00000,00000,00000,00000`. They are the same integer in two
 presentations.
 
-**Certificate (today).** The **num** strings agree, in every base. The **aop**
-strings disagree at base ten: factored `1024 * (t)` versus carried
-`w + 2*u + 4*t`. Structural `==` on the pair \((k,p)\) returns `0`. Making
-`==` compare distributed-then-carried polynomials is the next instrument
-change the paper needs; `as_distributed_poly` already exists in the Rust
-core.
+**Lemma (digit expansion of a scaled monomial).** For \(k \ge 0\) and
+\(e \ge 0\), if \(k = \sum_{i=0}^d k_i B^i\) is the canonical base-\(B\)
+expansion of \(k\), then
 
-## 6. Formal versus evaluational
+\[
+k \cdot X^e \;=\; \sum_{i=0}^d k_i X^{e+i}
+\]
+
+in \(\mathbb{Z}[X]/(X-B)\) after carry. At \(B=10\), \(k=1024\), \(e=20\),
+this is \(1024\cdot t = w + 2u + 4t\).
+
+*Proof.* Carry is the rewriting \(B^i X^e = X^{e+i}\) in the quotient by
+\(X-B\). Apply it to each digit of \(k\). \(\square\)
+
+**Certificate.** `(2b)^a == 2^a * (b^a)` and `2b^a == 1024 * t` both
+evaluate to `1`. The **aop** strings remain distinct: that is the lemma,
+not a failure of the identity. Subtraction of two presentations is not
+the certificate; `==` is. (Adding two stored pairs still goes through a
+separate distribute-and-carry in the arithmetic engine.)
+
+## 6. Formal versus evaluational: base change as experiment
 
 **Definition.** An identity \(L = R\) written in letters is
 
 - *Layer I (formal)* if it holds in \(\mathbb{Z}[X]\) before evaluation
   (Theorems 1–3);
 - *Layer II (covariant)* if \(\mathrm{ev}_B(L)=\mathrm{ev}_B(R)\) for every
-  \(B \ge 2\), but \(L\) and \(R\) are not equal as polynomials
-  (Theorem 5);
-- *Layer III (named)* if it uses a letter on the right-hand side whose rank
-  equals a \(B\)-dependent quantity, so it holds only for particular \(B\)
-  (the naming step in Theorem 6).
+  \(B \ge 2\), while the two sides need not be the same element of
+  \(\mathbb{Z}[X]\) before the exponent is evaluated (Theorem 5) — after
+  canonical presentation they still compare equal;
+- *Layer III (named)* if it uses a letter or a decimal numeral on the
+  right-hand side whose rank (or value) equals a \(B\)-dependent quantity,
+  so it holds only for particular \(B\) (Theorem 6).
+
+The same scratchpad, re-evaluated at a new base, is the experiment that
+separates the layers. Changing the base does not convert a finished decimal
+dump; it reinterprets every letter as a power of the new \(B\).
 
 **Theorem 6 (naming at base ten).** The following are equivalent to \(B=10\):
 
-1. \(b^a = t\) (because \(b^a = B^{2B}\) and \(t = B^{20}\));
-2. \(b^{2a} = O\) (because \(2B\cdot B = 40\));
+1. \(b^a = t\), because \(b^a = B^{2B}\) and \(t = B^{20}\);
+2. \(b^{2a} = O\), because \(2B\cdot B = 40\);
 3. \(2^a = 1024\).
 
 *Proof.* Immediate from the rank map and Theorem 5. \(\square\)
 
-**Experiment.** The same scratchpad at `/setbase 2` keeps
-`cQ * e == V + h` (Layer I: both sides are \(X^{47}+X^8\)) and
-`(2b)^a == 2^a * (b^a)` (Layer II), and breaks `b^a == t` (Layer III:
-left is \(B^{2B} = 2^4 = 16\), right is \(2^{20}\)). Base change is a
-laboratory, not a display option.
+### Figure 3. The same certificates at \(B=2\) and \(B=16\)
 
-## 7. Certificates without digits
+At every base the Layer I and Layer II certificates remain `1`. The Layer III
+certificates become `0`. The **aop** line of the *value* \(b^a\) shows where
+the name went.
 
-Let \(\equiv\) denote equality of the stored pair \((k,p)\). The engine's
-`==` is \(\equiv\) today. For Layer I both sides are already in the same
-presentation, so \(\equiv\) is the theorem. For Layer II, \(\equiv\) is
-strictly finer than integer equality: it distinguishes factored form from
-carried form. Integer equality is recovered from matching **num** strings,
-or (once the instrument is upgraded) from comparing
-`as_distributed_poly` after carry, still without expanding to a Python
-`int`.
+| Identity | Layer | \(B=2\) | \(B=10\) | \(B=16\) |
+| --- | --- | --- | --- | --- |
+| `cQ * e == V + h` | I | 1 | 1 | 1 |
+| `(2b)^a == 2^a * (b^a)` | II | 1 | 1 | 1 |
+| `b^a == t` | III | 0 | 1 | 0 |
+| `2^a == 1024` | III | 0 | 1 | 0 |
+| `2b^a == 1024 * t` | III | 0 | 1 | 0 |
+
+The values themselves, not the certificates:
+
+| Expression | \(B=2\) | \(B=10\) | \(B=16\) |
+| --- | --- | --- | --- |
+| \(a\) | \(2\), aop `a` | \(10\), aop `a` | \(16\), aop `a` |
+| \(b^a\) | \(16\), aop `d` | \(10^{20}\), aop `t` | \(16^{32}\), aop `G` |
+| \(t\) | \(2^{20}\), aop `t` | \(10^{20}\), aop `t` | \(16^{20}\), aop `t` |
+| \(2^a\) | \(4\), aop `b` | \(1024\), aop `c + 2*a + 4` | \(65536\), aop `d` |
+| \((2b)^a\) | \(64\), aop `4 * (d)` | \(1024\cdot 10^{20}\), aop `1024 * (t)` | \(65536\cdot 16^{32}\), aop `65536 * (G)` |
+| \(2^a\cdot b^a\) | \(64\), aop `f` | same integer, aop `w + 2*u + 4*t` | same integer, aop `K` |
+
+**Reading the table.** Letters name *ranks*, not decimal numbers. At \(B=2\),
+\(b^a = (2^2)^2 = 2^4 = d\), while \(t\) is still the letter of rank \(20\).
+The identity \(b^a = t\) asked a rank-\(20\) letter to equal a rank that
+depends on \(B\). It fails as soon as \(2B \ne 20\). The numeral `1024` is
+the same kind of object: it is \(2^{10}\), hence Layer III.
+
+Layer II never mentions those names. \((2b)^a = 2^a \cdot b^a\) holds at
+\(B=2\) as \(64=64\), and at \(B=16\) as two forty-digit integers that
+`==` identifies without printing them.
+
+**Two presentations, again.** At \(B=2\) the factored form of \((2b)^a\) is
+`4 * (d)` and the carried form is `f`, because \(4\cdot X^4 = X^6\) after
+carry in base \(2\). At \(B=16\) the coefficient \(2^{16}=65536=16^4\) is
+itself a monomial, so `65536 * (G)` carries all the way to the single letter
+`K` (rank \(32+4=36\)). At \(B=10\) the coefficient \(1024\) is *not* a
+power of ten, so the factored line `1024 * (t)` and the carried line
+`w + 2*u + 4*t` remain visibly different. Canonical `==` identifies all
+three pairs (Theorem 7). The printer is allowed to show the factor; the
+certificate is not allowed to care.
+
+**Remark (when \(2^B\) is a monomial).** \(2^B = B^k\) for an integer
+\(k \ge 0\) if and only if \(B = 2^{2^m}\) for some \(m \ge 0\)
+(\(B = 2, 4, 16, 256, \ldots\)). In that case \(2^a\) is a unit monomial and
+the two **aop** presentations of \((2b)^a\) collapse to one letter after
+carry. Base ten is interesting precisely because it is *not* on that list:
+the binary coefficient is forced to sit in front of a decimal monomial, which
+is the picture in Figure 2.
+
+*Proof of the remark.* If \(B\) has an odd prime factor then \(B^k\) does too,
+while \(2^B\) does not. Write \(B=2^s\). Then \(2^{sk}=2^B\) gives
+\(k=2^s/s\), so \(s \mid 2^s\), hence \(s\) is a power of \(2\). \(\square\)
+
+Notebooks: `examples/paper_letter_algebra.cosmic` (base 10, Figures 1–2) and
+`examples/paper_letter_algebra_base2.cosmic` (Figure 3). The same identities
+are locked in `tests/test_paper_identities.py` at bases 2, 10, and 16.
+
+## 7. Canonical presentation, and certificates without digits
+
+An AoP value is a pair \((k,p) \in \mathbb{Z} \times \mathbb{Z}[X]\). The
+empty polynomial is the unit for multiplication by \(k\): it denotes the
+constant \(k\), equivalently \(k X^0\). Write \(D(k,p) = k\cdot p \in
+\mathbb{Z}[X]\) for the *distributed* polynomial, and write \(C\) for carry
+into digits in \(\{0,1,\dots,B-1\}\).
+
+**Theorem 7 (canonical presentation).** For non-negative values, \(C(D(k,p))\)
+is the unique canonical base-\(B\) expansion of the integer \(k\cdot p(B)\).
+In particular
+
+\[
+(k,p) \sim (k',p') \quad\text{iff}\quad C(D(k,p)) = C(D(k',p'))
+\]
+
+if and only if \(\mathrm{ev}_B(k p) = \mathrm{ev}_B(k' p')\). The relation
+\(\sim\) does not require writing that integer.
+
+*Proof.* Uniqueness of base-\(B\) expansions of non-negative integers. Carry
+is exactly the rewriting \(c X^e \mapsto (c \bmod B) X^e + \lfloor c/B\rfloor
+X^{e+1}\) until every coefficient is a digit. Two polynomials with digits in
+\(\{0,\ldots,B-1\}\) evaluate equally iff they are identical. \(\square\)
+
+The engine's `==` is \(\sim\). **aop** mode prints the stored pair \((k,p)\)
+without forcing \(C\circ D\), which is why `(2b)^a` still reads `1024 * (t)`
+while `2^a * (b^a)` reads `w + 2*u + 4*t`. The certificate does not care.
+**num** mode is \(\mathrm{ev}_B\), used for figures, not for equality.
 
 A *proof notebook* is a Cosmic Scratchpad file whose nodes are lemmas and
 whose `==` nodes are certificates. `examples/paper_letter_algebra.cosmic`
-is the notebook for Theorems 1–6. `tests/test_paper_identities.py` is the
-same notebook as unit tests, including an explicit base-2 counterexample
-for every Layer III claim, and a record that `(2b)^a == 1024 * t` is
-currently `0` while the **num** strings match.
+is the notebook for Theorems 1–7. `tests/test_paper_identities.py` is the
+same notebook as unit tests, including bases 2 and 16 as Figure 3.
 
 **Parser note.** Certificates of the form `cQ == Q + c` require `==` to
-bind looser than `+`. That is now the language (see the spec). Without it,
+bind looser than `+`. That is the language (see the spec). Without it,
 the Pratt parser reads `(cQ == Q) + c` and returns the letter `c`.
 
 ## 8. What this paper is not
@@ -235,7 +335,7 @@ The multinomial theorem, hyperpower collapse \((B^p)^{B^q} = B^{p B^q}\)
 (so \(Z^e\) formats as \(a^g\)), and \(\gcd(B^i,B^j)=B^{\min(i,j)}\) (so
 `Z gcd Y` would be `Y`) are all native to the same notation. They are
 sequels. The first two are already visible in the engine; infix `gcd` is
-not yet implemented. None of them is needed to justify Theorems 1–6.
+not yet implemented. None of them is needed to justify Theorems 1–7.
 
 We do not claim a new theorem of number theory. We claim a language in
 which two classical identities are *seen*, a three-layer split that base
@@ -246,13 +346,9 @@ require writing the numbers the identities are about.
 
 - **Figures.** Fig. 1: translation nodes (`c`, `q`, `cQ`, `cQ*e`, `cQ*2e`).
   Fig. 2: coefficient-power nodes (`b^a`, `b^2a`, `2b^a`, `2b^2a`).
-  Fig. 3: the same file at base 2, with Layer III certificates failed.
+  Fig. 3: `examples/paper_letter_algebra_base2.cosmic` plus the §6 table
+  at bases 2, 10, 16.
 - **Voice.** Write as mathematics with an instrument, not as a description
   of software. Name the engine once, in §7.
-- **Next prose to finish.** §3 and §5 from the existing screenshots; then
-  §6 with the base-2 run.
-- **Instrument.** Make `==` compare distributed-then-carried polynomials so
-  Layer II certificates become `==` nodes. Until then, certify Layer II by
-  matching **num** strings and recording the two **aop** presentations.
 - **LaTeX.** Convert this file once §1–7 are stable. Monthly style,
   theorem–proof, three figures, one table of certificates.
