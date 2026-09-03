@@ -121,6 +121,7 @@ button,
 }
 
 #base-input { width: 64px; }
+#size-w, #size-h { width: 68px; }
 
 button {
   height: 30px;
@@ -243,6 +244,7 @@ table.sheet tbody th {
   font-weight: 500;
   font-size: 11px;
   letter-spacing: 0.04em;
+  user-select: none;
 }
 
 table.sheet thead th {
@@ -251,6 +253,8 @@ table.sheet thead th {
   width: var(--cell-w);
   min-width: var(--cell-w);
   max-width: var(--cell-w);
+  position: sticky;
+  overflow: visible;
 }
 
 table.sheet thead th.corner {
@@ -268,7 +272,41 @@ table.sheet tbody th {
   max-width: var(--row-head);
   height: var(--cell-h);
   text-align: center;
+  overflow: visible;
 }
+
+.col-resizer,
+.row-resizer {
+  position: absolute;
+  z-index: 5;
+  background: transparent;
+}
+
+.col-resizer {
+  top: 0;
+  right: -3px;
+  width: 7px;
+  height: 100%;
+  cursor: col-resize;
+}
+
+.row-resizer {
+  left: 0;
+  bottom: -3px;
+  width: 100%;
+  height: 7px;
+  cursor: row-resize;
+}
+
+.col-resizer:hover,
+.row-resizer:hover,
+.col-resizer.active,
+.row-resizer.active {
+  background: var(--blue);
+}
+
+body.resizing-col { cursor: col-resize; user-select: none; }
+body.resizing-row { cursor: row-resize; user-select: none; }
 
 td.cell {
   height: var(--cell-h);

@@ -2,6 +2,12 @@
   const COLS = 16;
   const ROWS = 40;
   const STORE_KEY = "cosmic-sheet-v1";
+  const DEFAULT_COL_W = 148;
+  const DEFAULT_ROW_H = 62;
+  const MIN_COL_W = 56;
+  const MAX_COL_W = 720;
+  const MIN_ROW_H = 28;
+  const MAX_ROW_H = 400;
 
   const els = {
     wrap: document.getElementById("grid-wrap"),
@@ -16,6 +22,8 @@
     previewNum: document.getElementById("preview-num"),
     previewAop: document.getElementById("preview-aop"),
     ctx: document.getElementById("ctx-menu"),
+    sizeW: document.getElementById("size-w"),
+    sizeH: document.getElementById("size-h"),
   };
 
   const state = {
@@ -31,6 +39,10 @@
     formulaAddr: "A1",
     history: [],
     clipboard: "",
+    colWidths: {},
+    rowHeights: {},
+    defaultColW: DEFAULT_COL_W,
+    defaultRowH: DEFAULT_ROW_H,
   };
 
   function colLetter(index) {
@@ -83,24 +95,161 @@
     els.detail.textContent = detail;
   }
 
+  function clamp(n, lo, hi) {
+    const v = Number(n);
+    if (!Number.isFinite(v)) return lo;
+    return Math.min(hi, Math.max(lo, Math.round(v)));
+  }
+
+  function colWidth(col) {
+    return state.colWidths[colLetter(col)] || state.defaultColW;
+  }
+
+  function rowHeight(row) {
+    return state.rowHeights[String(row + 1)] || state.defaultRowH;
+  }
+
+  function syncSizeInputs() {
+    const pos = parseAddr(state.selected);
+    if (!pos || !els.sizeW || !els.sizeH) return;
+    els.sizeW.value = String(colWidth(pos.col));
+    els.sizeH.value = String(rowHeight(pos.row));
+  }
+
+  function applySizes() {
+    const table = els.wrap.querySelector("table.sheet");
+    if (!table) return;
+    const cols = table.querySelectorAll("col");
+    if (cols[0]) {
+      cols[0].style.width = "var(--row-head)";
+    }
+    for (let c = 0; c < COLS; c++) {
+      const w = `${colWidth(c)}px`;
+      if (cols[c + 1]) cols[c + 1].style.width = w;
+    }
+    table.querySelectorAll("thead th").forEach((th, i) => {
+      if (i === 0) return;
+      const w = `${colWidth(i - 1)}px`;
+      th.style.width = w;
+      th.style.minWidth = w;
+      th.style.maxWidth = w;
+    });
+    table.querySelectorAll("tbody tr").forEach((tr, r) => {
+      const h = `${rowHeight(r)}px`;
+      tr.style.height = h;
+      const rh = tr.querySelector("th");
+      if (rh) rh.style.height = h;
+      tr.querySelectorAll("td.cell").forEach((td, c) => {
+        const w = `${colWidth(c)}px`;
+        td.style.height = h;
+        td.style.width = w;
+        td.style.minWidth = w;
+        td.style.maxWidth = w;
+      });
+    });
+    syncSizeInputs();
+  }
+
+  function setColWidth(col, width, { record = true } = {}) {
+    const letter = colLetter(col);
+    const w = clamp(width, MIN_COL_W, MAX_COL_W);
+    if (record) snapshot();
+    if (w === state.defaultColW) delete state.colWidths[letter];
+    else state.colWidths[letter] = w;
+    state.dirty = true;
+    applySizes();
+    persist();
+  }
+
+  function setRowHeight(row, height, { record = true } = {}) {
+    const key = String(row + 1);
+    const h = clamp(height, MIN_ROW_H, MAX_ROW_H);
+    if (record) snapshot();
+    if (h === state.defaultRowH) delete state.rowHeights[key];
+    else state.rowHeights[key] = h;
+    state.dirty = true;
+    applySizes();
+    persist();
+  }
+
+  function resetColWidth(col) {
+    snapshot();
+    delete state.colWidths[colLetter(col)];
+    state.dirty = true;
+    applySizes();
+    persist();
+  }
+
+  function resetRowHeight(row) {
+    snapshot();
+    delete state.rowHeights[String(row + 1)];
+    state.dirty = true;
+    applySizes();
+    persist();
+  }
+
+  function startColResize(col, event) {
+    event.preventDefault();
+    event.stopPropagation();
+    snapshot();
+    const startX = event.clientX;
+    const startW = colWidth(col);
+    const handle = event.currentTarget;
+    handle.classList.add("active");
+    document.body.classList.add("resizing-col");
+    const move = (ev) => {
+      setColWidth(col, startW + (ev.clientX - startX), { record: false });
+    };
+    const up = () => {
+      handle.classList.remove("active");
+      document.body.classList.remove("resizing-col");
+      document.removeEventListener("mousemove", move);
+      document.removeEventListener("mouseup", up);
+      persist();
+    };
+    document.addEventListener("mousemove", move);
+    document.addEventListener("mouseup", up);
+  }
+
+  function startRowResize(row, event) {
+    event.preventDefault();
+    event.stopPropagation();
+    snapshot();
+    const startY = event.clientY;
+    const startH = rowHeight(row);
+    const handle = event.currentTarget;
+    handle.classList.add("active");
+    document.body.classList.add("resizing-row");
+    const move = (ev) => {
+      setRowHeight(row, startH + (ev.clientY - startY), { record: false });
+    };
+    const up = () => {
+      handle.classList.remove("active");
+      document.body.classList.remove("resizing-row");
+      document.removeEventListener("mousemove", move);
+      document.removeEventListener("mouseup", up);
+      persist();
+    };
+    document.addEventListener("mousemove", move);
+    document.addEventListener("mouseup", up);
+  }
+
   function snapshot() {
     state.history.push(JSON.stringify({
       cells: state.cells,
       base: Number(els.base.value) || 10,
       defaultMode: state.defaultMode,
+      colWidths: state.colWidths,
+      rowHeights: state.rowHeights,
+      defaultColW: state.defaultColW,
+      defaultRowH: state.defaultRowH,
     }));
     if (state.history.length > 40) state.history.shift();
   }
 
   function persist() {
     try {
-      localStorage.setItem(STORE_KEY, JSON.stringify({
-        format: "cosmic-sheet",
-        version: 1,
-        base: Number(els.base.value) || 10,
-        default_output_mode: state.defaultMode,
-        cells: state.cells,
-      }));
+      localStorage.setItem(STORE_KEY, JSON.stringify(sheetPayload()));
     } catch {
       /* quota / private mode */
     }
@@ -163,6 +312,7 @@
     }
     paintCells();
     updatePreview(addr);
+    syncSizeInputs();
     hideCtx();
   }
 
@@ -325,6 +475,10 @@
       version: 1,
       base: Number(els.base.value) || 10,
       default_output_mode: state.defaultMode,
+      default_col_width: state.defaultColW,
+      default_row_height: state.defaultRowH,
+      col_widths: state.colWidths,
+      row_heights: state.rowHeights,
       cells: state.cells,
     };
   }
@@ -334,9 +488,14 @@
     state.defaultMode = data.default_output_mode || "num";
     state.cells = data.cells || {};
     state.results = {};
+    state.defaultColW = clamp(data.default_col_width || DEFAULT_COL_W, MIN_COL_W, MAX_COL_W);
+    state.defaultRowH = clamp(data.default_row_height || DEFAULT_ROW_H, MIN_ROW_H, MAX_ROW_H);
+    state.colWidths = { ...(data.col_widths || {}) };
+    state.rowHeights = { ...(data.row_heights || {}) };
     els.base.value = String(state.base);
     els.mode.value = state.defaultMode;
     state.dirty = markDirty;
+    applySizes();
     selectCell("A1");
     persist();
     evaluateSheet();
@@ -345,7 +504,15 @@
   function newSheet() {
     if (state.dirty && !confirm("Discard the current sheet?")) return;
     snapshot();
-    applySheet({ base: 10, default_output_mode: "num", cells: {} });
+    applySheet({
+      base: 10,
+      default_output_mode: "num",
+      cells: {},
+      col_widths: {},
+      row_heights: {},
+      default_col_width: DEFAULT_COL_W,
+      default_row_height: DEFAULT_ROW_H,
+    });
     setStatus("New sheet");
   }
 
@@ -384,10 +551,15 @@
     const snap = JSON.parse(raw);
     state.cells = snap.cells || {};
     state.defaultMode = snap.defaultMode || "num";
+    state.colWidths = snap.colWidths || {};
+    state.rowHeights = snap.rowHeights || {};
+    state.defaultColW = snap.defaultColW || DEFAULT_COL_W;
+    state.defaultRowH = snap.defaultRowH || DEFAULT_ROW_H;
     els.base.value = String(snap.base || 10);
     els.mode.value = state.defaultMode;
     state.dirty = true;
     persist();
+    applySizes();
     selectCell(state.selected);
     evaluateSheet();
     setStatus("Undo");
@@ -448,6 +620,17 @@
   function buildGrid() {
     const table = document.createElement("table");
     table.className = "sheet";
+    const colgroup = document.createElement("colgroup");
+    const cornerCol = document.createElement("col");
+    cornerCol.style.width = "var(--row-head)";
+    colgroup.appendChild(cornerCol);
+    for (let c = 0; c < COLS; c++) {
+      const col = document.createElement("col");
+      col.style.width = `${colWidth(c)}px`;
+      colgroup.appendChild(col);
+    }
+    table.appendChild(colgroup);
+
     const thead = document.createElement("thead");
     const headRow = document.createElement("tr");
     const corner = document.createElement("th");
@@ -456,6 +639,16 @@
     for (let c = 0; c < COLS; c++) {
       const th = document.createElement("th");
       th.textContent = colLetter(c);
+      const grip = document.createElement("span");
+      grip.className = "col-resizer";
+      grip.title = "Drag to resize column · double-click to reset";
+      grip.addEventListener("mousedown", (event) => startColResize(c, event));
+      grip.addEventListener("dblclick", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        resetColWidth(c);
+      });
+      th.appendChild(grip);
       headRow.appendChild(th);
     }
     thead.appendChild(headRow);
@@ -466,6 +659,16 @@
       const tr = document.createElement("tr");
       const rh = document.createElement("th");
       rh.textContent = String(r + 1);
+      const grip = document.createElement("span");
+      grip.className = "row-resizer";
+      grip.title = "Drag to resize row · double-click to reset";
+      grip.addEventListener("mousedown", (event) => startRowResize(r, event));
+      grip.addEventListener("dblclick", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        resetRowHeight(r);
+      });
+      rh.appendChild(grip);
       tr.appendChild(rh);
       for (let c = 0; c < COLS; c++) {
         const td = document.createElement("td");
@@ -490,6 +693,7 @@
     }
     table.appendChild(tbody);
     els.wrap.replaceChildren(table);
+    applySizes();
     paintCells();
   }
 
@@ -611,6 +815,18 @@
     evaluateSheet();
   });
 
+  els.sizeW.addEventListener("change", () => {
+    const pos = parseAddr(state.selected);
+    if (!pos) return;
+    setColWidth(pos.col, els.sizeW.value);
+  });
+
+  els.sizeH.addEventListener("change", () => {
+    const pos = parseAddr(state.selected);
+    if (!pos) return;
+    setRowHeight(pos.row, els.sizeH.value);
+  });
+
   document.getElementById("btn-new").addEventListener("click", newSheet);
   document.getElementById("btn-save").addEventListener("click", saveSheet);
   document.getElementById("btn-open").addEventListener("click", () => els.file.click());
@@ -638,6 +854,14 @@
     if (act === "paste") pasteInto();
     if (act === "clear") clearCell(state.selected);
     if (act === "toggle-mode") toggleCellMode(state.selected);
+    if (act === "reset-col") {
+      const pos = parseAddr(state.selected);
+      if (pos) resetColWidth(pos.col);
+    }
+    if (act === "reset-row") {
+      const pos = parseAddr(state.selected);
+      if (pos) resetRowHeight(pos.row);
+    }
   });
 
   document.addEventListener("click", (event) => {

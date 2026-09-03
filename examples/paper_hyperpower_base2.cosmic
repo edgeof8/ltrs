@@ -1,0 +1,70 @@
+{
+  "version": "0.3",
+  "base": 2,
+  "nodes": [
+    {
+      "type": "calculation",
+      "expression": "Z^e",
+      "output_mode": "aop",
+      "pos_x": 40,
+      "pos_y": 80,
+      "width": 280,
+      "height": 80
+    },
+    {
+      "type": "calculation",
+      "expression": "a^g",
+      "output_mode": "aop",
+      "pos_x": 340,
+      "pos_y": 80,
+      "width": 180,
+      "height": 80
+    },
+    {
+      "type": "calculation",
+      "expression": "Z^e == a^g",
+      "output_mode": "aop",
+      "pos_x": 540,
+      "pos_y": 80,
+      "width": 240,
+      "height": 80
+    },
+    {
+      "type": "calculation",
+      "expression": "a^b",
+      "output_mode": "aop",
+      "pos_x": 40,
+      "pos_y": 200,
+      "width": 180,
+      "height": 80
+    },
+    {
+      "type": "calculation",
+      "expression": "a^b == Z",
+      "output_mode": "aop",
+      "pos_x": 240,
+      "pos_y": 200,
+      "width": 220,
+      "height": 80
+    },
+    {
+      "type": "calculation",
+      "expression": "Z^e == Z^e",
+      "output_mode": "aop",
+      "pos_x": 480,
+      "pos_y": 200,
+      "width": 240,
+      "height": 80
+    }
+  ],
+  "drawing_items": [
+    {
+      "type": "text_note",
+      "text": "Figure 3. Base 2. Z^e is a^(k + j + g), not a^g. Named collapse is Layer III.",
+      "pos_x": 40,
+      "pos_y": 10,
+      "width": 640,
+      "height": 50
+    }
+  ]
+}

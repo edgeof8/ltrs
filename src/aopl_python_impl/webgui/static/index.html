@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cosmic Sheet</title>
-  <link rel="stylesheet" href="/static/style.css?v=3">
+  <link rel="stylesheet" href="/static/style.css?v=4">
 </head>
 <body>
   <div class="app">
@@ -27,6 +27,14 @@
             <option value="num">num</option>
             <option value="aop">aop</option>
           </select>
+        </label>
+        <label class="field" title="Width of the selected column">
+          <span>W</span>
+          <input id="size-w" type="number" min="56" max="720" value="148">
+        </label>
+        <label class="field" title="Height of the selected row">
+          <span>H</span>
+          <input id="size-h" type="number" min="28" max="400" value="62">
         </label>
         <button type="button" id="btn-new" title="New sheet">New</button>
         <button type="button" id="btn-open" title="Open .sheet.json">Open</button>
@@ -69,6 +77,8 @@
     <button type="button" data-act="paste">Paste</button>
     <button type="button" data-act="clear">Clear</button>
     <button type="button" data-act="toggle-mode">Swap num / aop</button>
+    <button type="button" data-act="reset-col">Reset column width</button>
+    <button type="button" data-act="reset-row">Reset row height</button>
   </menu>
 
   <dialog id="help-dialog">
@@ -92,6 +102,7 @@
             <li><kbd>Delete</kbd> clear · <kbd>Ctrl</kbd>+<kbd>Z</kbd> undo</li>
             <li><kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>V</kbd> copy source / paste</li>
             <li><kbd>Ctrl</kbd>+<kbd>S</kbd> save · <kbd>Ctrl</kbd>+<kbd>O</kbd> open</li>
+            <li>Drag a column or row header edge to resize. W / H set the selected column and row. Double-click a handle to reset.</li>
           </ul>
         </section>
         <section>
@@ -102,6 +113,6 @@
     </div>
   </dialog>
 
-  <script src="/static/app.js?v=3"></script>
+  <script src="/static/app.js?v=4"></script>
 </body>
 </html>

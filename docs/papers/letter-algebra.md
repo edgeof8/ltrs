@@ -331,11 +331,10 @@ the Pratt parser reads `(cQ == Q) + c` and returns the letter `c`.
 
 ## 8. What this paper is not
 
-The multinomial theorem, hyperpower collapse \((B^p)^{B^q} = B^{p B^q}\)
-(so \(Z^e\) formats as \(a^g\)), and \(\gcd(B^i,B^j)=B^{\min(i,j)}\) (so
-`Z gcd Y` would be `Y`) are all native to the same notation. They are
-sequels. The first two are already visible in the engine; infix `gcd` is
-not yet implemented. None of them is needed to justify Theorems 1–7.
+Hyperpower collapse — \(Z^e = a^g\) at base ten, without writing
+\(10^{10^7}\) digits — is the companion note
+`docs/papers/hyperpower-collapse.md`. The multinomial theorem and infix
+gcd of letters remain sequels after that.
 
 We do not claim a new theorem of number theory. We claim a language in
 which two classical identities are *seen*, a three-layer split that base

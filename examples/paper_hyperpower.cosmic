@@ -1,0 +1,124 @@
+{
+  "version": "0.3",
+  "base": 10,
+  "nodes": [
+    {
+      "type": "calculation",
+      "expression": "Z^a",
+      "output_mode": "aop",
+      "pos_x": 40,
+      "pos_y": 80,
+      "width": 180,
+      "height": 80
+    },
+    {
+      "type": "calculation",
+      "expression": "Z^b",
+      "output_mode": "aop",
+      "pos_x": 240,
+      "pos_y": 80,
+      "width": 180,
+      "height": 80
+    },
+    {
+      "type": "calculation",
+      "expression": "Z^c",
+      "output_mode": "aop",
+      "pos_x": 440,
+      "pos_y": 80,
+      "width": 180,
+      "height": 80
+    },
+    {
+      "type": "calculation",
+      "expression": "Z^d",
+      "output_mode": "aop",
+      "pos_x": 640,
+      "pos_y": 80,
+      "width": 180,
+      "height": 80
+    },
+    {
+      "type": "calculation",
+      "expression": "Z^e",
+      "output_mode": "aop",
+      "pos_x": 840,
+      "pos_y": 80,
+      "width": 180,
+      "height": 80
+    },
+    {
+      "type": "calculation",
+      "expression": "Z^e == a^g",
+      "output_mode": "aop",
+      "pos_x": 40,
+      "pos_y": 200,
+      "width": 240,
+      "height": 80
+    },
+    {
+      "type": "calculation",
+      "expression": "Y^e == a^(5*f)",
+      "output_mode": "aop",
+      "pos_x": 300,
+      "pos_y": 200,
+      "width": 280,
+      "height": 80
+    },
+    {
+      "type": "calculation",
+      "expression": "a^b == Z",
+      "output_mode": "aop",
+      "pos_x": 600,
+      "pos_y": 200,
+      "width": 220,
+      "height": 80
+    },
+    {
+      "type": "calculation",
+      "expression": "Z^Z == a^(a^(b + 2))",
+      "output_mode": "aop",
+      "pos_x": 840,
+      "pos_y": 200,
+      "width": 320,
+      "height": 80
+    },
+    {
+      "type": "calculation",
+      "expression": "a^b^c == a^(a^(2*c))",
+      "output_mode": "aop",
+      "pos_x": 40,
+      "pos_y": 320,
+      "width": 320,
+      "height": 80
+    },
+    {
+      "type": "calculation",
+      "expression": "(a*Z)^b == a^(d + b)",
+      "output_mode": "aop",
+      "pos_x": 380,
+      "pos_y": 320,
+      "width": 320,
+      "height": 80
+    },
+    {
+      "type": "calculation",
+      "expression": "(d*o*g)^c == a^(2*d + 6*c)",
+      "output_mode": "aop",
+      "pos_x": 720,
+      "pos_y": 320,
+      "width": 360,
+      "height": 80
+    }
+  ],
+  "drawing_items": [
+    {
+      "type": "text_note",
+      "text": "Hyperpower collapse. Z^λ slides a^c … a^g. Never evaluate Z^e in num mode. == is the certificate.",
+      "pos_x": 40,
+      "pos_y": 10,
+      "width": 720,
+      "height": 50
+    }
+  ]
+}
