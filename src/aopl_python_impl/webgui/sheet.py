@@ -8,6 +8,7 @@ import re
 
 from aopl_python_impl.aop_calculator import AoP_Calculator
 from aopl_python_impl.aop_formatter import format_as_decimal_string
+from aopl_python_impl.aop_value import AoPValue
 from aopl_python_impl.constants import LETTER_TO_EXPONENT_MAP
 from aopl_python_impl.gui.graph_logic import pair_display_lines
 from aopl_python_impl.gui.script_eval import run_isolated_script_pair
@@ -15,6 +16,7 @@ from aopl_python_impl.gui.script_eval import run_isolated_script_pair
 VARIABLE_RE = re.compile(r"\$([a-zA-Z_]\w*)")
 ASSIGN_HEAD_RE = re.compile(r"^\s*(\$[a-zA-Z_]\w*)\s*=(?!=)")
 ADDR_RE = re.compile(r"^([A-Za-z]+)(\d+)$")
+RANGE_RE = re.compile(r"\$([A-Za-z]+\d+)\s*:\s*\$([A-Za-z]+\d+)")
 
 KNOWN_CONSTANTS = ("#pi", "#e", "#phi", "#tau", "#sqrt2", "#j", "#sqrt3", "#ln2")
 HELP_TEXT = (
@@ -23,6 +25,7 @@ HELP_TEXT = (
     "  $name = expr defines a named variable.\n"
     "  Adjacent letters add (ba = 110). Use * to multiply (a*b = c).\n"
     "  A leading = is optional spreadsheet sugar (=$A1+1).\n"
+    "  $A1:$C1 sums that rectangle (empty cells count as 0).\n"
     "Commands:\n"
     "  /vars  /base  /setbase <n>  /constants  /letters  /help"
 )
@@ -121,6 +124,30 @@ def canonicalize_cell_vars(expr: str) -> str:
             return match.group(0)
 
     return VARIABLE_RE.sub(repl, expr)
+
+
+def expand_cell_ranges(expr: str, max_cells: int = 1560) -> str:
+    """Rewrite $A1:$C2 as ($A1 + $B1 + $C1 + $A2 + $B2 + $C2). Display source is unchanged."""
+
+    def repl(match: re.Match) -> str:
+        try:
+            c0, r0 = parse_addr(match.group(1))
+            c1, r1 = parse_addr(match.group(2))
+        except ValueError:
+            return match.group(0)
+        ca, cb = min(c0, c1), max(c0, c1)
+        ra, rb = min(r0, r1), max(r0, r1)
+        count = (cb - ca + 1) * (rb - ra + 1)
+        if count < 1 or count > max_cells:
+            return match.group(0)
+        parts = [
+            f"${format_addr(col, row)}"
+            for row in range(ra, rb + 1)
+            for col in range(ca, cb + 1)
+        ]
+        return "(" + " + ".join(parts) + ")"
+
+    return RANGE_RE.sub(repl, expr)
 
 
 def _script_for_cell(addr: str, expr: str) -> str:
@@ -271,7 +298,7 @@ class SheetEngine:
         deps: Dict[str, List[str]] = {addr: [] for addr in formula_addrs}
         for addr in formula_addrs:
             seen = set()
-            for raw in VARIABLE_RE.findall(specs[addr].expr):
+            for raw in VARIABLE_RE.findall(expand_cell_ranges(specs[addr].expr)):
                 name = f"${raw}"
                 source = var_definer.get(name)
                 if source and source != addr and source not in seen:
@@ -279,9 +306,28 @@ class SheetEngine:
                     deps[addr].append(source)
         return deps
 
+    def _bind_missing_cell_refs(self, expr: str) -> List[str]:
+        added: List[str] = []
+        for raw in VARIABLE_RE.findall(expr):
+            name = f"${raw}"
+            if not _is_cell_var_name(name):
+                continue
+            if name in self.calculator.variables:
+                continue
+            self.calculator.variables[name] = AoPValue.from_number(0, self.calculator.base)
+            added.append(name)
+        return added
+
     def _eval_formula(self, addr: str, spec: CellSpec) -> CellOut:
-        script = _script_for_cell(addr, spec.expr)
-        num, aop = run_isolated_script_pair(self.calculator, script)
+        expanded = expand_cell_ranges(spec.expr)
+        script = _script_for_cell(addr, expanded)
+        fillers = self._bind_missing_cell_refs(script)
+        try:
+            num, aop = run_isolated_script_pair(self.calculator, script)
+        finally:
+            for name in fillers:
+                if name != f"${addr}":
+                    self.calculator.variables.pop(name, None)
         if num.startswith("Error:"):
             cell_var = f"${addr}"
             self.calculator.variables.pop(cell_var, None)

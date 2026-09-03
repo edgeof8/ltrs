@@ -6,6 +6,7 @@ from src.aopl_python_impl.webgui.sheet import (
     _named_assignments,
     canonicalize_cell_vars,
     evaluate_sheet,
+    expand_cell_ranges,
     format_addr,
     normalize_addr,
     parse_addr,
@@ -26,6 +27,14 @@ class TestSheetAddresses(unittest.TestCase):
         self.assertEqual(strip_leading_equals("=$A1 + 1"), "$A1 + 1")
         self.assertEqual(strip_leading_equals("== 1"), "== 1")
         self.assertEqual(canonicalize_cell_vars("$b1 + $x"), "$B1 + $x")
+        self.assertEqual(
+            expand_cell_ranges("$A1:$B1"),
+            "($A1 + $B1)",
+        )
+        self.assertEqual(
+            expand_cell_ranges("$B2:$A1"),
+            "($A1 + $B1 + $A2 + $B2)",
+        )
 
     def test_equality_is_not_assignment(self):
         self.assertEqual(_named_assignments("$A1 == c"), [])
@@ -156,6 +165,29 @@ class TestSheetEvaluate(unittest.TestCase):
         self.assertEqual(result.base, 2)
         self.assertEqual(result.cells["A1"].primary, "2")
         self.assertTrue(result.cells["Z1"].command)
+
+    def test_range_sums_rectangle(self):
+        result = evaluate_sheet(
+            10,
+            {
+                "A1": {"expr": "1"},
+                "B1": {"expr": "2"},
+                "C1": {"expr": "$A1:$B1"},
+            },
+        )
+        self.assertEqual(result.cells["C1"].primary, "3")
+        self.assertEqual(result.cells["C1"].expr, "$A1:$B1")
+
+    def test_empty_cell_in_range_is_zero(self):
+        result = evaluate_sheet(
+            10,
+            {
+                "A1": {"expr": "5"},
+                "C1": {"expr": "$A1:$B1"},
+            },
+        )
+        self.assertEqual(result.cells["C1"].primary, "5")
+        self.assertNotIn("$B1", result.variables)
 
     def test_help_command(self):
         result = evaluate_sheet(10, {"A1": {"expr": "/help"}})

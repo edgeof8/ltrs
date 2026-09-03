@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cosmic Sheet</title>
-  <link rel="stylesheet" href="/static/style.css?v=4">
+  <link rel="stylesheet" href="/static/style.css?v=6">
 </head>
 <body>
   <div class="app">
@@ -62,7 +62,9 @@
     </div>
 
     <div class="workspace">
-      <div id="grid-wrap" class="grid-wrap"></div>
+      <div id="grid-wrap" class="grid-wrap">
+        <div id="fill-handle" class="fill-handle" hidden title="Drag to fill · Ctrl+D down · Ctrl+R right"></div>
+      </div>
     </div>
 
     <footer class="statusbar">
@@ -77,6 +79,8 @@
     <button type="button" data-act="paste">Paste</button>
     <button type="button" data-act="clear">Clear</button>
     <button type="button" data-act="toggle-mode">Swap num / aop</button>
+    <button type="button" data-act="fill-down">Fill down</button>
+    <button type="button" data-act="fill-right">Fill right</button>
     <button type="button" data-act="reset-col">Reset column width</button>
     <button type="button" data-act="reset-row">Reset row height</button>
   </menu>
@@ -91,18 +95,19 @@
         <section>
           <h3>Cells</h3>
           <p>Each cell keeps the <strong>source</strong> on the first line and the answer below it. Huge results stay inside the cell (ellipsis); the strip under the formula bar shows the full value, selectable to copy.</p>
-          <p>Other cells read this one as <code>$A1</code>. Named variables still work: <code>$x = a*b</code>. Adjacent letters <strong>add</strong> (<code>ba</code> is 110). Multiply with <code>*</code>.</p>
+          <p>Other cells read this one as <code>$A1</code>. A range <code>$A1:$C1</code> sums that rectangle (empty cells are 0). Named variables still work: <code>$x = a*b</code>. Adjacent letters <strong>add</strong> (<code>ba</code> is 110). Multiply with <code>*</code>.</p>
         </section>
         <section>
           <h3>Shortcuts</h3>
           <ul>
             <li><kbd>Enter</kbd> evaluate, move down · <kbd>Shift</kbd>+<kbd>Enter</kbd> new line</li>
-            <li><kbd>Tab</kbd> evaluate, move right</li>
-            <li><kbd>F2</kbd> edit · <kbd>Esc</kbd> cancel</li>
-            <li><kbd>Delete</kbd> clear · <kbd>Ctrl</kbd>+<kbd>Z</kbd> undo</li>
-            <li><kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>V</kbd> copy source / paste</li>
+            <li><kbd>Tab</kbd> evaluate, move right · <kbd>F2</kbd> edit · <kbd>Esc</kbd> collapse / cancel</li>
+            <li><kbd>Delete</kbd> clear the selection · <kbd>Ctrl</kbd>+<kbd>Z</kbd> undo · <kbd>Ctrl</kbd>+<kbd>A</kbd> all</li>
+            <li><kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>V</kbd> copy source / paste (refs shift)</li>
             <li><kbd>Ctrl</kbd>+<kbd>S</kbd> save · <kbd>Ctrl</kbd>+<kbd>O</kbd> open</li>
-            <li>Drag a column or row header edge to resize. W / H set the selected column and row. Double-click a handle to reset.</li>
+            <li>While editing, click a cell to insert <code>$B2</code>; Shift+click extends that to a range <code>$B2:$D4</code></li>
+            <li>Drag across cells to select. Click a header for the whole row or column. Drag the blue square to fill; <kbd>Ctrl</kbd>+<kbd>D</kbd> / <kbd>R</kbd> fill down / right.</li>
+            <li>Drag a column or row header edge to resize. W / H set the selected column and row.</li>
           </ul>
         </section>
         <section>
@@ -113,6 +118,6 @@
     </div>
   </dialog>
 
-  <script src="/static/app.js?v=4"></script>
+  <script src="/static/app.js?v=6"></script>
 </body>
 </html>

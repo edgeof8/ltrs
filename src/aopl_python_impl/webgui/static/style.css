@@ -245,6 +245,7 @@ table.sheet tbody th {
   font-size: 11px;
   letter-spacing: 0.04em;
   user-select: none;
+  cursor: pointer;
 }
 
 table.sheet thead th {
@@ -324,6 +325,52 @@ td.cell.selected {
   outline-offset: -2px;
   z-index: 1;
   position: relative;
+}
+
+td.cell.in-range {
+  background: color-mix(in srgb, var(--blue) 14%, var(--base));
+}
+
+td.cell.is-ref {
+  outline: 1px dashed var(--peach);
+  outline-offset: -3px;
+}
+
+td.cell.fill-target {
+  background: color-mix(in srgb, var(--yellow) 16%, var(--base));
+}
+
+table.sheet thead th.in-range,
+table.sheet tbody th.in-range {
+  background: color-mix(in srgb, var(--blue) 22%, var(--mantle));
+  color: var(--text);
+}
+
+.fill-handle {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  background: var(--blue);
+  border: 1px solid var(--crust);
+  box-shadow: 0 0 0 1px var(--crust);
+  z-index: 8;
+  cursor: crosshair;
+  box-sizing: border-box;
+  pointer-events: auto;
+}
+
+body.selecting-range,
+body.selecting-range * {
+  user-select: none;
+  cursor: cell;
+}
+
+.cell-body.wrap .cell-src,
+.cell-body.wrap .cell-value,
+.cell-body.wrap .cell-secondary {
+  white-space: pre-wrap;
+  word-break: break-all;
+  text-overflow: clip;
 }
 
 td.cell.has-formula { background: color-mix(in srgb, var(--base) 80%, #313244); }
